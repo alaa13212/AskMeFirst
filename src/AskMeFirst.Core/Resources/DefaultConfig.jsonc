@@ -1,0 +1,13 @@
+{
+  "_comment": "Phase 1 default. Single browser selection; no rules. Phase 2 will populate this from user config.",
+
+  "settings": {
+    "default_browser_id": "system",
+    "strip_tracking": true,
+    "unshorten": false,
+    "inventory_cache_hours": 24,
+    "unshorten_timeout_ms": 1000
+  },
+
+  "browsers": []
+}

@@ -1,7 +1,8 @@
 using System.Diagnostics;
+using AskMeFirst;
 using Xunit;
 
-namespace AskMeFirst.Tests;
+namespace AskMeFirst.Core.Tests;
 
 public class CliTests
 {
@@ -19,13 +20,13 @@ public class CliTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains("askmefirst", stdout);
-        Assert.Contains("0.1.0", stdout);
+        Assert.Contains("0.2.0", stdout);
     }
 
     [Fact]
     public void Version_ShortFlag_AlsoWorks()
     {
-        (int exitCode, string stdout, _) = Run("-v");
+        (int exitCode, string stdout, _) = Run("-V");
 
         Assert.Equal(0, exitCode);
         Assert.Contains("askmefirst", stdout);
@@ -39,6 +40,7 @@ public class CliTests
         Assert.Equal(0, exitCode);
         Assert.Contains("Usage:", stdout);
         Assert.Contains("--version", stdout);
+        Assert.Contains("<url>", stdout);
     }
 
     [Fact]
@@ -51,12 +53,12 @@ public class CliTests
     }
 
     [Fact]
-    public void UnknownCommand_ReturnsNonZero()
+    public void UnknownFlag_ReturnsNonZero()
     {
         (int exitCode, _, string stderr) = Run("--not-a-real-flag");
 
         Assert.NotEqual(0, exitCode);
-        Assert.Contains("Unknown argument", stderr);
+        Assert.Contains("Unknown flag", stderr);
     }
 
     [Fact]
