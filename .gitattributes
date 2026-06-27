@@ -1,0 +1,23 @@
+# Auto-detect text files; force LF line endings.
+*           text=auto eol=lf
+
+# Source code
+*.cs        text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.sln       text eol=lf crlf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+
+# Shell scripts
+*.sh        text eol=lf
+*.ps1       text eol=crlf
+
+# Native binaries (don't diff)
+*.exe       binary
+*.dll       binary
+*.so        binary
+*.dylib     binary

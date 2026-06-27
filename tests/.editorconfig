@@ -1,0 +1,10 @@
+# Tests intentionally use underscores (Test_Scenario_Expectation) per xUnit convention.
+# Suppress CA1707 globally for test projects.
+[**/tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+[**/*Tests.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+[**/*Tests/**]
+dotnet_diagnostic.CA1707.severity = none
