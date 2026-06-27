@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>AskMeFirst.Platforms.MacOs</RootNamespace>
+    <AssemblyName>AskMeFirst.Platforms.MacOs</AssemblyName>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatform>osx</SupportedOSPlatform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AskMeFirst.Core\AskMeFirst.Core.csproj" />
+  </ItemGroup>
+
+</Project>

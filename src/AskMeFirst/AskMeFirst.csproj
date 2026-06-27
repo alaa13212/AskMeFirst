@@ -4,12 +4,19 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>AskMeFirst</RootNamespace>
     <AssemblyName>askmefirst</AssemblyName>
-    <Version>0.1.0</Version>
-    <InformationalVersion>0.1.0</InformationalVersion>
+    <Version>0.2.0</Version>
+    <InformationalVersion>0.2.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="AskMeFirst.Tests" />
+    <ProjectReference Include="..\AskMeFirst.Core\AskMeFirst.Core.csproj" />
+    <ProjectReference Include="..\AskMeFirst.Platforms.Windows\AskMeFirst.Platforms.Windows.csproj" />
+    <ProjectReference Include="..\AskMeFirst.Platforms.MacOs\AskMeFirst.Platforms.MacOs.csproj" />
+    <ProjectReference Include="..\AskMeFirst.Platforms.Linux\AskMeFirst.Platforms.Linux.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AskMeFirst.Core.Tests" />
   </ItemGroup>
 
 </Project>

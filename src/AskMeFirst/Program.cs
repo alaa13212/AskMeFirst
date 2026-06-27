@@ -1,10 +1,13 @@
 using System.Diagnostics;
+using AskMeFirst.Core;
+using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Models;
 
 namespace AskMeFirst;
 
 internal static class Program
 {
-    private const string VERSION = "0.1.0";
+    private const string VERSION = "0.2.0";
     private const string EXECUTABLE_NAME = "askmefirst";
 
     private static int Main()
@@ -14,17 +17,46 @@ internal static class Program
 
         if (userArgs.Length == 0)
         {
-            PrintUsage();
+            Console.Error.WriteLine(CliArgsParser.HelpText);
             return 1;
         }
 
-        return userArgs[0] switch
+        string first = userArgs[0];
+        if (first is "--version" or "-V")
         {
-            "--version" or "-v" => PrintVersion(),
-            "--help" or "-h" or "-?" => PrintHelp(),
-            "--bench" => PrintBench(),
-            _ => UnknownCommand(userArgs[0])
-        };
+            return PrintVersion();
+        }
+        if (first is "--help" or "-h" or "-?")
+        {
+            return PrintHelp();
+        }
+        if (first is "--bench")
+        {
+            return PrintBench();
+        }
+        if (first is "--list")
+        {
+            return PrintList();
+        }
+
+        try
+        {
+            CliArgs args = CliArgsParser.Parse(userArgs);
+            UrlRouter router = Composition.BuildRouter(args.Verbose, out string platform);
+            Console.Error.WriteLine($"[info] platform: {platform}");
+            return router.Route(args.Url, args.BrowserId);
+        }
+        catch (CliArgsException ex)
+        {
+            Console.Error.WriteLine($"error: {ex.Message}");
+            Console.Error.WriteLine($"Run '{EXECUTABLE_NAME} --help' for usage.");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"fatal: {ex.Message}");
+            return 99;
+        }
     }
 
     private static int PrintVersion()
@@ -35,15 +67,7 @@ internal static class Program
 
     private static int PrintHelp()
     {
-        Console.WriteLine($"{EXECUTABLE_NAME} — smart browser router");
-        Console.WriteLine();
-        Console.WriteLine("Usage:");
-        Console.WriteLine($"  {EXECUTABLE_NAME} --version       Print version and exit");
-        Console.WriteLine($"  {EXECUTABLE_NAME} --help          Print this help and exit");
-        Console.WriteLine($"  {EXECUTABLE_NAME} --bench         Print a placeholder benchmark");
-        Console.WriteLine();
-        Console.WriteLine("Bootstrap build. URL routing not yet implemented.");
-        Console.WriteLine("See docs/roadmap.md for the build plan.");
+        Console.WriteLine(CliArgsParser.HelpText);
         return 0;
     }
 
@@ -67,16 +91,20 @@ internal static class Program
         return 0;
     }
 
-    private static int UnknownCommand(string command)
+    private static int PrintList()
     {
-        Console.Error.WriteLine($"Unknown argument: {command}");
-        Console.Error.WriteLine($"Run '{EXECUTABLE_NAME} --help' for usage.");
-        return 1;
-    }
-
-    private static void PrintUsage()
-    {
-        Console.Error.WriteLine($"Usage: {EXECUTABLE_NAME} --version | --help | --bench");
-        Console.Error.WriteLine("No URL routing yet.");
+        IBrowserInventory inventory = Composition.BuildInventory();
+        IReadOnlyList<Browser> browsers = inventory.Discover();
+        if (browsers.Count == 0)
+        {
+            Console.WriteLine("No browsers discovered on this system.");
+            return 0;
+        }
+        Console.WriteLine($"Discovered {browsers.Count} browser(s):");
+        foreach (Browser b in browsers)
+        {
+            Console.WriteLine($"  {b.Id,-12} {b.DisplayName,-24} {b.ExecutablePath}");
+        }
+        return 0;
     }
 }

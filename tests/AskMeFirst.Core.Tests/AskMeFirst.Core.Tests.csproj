@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <RootNamespace>AskMeFirst.Tests</RootNamespace>
-    <AssemblyName>AskMeFirst.Tests</AssemblyName>
+    <RootNamespace>AskMeFirst.Core.Tests</RootNamespace>
+    <AssemblyName>AskMeFirst.Core.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AskMeFirst\AskMeFirst.csproj" />
+    <ProjectReference Include="..\..\src\AskMeFirst.Core\AskMeFirst.Core.csproj" />
   </ItemGroup>
 
 </Project>

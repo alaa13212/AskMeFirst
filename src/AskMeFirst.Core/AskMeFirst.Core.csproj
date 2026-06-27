@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>AskMeFirst.Core</RootNamespace>
+    <AssemblyName>AskMeFirst.Core</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\DefaultConfig.jsonc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AskMeFirst.Core.Tests" />
+  </ItemGroup>
+
+</Project>
