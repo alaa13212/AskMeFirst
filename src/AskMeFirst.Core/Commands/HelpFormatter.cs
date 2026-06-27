@@ -19,29 +19,9 @@ public static class HelpFormatter
 
     private static List<(string Label, string Text)> BuildRows(CommandRegistry registry)
     {
-        List<(string Label, string Text)> rows = [];
-        foreach (ICommand cmd in registry.All())
-        {
-            string label = FormatCommandLabel(cmd, isDefault: ReferenceEquals(cmd, registry.Default));
-            string text = ReferenceEquals(cmd, registry.Default)
-                ? $"{cmd.Description} (default)"
-                : cmd.Description;
-            rows.Add((label, text));
-        }
-        return rows;
-    }
-
-    private static string FormatCommandLabel(ICommand cmd, bool isDefault)
-    {
-        if (isDefault)
-        {
-            return cmd.Usage;
-        }
-        if (cmd.Aliases.Count == 0)
-        {
-            return cmd.Name;
-        }
-        return $"{cmd.Name}, {string.Join(", ", cmd.Aliases)}";
+        return registry.All()
+            .Select(cmd => ( cmd.Usage, cmd.Description ))
+            .ToList();
     }
 
     private static string FormatColumns(List<(string Label, string Text)> rows)
