@@ -1,0 +1,99 @@
+{
+  "_comment": "Example AskMeFirst config. Copy to the OS-standard location (see platform-integration.md) and edit.",
+  "settings": {
+    "default_browser": null,
+    "strip_tracking": true,
+    "unshorten": false,
+    "inventory_cache_hours": 24,
+    "unshorten_timeout_ms": 1000
+  },
+
+  "tracking_params_extra": [
+    "si",
+    "feature",
+    "igshid"
+  ],
+  "tracking_params_override": false,
+
+  "unshorten_domains_extra": [],
+  "unshorten_domains_override": false,
+
+  "browsers": [
+    {
+      "id": "chrome-personal",
+      "display_name": "Chrome (Personal)",
+      "executable": "auto",
+      "profile": "Default"
+    },
+    {
+      "id": "chrome-work",
+      "display_name": "Chrome (Work)",
+      "executable": "auto",
+      "profile": "Profile 1"
+    },
+    {
+      "id": "firefox-personal",
+      "display_name": "Firefox",
+      "executable": "auto",
+      "profile": "default-release"
+    },
+    {
+      "id": "firefox-work",
+      "display_name": "Firefox (Work)",
+      "executable": "auto",
+      "profile": "work"
+    }
+  ],
+
+  "rules": [
+    {
+      "name": "Work links to Firefox Work",
+      "priority": 100,
+      "when": {
+        "process_in": ["slack", "outlook", "code", "teams"],
+        "url_matches_any": [
+          "*.atlassian.net",
+          "*.github.com",
+          "*.slack.com"
+        ]
+      },
+      "then": {
+        "browser": "firefox-work",
+        "focus_existing": true,
+        "strip_tracking": true
+      }
+    },
+    {
+      "name": "GitHub PRs from work apps go to Chrome Work",
+      "priority": 90,
+      "when": {
+        "process_in": ["slack", "outlook"],
+        "url_regex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
+      },
+      "then": {
+        "browser": "chrome-work"
+      }
+    },
+    {
+      "name": "YouTube always personal",
+      "priority": 80,
+      "when": {
+        "url_matches_any": ["youtube.com", "youtu.be"]
+      },
+      "then": {
+        "browser": "chrome-personal"
+      }
+    },
+    {
+      "name": "Work hours, weekday, anything not matched — Chrome Work",
+      "priority": 10,
+      "when": {
+        "time_between": "09:00-18:00",
+        "weekday_in": ["Mon", "Tue", "Wed", "Thu", "Fri"]
+      },
+      "then": {
+        "browser": "chrome-work"
+      }
+    }
+  ]
+}

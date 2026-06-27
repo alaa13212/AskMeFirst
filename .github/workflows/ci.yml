@@ -1,0 +1,95 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: 10.0.x
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+
+  publish:
+    name: publish (${{ matrix.os }} / ${{ matrix.rid }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish (Native AOT)
+        run: dotnet publish src/AskMeFirst/AskMeFirst.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o ./publish/${{ matrix.rid }}
+
+      - name: Smoke test --version
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            windows-latest) ./publish/${{ matrix.rid }}/askmefirst.exe --version ;;
+            macos-latest)   ./publish/${{ matrix.rid }}/askmefirst --version ;;
+            *)              ./publish/${{ matrix.rid }}/askmefirst --version ;;
+          esac
+
+      - name: Cold-start benchmark
+        shell: bash
+        run: |
+          set -e
+          case "${{ matrix.os }}" in
+            windows-latest)
+              BIN=./publish/${{ matrix.rid }}/askmefirst.exe
+              ;;
+            *)
+              BIN=./publish/${{ matrix.rid }}/askmefirst
+              ;;
+          esac
+          for i in 1 2 3; do
+            /usr/bin/time -f "%e" "$BIN" --version > /dev/null
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: askmefirst-${{ matrix.rid }}
+          path: publish/${{ matrix.rid }}/*
+          if-no-files-found: error
