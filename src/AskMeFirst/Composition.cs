@@ -1,24 +1,26 @@
 using System.Runtime.InteropServices;
-using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Composition;
-using AskMeConfig = AskMeFirst.Core.Config.Config;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Logging;
+using AskMeFirst.Platforms.Linux;
+using AskMeFirst.Platforms.MacOs;
+using AskMeFirst.Platforms.Windows;
 
 namespace AskMeFirst;
 
 internal static class Composition
 {
-    public static UrlRouter BuildRouter(bool verbose, out string platformName)
+    public static CommandContext Bootstrap(bool verbose, CommandRegistry registry)
     {
         BootstrapContext ctx = SelectPlatform();
-        platformName = ctx.PlatformName;
 
         ILogger logger = new ConsoleLogger(verbose);
-        AskMeConfig config = ConfigLoader.LoadDefault();
+        AppConfig appConfig = ConfigLoader.LoadDefault();
 
-        return new UrlRouter(ctx.Inventory, ctx.Launcher, logger, config);
+        return new CommandContext(
+            logger, ctx.Inventory, ctx.Launcher, ctx.Profiles, appConfig, ctx.PlatformName, registry);
     }
 
     public static IBrowserInventory BuildInventory()
@@ -30,15 +32,15 @@ internal static class Composition
     {
         if (OperatingSystem.IsWindows())
         {
-            return AskMeFirst.Platforms.Windows.WindowsBootstrap.Create();
+            return WindowsBootstrap.Create();
         }
         if (OperatingSystem.IsMacOS())
         {
-            return AskMeFirst.Platforms.MacOs.MacOsBootstrap.Create();
+            return MacOsBootstrap.Create();
         }
         if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
-            return AskMeFirst.Platforms.Linux.LinuxBootstrap.Create();
+            return LinuxBootstrap.Create();
         }
         throw new PlatformNotSupportedException(
             $"askmefirst has no platform integration for {RuntimeInformation.OSDescription}.");

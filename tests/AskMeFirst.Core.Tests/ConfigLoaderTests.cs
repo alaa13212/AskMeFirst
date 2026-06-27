@@ -1,4 +1,3 @@
-using AskMeConfig = AskMeFirst.Core.Config.Config;
 using AskMeFirst.Core.Config;
 using Xunit;
 
@@ -9,7 +8,7 @@ public class ConfigLoaderTests
     [Fact]
     public void LoadDefault_ReturnsValidConfig()
     {
-        AskMeConfig config = ConfigLoader.LoadDefault();
+        AppConfig config = ConfigLoader.LoadDefault();
 
         Assert.NotNull(config);
         Assert.NotNull(config.Settings);
@@ -20,7 +19,7 @@ public class ConfigLoaderTests
     [Fact]
     public void LoadDefault_BrowsersListIsEmpty()
     {
-        AskMeConfig config = ConfigLoader.LoadDefault();
+        AppConfig config = ConfigLoader.LoadDefault();
         Assert.Empty(config.Browsers);
     }
 }

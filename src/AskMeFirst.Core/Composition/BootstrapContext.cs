@@ -5,4 +5,5 @@ namespace AskMeFirst.Core.Composition;
 public sealed record BootstrapContext(
     IBrowserInventory Inventory,
     IUrlLauncher Launcher,
+    IBrowserProfileDetector Profiles,
     string PlatformName);

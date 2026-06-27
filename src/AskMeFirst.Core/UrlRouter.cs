@@ -1,48 +1,38 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
-using AskMeConfig = AskMeFirst.Core.Config.Config;
 
 namespace AskMeFirst.Core;
 
-public sealed class UrlRouter
+public sealed class UrlRouter(
+    IBrowserInventory inventory,
+    IUrlLauncher launcher,
+    IBrowserProfileDetector profiles,
+    ILogger logger,
+    AppConfig appConfig)
 {
-    private readonly IBrowserInventory _inventory;
-    private readonly IUrlLauncher _launcher;
-    private readonly ILogger _logger;
-    private readonly AskMeConfig _config;
-
-    public UrlRouter(
-        IBrowserInventory inventory,
-        IUrlLauncher launcher,
-        ILogger logger,
-        AskMeConfig config)
+    public int Route(Uri url, string? browserId, string? profileName)
     {
-        _inventory = inventory;
-        _launcher = launcher;
-        _logger = logger;
-        _config = config;
-    }
-
-    public int Route(Uri url, string? browserId)
-    {
-        IReadOnlyList<Browser> browsers = _inventory.Discover();
+        IReadOnlyList<Browser> browsers = inventory.Discover();
         if (browsers.Count == 0)
         {
-            _logger.LogError("No browsers discovered on this system.");
+            logger.LogError("No browsers discovered on this system.");
             return 2;
         }
 
         Browser? chosen = ResolveBrowser(browserId, browsers);
         if (chosen is null)
         {
-            _logger.LogError(
+            logger.LogError(
                 $"Browser '{browserId}' not found. " +
                 $"Discovered: {string.Join(", ", browsers.Select(b => b.Id))}");
             return 3;
         }
 
-        _logger.LogInfo($"Routing {url} → {chosen.DisplayName} ({chosen.ExecutablePath})");
-        _launcher.Launch(chosen, url);
+        Browser resolved = ResolveProfile(chosen, profileName);
+        logger.LogInfo($"Routing {url} → {resolved.DisplayName} ({resolved.ExecutablePath})"
+            + (resolved.Profile is null ? "" : $" [profile: {resolved.Profile.Name}]"));
+        launcher.Launch(resolved, url);
         return 0;
     }
 
@@ -50,9 +40,57 @@ public sealed class UrlRouter
     {
         if (browserId is null or "system")
         {
-            _logger.LogInfo("No --browser specified; using first discovered browser.");
+            string? configured = appConfig.Settings.DefaultBrowserId;
+            if (!string.IsNullOrWhiteSpace(configured) && configured != "system")
+            {
+                Browser? match = inventory.FindById(configured);
+                if (match is not null)
+                {
+                    logger.LogInfo($"No --browser specified; using configured default '{configured}'.");
+                    return match;
+                }
+                logger.LogWarn(
+                    $"Configured default browser '{configured}' not found; falling back to first discovered.");
+            }
+            else
+            {
+                logger.LogInfo("No --browser specified; using first discovered browser.");
+            }
             return browsers[0];
         }
-        return _inventory.FindById(browserId);
+        return inventory.FindById(browserId);
+    }
+
+    private Browser ResolveProfile(Browser browser, string? profileName)
+    {
+        IReadOnlyList<BrowserProfile> detected = profiles.Detect(browser.Id);
+        if (detected.Count == 0)
+        {
+            if (profileName is null)
+            {
+                return browser;
+            }
+            BrowserProfile synthetic = new(profileName, profileName, IsDefault: false);
+            return browser with { Profile = synthetic };
+        }
+
+        if (profileName is null)
+        {
+            BrowserProfile defaultProfile = detected.FirstOrDefault(p => p.IsDefault) ?? detected[0];
+            return browser with { Profile = defaultProfile };
+        }
+
+        BrowserProfile? match = detected.FirstOrDefault(p =>
+            string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(p.DirectoryName, profileName, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            logger.LogWarn(
+                $"Profile '{profileName}' not found for {browser.DisplayName}. " +
+                $"Available: {string.Join(", ", detected.Select(p => p.Name))}");
+            BrowserProfile fallback = detected.FirstOrDefault(p => p.IsDefault) ?? detected[0];
+            return browser with { Profile = fallback };
+        }
+        return browser with { Profile = match };
     }
 }

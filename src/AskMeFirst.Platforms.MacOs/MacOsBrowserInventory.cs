@@ -1,4 +1,5 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 
 namespace AskMeFirst.Platforms.MacOs;
@@ -25,7 +26,13 @@ public sealed class MacOsBrowserInventory : IBrowserInventory
             string appPath = $"/Applications/{appName}.app";
             if (Directory.Exists(appPath))
             {
-                discovered.Add(new Browser(id, displayName, appPath));
+                discovered.Add(new Browser
+                {
+                    Id = id,
+                    DisplayName = displayName,
+                    ExecutablePath = appPath,
+                    LaunchStrategy = BrowserLaunchStrategies.For(id),
+                });
             }
         }
         return discovered;

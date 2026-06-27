@@ -1,7 +1,17 @@
+using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Launch;
+
 namespace AskMeFirst.Core.Models;
 
-public sealed record Browser(
-    string Id,
-    string DisplayName,
-    string ExecutablePath,
-    string? Profile = null);
+public sealed record Browser
+{
+    public required string Id { get; init; }
+
+    public required string DisplayName { get; init; }
+
+    public required string ExecutablePath { get; init; }
+
+    public IBrowserLaunchStrategy LaunchStrategy { get; init; } = DefaultLaunchStrategy.Instance;
+
+    public BrowserProfile? Profile { get; init; }
+}

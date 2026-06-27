@@ -11,9 +11,12 @@ public sealed class LinuxUrlLauncher : IUrlLauncher
         ProcessStartInfo psi = new()
         {
             FileName = browser.ExecutablePath,
-            ArgumentList = { url.ToString() },
             UseShellExecute = false,
         };
+        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile))
+        {
+            psi.ArgumentList.Add(arg);
+        }
         Process.Start(psi);
     }
 }

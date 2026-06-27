@@ -68,7 +68,7 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
   - Linux: .desktop file + xdg-mime default
 - [ ] `uninstall` command — reverse
 - [ ] Running-browser detection
-- [ ] `focus_existing` and `new_window` actions
+- [ ] `FocusExisting` and `NewWindow` actions
 
 **Exit criteria**: install command makes AskMeFirst the system default; uninstall restores the previous default. Focus-existing works for Chrome + Firefox.
 
@@ -80,7 +80,7 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 - [ ] Triggered only when picker would show + known shortener domain
 - [ ] Live URL update in picker
 - [ ] Per-rule `unshorten` toggle
-- [ ] Configurable shortener domain list (`unshorten_domains_extra` / `_override`)
+- [ ] Configurable shortener domain list (`UnshortenDomainsExtra` / `UnshortenDomainsOverride`)
 
 **Exit criteria**: t.co / bit.ly links show resolved URL in picker as user decides.
 

@@ -1,10 +1,11 @@
 using System.Text.RegularExpressions;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 
 namespace AskMeFirst.Platforms.Linux;
 
-public sealed class LinuxBrowserInventory : IBrowserInventory
+public sealed partial class LinuxBrowserInventory : IBrowserInventory
 {
     private static readonly string[] DesktopDirs =
     [
@@ -13,17 +14,22 @@ public sealed class LinuxBrowserInventory : IBrowserInventory
         "/var/lib/flatpak/exports/share/applications",
     ];
 
-    private static readonly Regex CategoryBrowser = new(
-        @"^Categories=.*\b(?:WebBrowser|WebBrowser\.)\b",
-        RegexOptions.Compiled | RegexOptions.Multiline);
-
-    private static readonly Regex NameLine = new(
-        @"^Name=(.+)$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
-
-    private static readonly Regex ExecLine = new(
-        @"^Exec=(.+)$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Dictionary<string, string> KnownIds =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["chrome"] = "chrome",
+            ["chromium"] = "chromium",
+            ["google-chrome"] = "chrome",
+            ["google-chrome-stable"] = "chrome",
+            ["firefox"] = "firefox",
+            ["firefox-esr"] = "firefox",
+            ["microsoft-edge"] = "edge",
+            ["msedge"] = "edge",
+            ["brave-browser"] = "brave",
+            ["opera"] = "opera",
+            ["vivaldi"] = "vivaldi",
+            ["vivaldi-stable"] = "vivaldi",
+        };
 
     public IReadOnlyList<Browser> Discover()
     {
@@ -92,13 +98,13 @@ public sealed class LinuxBrowserInventory : IBrowserInventory
             return null;
         }
 
-        if (!CategoryBrowser.IsMatch(content))
+        if (!CategoryBrowserRegex().IsMatch(content))
         {
             return null;
         }
 
-        Match nameMatch = NameLine.Match(content);
-        Match execMatch = ExecLine.Match(content);
+        Match nameMatch = NameLineRegex().Match(content);
+        Match execMatch = ExecLineRegex().Match(content);
         if (!nameMatch.Success || !execMatch.Success)
         {
             return null;
@@ -113,12 +119,19 @@ public sealed class LinuxBrowserInventory : IBrowserInventory
         }
 
         string id = NormalizeId(displayName, path);
-        return new Browser(id, displayName, executable);
+        IBrowserLaunchStrategy launchStrategy = BrowserLaunchStrategies.For(id);
+        return new Browser
+        {
+            Id = id,
+            DisplayName = displayName,
+            ExecutablePath = executable,
+            LaunchStrategy = launchStrategy,
+        };
     }
 
     private static string? ResolveExecutable(string exec)
     {
-        string stripped = Regex.Replace(exec, @"%[a-zA-Z]", "");
+        string stripped = FieldCodeRegex().Replace(exec, "");
         string[] parts = stripped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
         {
@@ -150,6 +163,12 @@ public sealed class LinuxBrowserInventory : IBrowserInventory
 
     private static string NormalizeId(string displayName, string path)
     {
+        string desktopId = Path.GetFileNameWithoutExtension(path);
+        if (KnownIds.TryGetValue(desktopId, out string? mapped))
+        {
+            return mapped;
+        }
+
         string lowered = displayName.ToLowerInvariant();
         if (lowered.Contains("chrome"))
         {
@@ -179,6 +198,18 @@ public sealed class LinuxBrowserInventory : IBrowserInventory
         {
             return "chromium";
         }
-        return Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+        return desktopId.ToLowerInvariant();
     }
+
+    [GeneratedRegex(@"^Categories=.*\b(?:WebBrowser|WebBrowser\.)\b", RegexOptions.Multiline)]
+    private static partial Regex CategoryBrowserRegex();
+
+    [GeneratedRegex(@"^Name=(.+)$", RegexOptions.Multiline)]
+    private static partial Regex NameLineRegex();
+
+    [GeneratedRegex(@"^Exec=(.+)$", RegexOptions.Multiline)]
+    private static partial Regex ExecLineRegex();
+
+    [GeneratedRegex(@"%[a-zA-Z]")]
+    private static partial Regex FieldCodeRegex();
 }

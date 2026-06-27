@@ -9,6 +9,7 @@ public static class LinuxBootstrap
     {
         IBrowserInventory inventory = new LinuxBrowserInventory();
         IUrlLauncher launcher = new LinuxUrlLauncher();
-        return new BootstrapContext(inventory, launcher, "linux");
+        IBrowserProfileDetector profiles = new LinuxBrowserProfileDetector();
+        return new BootstrapContext(inventory, launcher, profiles, "linux");
     }
 }

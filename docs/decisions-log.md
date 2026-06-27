@@ -39,7 +39,7 @@ All design decisions made during planning, with rationale. New contributors shou
 
 ## 6. App tags: Dropped
 
-**Rationale**: Grouping benefit only matters at scale. Direct `process_in: [list]` references in rules are equally readable for <10 source apps per category. OS-specific process name normalization happens in the platform layer (one file, ~50 LOC per OS), decoupling rules from `Slack.exe` vs `slack` vs `com.tinyspeck.chatlyo`.
+**Rationale**: Grouping benefit only matters at scale. Direct `ProcessIn: [list]` references in rules are equally readable for <10 source apps per category. OS-specific process name normalization happens in the platform layer (one file, ~50 LOC per OS), decoupling rules from `Slack.exe` vs `slack` vs `com.tinyspeck.chatlyo`.
 
 **Reconsider**: if rule schemas grow painful with long process lists. Add tags back as an *optional* convenience layer — additive change.
 
@@ -51,7 +51,7 @@ All design decisions made during planning, with rationale. New contributors shou
 
 **Rationale**: User pushed back on my initial simplification proposal. The richer schema (multiple predicates, regex, time-of-day, weekday, scheme, etc.) can do everything a simpler one can and more. Picker-generated rules just produce simple entries in the richer schema.
 
-**Predicates included**: `process_in`, `url_matches_any`, `url_matches_all`, `url_regex`, `scheme_in`, `time_between`, `weekday_in`, `browser_running`.
+**Predicates included**: `ProcessIn`, `UrlMatchesAny`, `UrlMatchesAll`, `UrlRegex`, `SchemeIn`, `TimeBetween`, `WeekdayIn`, `BrowserRunning`.
 **Predicates excluded**: `tag_in` (tags dropped).
 
 ## 9. Source-app detection depth: L1 (process name only)
@@ -106,31 +106,31 @@ All design decisions made during planning, with rationale. New contributors shou
 - *Ignore*: 1 action (default Enter opens with "Just this once")
 - *Remember*: 2 actions (set remember radio + click browser)
 
-**Layout**: ~720×440 px, two side-by-side panels. Smaller displays stack vertically. Live URL display (short URL → resolved URL) when unshortener is in flight.
+**Layout**: ~720×440 px, two side-by-side panels. Smaller displays stack vertically. Live URL display (short URL → resolved URL) when Unshortener is in flight.
 
 ## 17. Unshortener triggering: Picker-only + known shortener domain + async
 
 **Rationale**: User clarification. Unshortener runs ONLY when:
 1. Picker would show (no rule matched)
 2. URL is from known shortener domain (built-in list + user extensions)
-3. Async, with live UI update — picker is fully interactive during unshortening
-4. User choice stands regardless of unshortening state
+3. Async, with live UI update — picker is fully interactive during Unshortening
+4. User choice stands regardless of Unshortening state
 
-**Why this matters**: Short URLs hide their destination. Without unshortening, `t.co/abc` would route based on the short domain (Twitter = personal Chrome). With unshortening, the picker shows the resolved URL (e.g. `company.atlassian.net/...`), letting the user pick based on the actual destination.
+**Why this matters**: Short URLs hide their destination. Without Unshortening, `t.co/abc` would route based on the short domain (Twitter = personal Chrome). With Unshortening, the picker shows the resolved URL (e.g. `company.atlassian.net/...`), letting the user pick based on the actual destination.
 
 **No browser extension**: The browser itself follows redirects natively after we hand it the URL. We don't need to swap tabs.
 
 ## 18. Known shortener domains: Built-in default + user extensions
 
-**Rationale**: Built-in list (~27 entries: t.co, bit.ly, tinyurl.com, etc.) covers 95% of cases. User extension via `unshorten_domains_extra` handles the long tail (internal company shorteners). `unshorten_domains_override: true` replaces entirely for power users.
+**Rationale**: Built-in list (~27 entries: t.co, bit.ly, tinyurl.com, etc.) covers 95% of cases. User extension via `UnshortenDomainsExtra` handles the long tail (internal company shorteners). `Unshorten_domains_override: true` replaces entirely for power users.
 
 **Management UI**: configurable in Phase 7+.
 
 ## 19. Tracking parameters: Built-in default + user extensions (parallel to shorteners)
 
-**Rationale**: Same pattern. Built-in list (~30 entries: utm_*, fbclid, gclid, mc_eid, _ga, ref, etc.) covers 95%. User extension via `tracking_params_extra`. `tracking_params_override: true` replaces entirely.
+**Rationale**: Same pattern. Built-in list (~30 entries: utm_*, fbclid, gclid, mc_eid, _ga, ref, etc.) covers 95%. User extension via `TrackingParamsExtra`. `TrackingParamsOverride: true` replaces entirely.
 
-**Trigger**: `settings.strip_tracking: true` by default. Per-rule override via `then.strip_tracking: bool`.
+**Trigger**: `settings.StripTracking: true` by default. Per-rule override via `then.StripTracking: bool`.
 
 ## 20. "Just this once" semantics: Forever
 
