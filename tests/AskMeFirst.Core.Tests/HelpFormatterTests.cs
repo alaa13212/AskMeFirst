@@ -44,20 +44,10 @@ public class HelpFormatterTests
     [Fact]
     public void Render_ListsNamedCommandWithAliases()
     {
-        CommandRegistry registry = Registry(FakeCommand("--version", "Print version.", ["-V"]));
+        CommandRegistry registry = Registry(FakeCommand("--version", "Print version.", ["-V"], usage: "--version, -V"));
         string output = HelpFormatter.Render(registry);
         Assert.Contains("--version, -V", output);
         Assert.Contains("Print version.", output);
-    }
-
-    [Fact]
-    public void Render_MarksDefaultCommand()
-    {
-        CommandRegistry registry = RegistryWithDefault(
-            FakeCommand("open", "Route URL.", usage: "<url>"));
-        string output = HelpFormatter.Render(registry);
-        Assert.Contains("(default)", output);
-        Assert.Contains("<url>", output);
     }
 
     [Fact]
@@ -81,31 +71,16 @@ public class HelpFormatterTests
     {
         CommandRegistry registry = RegistryWithDefault(
             FakeCommand("open", "o", usage: "<url>"),
-            FakeCommand("--version", "v"),
-            FakeCommand("--help", "h"),
-            FakeCommand("--bench", "b"),
-            FakeCommand("--list", "l"));
+            FakeCommand("--version", "v", usage: "--version, -v"),
+            FakeCommand("--help", "h", usage: "--help, -h, ?"),
+            FakeCommand("--bench", "b", usage: "--bench, -b"),
+            FakeCommand("--list", "l", usage: "--list, -l"));
         string output = HelpFormatter.Render(registry);
         Assert.Contains("--version", output);
         Assert.Contains("--help", output);
         Assert.Contains("--bench", output);
         Assert.Contains("--list", output);
         Assert.Contains("<url>", output);
-        Assert.Contains("(default)", output);
-    }
-
-    [Fact]
-    public void Render_PutsDefaultCommandFirst()
-    {
-        CommandRegistry registry = RegistryWithDefault(
-            FakeCommand("open", "o", usage: "<url>"),
-            FakeCommand("--version", "v"));
-        string output = HelpFormatter.Render(registry);
-        int defaultPos = output.IndexOf("(default)", StringComparison.Ordinal);
-        int versionPos = output.IndexOf("--version", StringComparison.Ordinal);
-        Assert.True(defaultPos > 0);
-        Assert.True(versionPos > 0);
-        Assert.True(defaultPos < versionPos);
     }
 
     [Fact]

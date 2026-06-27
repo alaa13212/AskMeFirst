@@ -1,5 +1,4 @@
 using AskMeFirst.Commands;
-using AskMeFirst.Core;
 using AskMeFirst.Core.Commands;
 
 namespace AskMeFirst;
@@ -47,22 +46,15 @@ internal static class Program
     private static CommandRegistry BuildRegistry()
     {
         return new CommandRegistry()
+            .RegisterDefault(new RouteCommand())
             .Register(new VersionCommand())
             .Register(new HelpCommand())
             .Register(new BenchCommand())
-            .Register(new ListCommand())
-            .RegisterDefault(new RouteCommand());
+            .Register(new ListCommand());
     }
 
     private static bool IsVerboseRequested(string[] args)
     {
-        foreach (string arg in args)
-        {
-            if (arg is "--verbose" or "-v")
-            {
-                return true;
-            }
-        }
-        return false;
+        return args.ContainsAny("--verbose", "-v");
     }
 }
