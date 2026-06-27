@@ -1,13 +1,36 @@
+using System.Text.RegularExpressions;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 using Microsoft.Win32;
 
 namespace AskMeFirst.Platforms.Windows;
 
-public sealed class WindowsBrowserInventory : IBrowserInventory
+public sealed partial class WindowsBrowserInventory : IBrowserInventory
 {
-    private const string START_MENU_INTERNET_KEY =
-        @"SOFTWARE\WOW6432Node\Clients\StartMenuInternet";
+    private const string StartMenuInternetKey = @"SOFTWARE\WOW6432Node\Clients\StartMenuInternet";
+
+    private static readonly Dictionary<string, string> IdOverrides =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["google chrome"] = "chrome",
+            ["firefox"] = "firefox",
+            ["mozilla firefox"] = "firefox",
+            ["microsoft edge"] = "edge",
+            ["brave browser"] = "brave",
+        };
+
+    private static readonly Dictionary<string, string> DisplayOverrides =
+        new(StringComparer.Ordinal)
+        {
+            ["Google Chrome"] = "Google Chrome",
+            ["Firefox"] = "Mozilla Firefox",
+            ["Mozilla Firefox"] = "Mozilla Firefox",
+            ["Microsoft Edge"] = "Microsoft Edge",
+            ["Brave Browser"] = "Brave",
+        };
+
+    private static readonly Regex FirefoxHashSuffix = FirefoxHashSuffixRegex();
 
     public IReadOnlyList<Browser> Discover()
     {
@@ -18,7 +41,7 @@ public sealed class WindowsBrowserInventory : IBrowserInventory
             return browsers;
         }
 
-        using RegistryKey? rootKey = Registry.LocalMachine.OpenSubKey(START_MENU_INTERNET_KEY);
+        using RegistryKey? rootKey = Registry.LocalMachine.OpenSubKey(StartMenuInternetKey);
         if (rootKey is null)
         {
             return browsers;
@@ -49,13 +72,9 @@ public sealed class WindowsBrowserInventory : IBrowserInventory
         }
 
         using RegistryKey? browserKey = Registry.LocalMachine.OpenSubKey(
-            $@"{START_MENU_INTERNET_KEY}\{registryName}\shell\open\command");
-        if (browserKey is null)
-        {
-            return null;
-        }
+            $@"{StartMenuInternetKey}\{registryName}\shell\open\command");
 
-        object? commandValue = browserKey.GetValue(null);
+        object? commandValue = browserKey?.GetValue(null);
         if (commandValue is not string rawCommand || string.IsNullOrWhiteSpace(rawCommand))
         {
             return null;
@@ -69,7 +88,14 @@ public sealed class WindowsBrowserInventory : IBrowserInventory
 
         string id = NormalizeId(registryName);
         string displayName = NormalizeDisplayName(registryName);
-        return new Browser(id, displayName, executable);
+        IBrowserLaunchStrategy launchStrategy = BrowserLaunchStrategies.For(id);
+        return new Browser
+        {
+            Id = id,
+            DisplayName = displayName,
+            ExecutablePath = executable,
+            LaunchStrategy = launchStrategy,
+        };
     }
 
     private static string ParseExecutable(string rawCommand)
@@ -86,30 +112,25 @@ public sealed class WindowsBrowserInventory : IBrowserInventory
 
     private static string NormalizeId(string registryName)
     {
-        string lowered = registryName.ToLowerInvariant();
-        return lowered switch
-        {
-            "google chrome" => "chrome",
-            "firefox" or "mozilla firefox" => "firefox",
-            "microsoft edge" => "edge",
-            "brave" or "brave browser" => "brave",
-            "opera" => "opera",
-            "vivaldi" => "vivaldi",
-            _ => lowered.Replace(' ', '-'),
-        };
+        string baseName = StripFirefoxHash(registryName);
+
+        return IdOverrides.TryGetValue(baseName, out string? mapped)
+            ? mapped
+            : baseName.ToLowerInvariant().Replace(' ', '-');
     }
 
     private static string NormalizeDisplayName(string registryName)
     {
-        return registryName switch
-        {
-            "Google Chrome" => "Google Chrome",
-            "Firefox" or "Mozilla Firefox" => "Mozilla Firefox",
-            "Microsoft Edge" => "Microsoft Edge",
-            "Brave" or "Brave Browser" => "Brave",
-            "Opera" => "Opera",
-            "Vivaldi" => "Vivaldi",
-            _ => registryName,
-        };
+        string baseName = StripFirefoxHash(registryName);
+
+        return DisplayOverrides.GetValueOrDefault(baseName, baseName);
     }
+
+    private static string StripFirefoxHash(string registryName)
+    {
+        return FirefoxHashSuffix.Replace(registryName, "");
+    }
+
+    [GeneratedRegex(@"-[\dA-F]{16}$", RegexOptions.IgnoreCase)]
+    private static partial Regex FirefoxHashSuffixRegex();
 }

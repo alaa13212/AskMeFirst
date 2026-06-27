@@ -11,9 +11,12 @@ public sealed class WindowsUrlLauncher : IUrlLauncher
         ProcessStartInfo psi = new()
         {
             FileName = browser.ExecutablePath,
-            Arguments = $"\"{url}\"",
             UseShellExecute = true,
         };
+        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile))
+        {
+            psi.ArgumentList.Add(arg);
+        }
         Process.Start(psi);
     }
 }

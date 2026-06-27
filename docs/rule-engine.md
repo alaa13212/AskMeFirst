@@ -23,48 +23,48 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
     // v1 always shows the picker in this case (catchall).
     // This field is reserved for Phase 7+ when we may support
     // a "default browser" fallback.
-    "default_browser": null,
+    "DefaultBrowserId": null,
 
     // Global toggles (overridable per-rule).
-    "strip_tracking": true,
-    "unshorten": false,
+    "StripTracking": true,
+    "Unshorten": false,
 
     // Browser inventory cache freshness.
-    "inventory_cache_hours": 24
+    "InventoryCacheTtl": 24
   },
 
   // Tracking parameters to strip. Appends to or replaces the built-in list.
-  "tracking_params_extra": [
+  "TrackingParamsExtra": [
     "si",                  // YouTube share id
     "feature",             // YouTube share feature
     "igshid"               // Instagram share id
   ],
-  "tracking_params_override": false,   // true = replace built-in entirely
+  "TrackingParamsOverride": false,   // true = replace built-in entirely
 
-  // Shortener domains that trigger the unshortener.
+  // Shortener domains that trigger the Unshortener.
   // Only relevant when picker is about to show.
-  "unshorten_domains_extra": [
+  "UnshortenDomainsExtra": [
     "myshortener.company.com"
   ],
-  "unshorten_domains_override": false, // true = replace built-in entirely
+  "Unshorten_domains_override": false, // true = replace built-in entirely
 
   // Browser / profile definitions. P2 = auto-discovered, this block overrides.
   "browsers": [
     {
       "id": "chrome-personal",
-      "display_name": "Chrome (Personal)",
+      "DisplayName": "Chrome (Personal)",
       "executable": "auto",
       "profile": "Default"
     },
     {
       "id": "chrome-work",
-      "display_name": "Chrome (Work)",
+      "DisplayName": "Chrome (Work)",
       "executable": "auto",
       "profile": "Profile 1"
     },
     {
       "id": "firefox-work",
-      "display_name": "Firefox (Work)",
+      "DisplayName": "Firefox (Work)",
       "executable": "/Applications/Firefox Work.app/Contents/MacOS/firefox",
       "profile": "work"
     }
@@ -76,8 +76,8 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
       "name": "Work links to Firefox Work profile",
       "priority": 100,
       "when": {
-        "process_in": ["slack", "outlook", "code", "teams"],
-        "url_matches_any": [
+        "ProcessIn": ["slack", "outlook", "code", "teams"],
+        "UrlMatchesAny": [
           "*.atlassian.net",
           "*.github.com",
           "*.slack.com"
@@ -85,16 +85,16 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
       },
       "then": {
         "browser": "firefox-work",
-        "focus_existing": true,
-        "strip_tracking": true,
-        "unshorten": false
+        "FocusExisting": true,
+        "StripTracking": true,
+        "Unshorten": false
       }
     },
     {
       "name": "YouTube always to personal Chrome",
       "priority": 80,
       "when": {
-        "url_matches_any": ["youtube.com", "youtu.be"]
+        "UrlMatchesAny": ["youtube.com", "youtu.be"]
       },
       "then": {
         "browser": "chrome-personal"
@@ -104,8 +104,8 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
       "name": "GitHub PRs to Chrome Work",
       "priority": 90,
       "when": {
-        "process_in": ["slack", "outlook"],
-        "url_regex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
+        "ProcessIn": ["slack", "outlook"],
+        "UrlRegex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
       },
       "then": {
         "browser": "chrome-work",
@@ -121,7 +121,7 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
 1. Sort rules by `priority` descending. Ties broken by array order (earlier wins).
 2. For each rule in order:
    - Evaluate all `when` predicates. All must match (logical AND).
-   - If any predicate references data we don't have (e.g. `process_in` requires the source process), the predicate is considered not matched → skip this rule.
+   - If any predicate references data we don't have (e.g. `ProcessIn` requires the source process), the predicate is considered not matched → skip this rule.
    - First rule with all predicates matching wins.
 3. Apply the rule's `then`. Missing fields fall back to `settings` defaults.
 4. If no rule matched → implicit catchall shows the picker.
@@ -132,14 +132,14 @@ All predicates are optional. Omitted = match anything.
 
 | Predicate | Matches when... | Example |
 |---|---|---|
-| `process_in: [list]` | source process name (canonical, case-insensitive) is in the list | `["slack", "outlook", "code"]` |
-| `url_matches_any: [globs]` | URL host+path matches any glob | `["*.github.com", "github.com"]` |
-| `url_matches_all: [globs]` | URL host+path matches every glob | `["https://*", "*.amazon.com/*"]` |
-| `url_regex: "..."` | URL matches a regex | `"^https://github\\.com/[^/]+/[^/]+/issues/\\d+"` |
-| `scheme_in: [list]` | URL scheme in list | `["https"]` |
-| `time_between: "HH:MM-HH:MM"` | current local time in range | `"09:00-18:00"` |
-| `weekday_in: [list]` | weekday in list | `["Mon", "Tue", "Wed", "Thu", "Fri"]` |
-| `browser_running: bool` | the *then* browser is currently running | `true` |
+| `ProcessIn: [list]` | source process name (canonical, case-insensitive) is in the list | `["slack", "outlook", "code"]` |
+| `UrlMatchesAny: [globs]` | URL host+path matches any glob | `["*.github.com", "github.com"]` |
+| `UrlMatchesAll: [globs]` | URL host+path matches every glob | `["https://*", "*.amazon.com/*"]` |
+| `UrlRegex: "..."` | URL matches a regex | `"^https://github\\.com/[^/]+/[^/]+/issues/\\d+"` |
+| `SchemeIn: [list]` | URL scheme in list | `["https"]` |
+| `TimeBetween: "HH:MM-HH:MM"` | current local time in range | `"09:00-18:00"` |
+| `WeekdayIn: [list]` | weekday in list | `["Mon", "Tue", "Wed", "Thu", "Fri"]` |
+| `BrowserRunning: bool` | the *then* browser is currently running | `true` |
 
 **Process name normalization** is OS-specific and happens in the platform layer. The rule author writes `slack` and the platform layer maps `Slack.exe` / `slack` / `com.tinyspeck.chatlyo` to `slack`. See [platform-integration.md](./platform-integration.md#source-app-detection-l1).
 
@@ -152,16 +152,16 @@ All actions are optional. Omitted = use sensible default.
 | Action | Effect | Default |
 |---|---|---|
 | `browser: <id>` | which browser to use (must exist in `browsers:`) | required |
-| `profile: <name>` | which browser profile | browser's `default_profile` |
-| `focus_existing: bool` | route to already-running instance | `true` |
-| `new_window: bool` | open new browser window vs new tab | `false` (new tab) |
+| `profile: <name>` | which browser profile | browser's `DefaultProfile` |
+| `FocusExisting: bool` | route to already-running instance | `true` |
+| `NewWindow: bool` | open new browser window vs new tab | `false` (new tab) |
 | `private: bool` | open in private/incognito | `false` |
-| `strip_tracking: bool` | override `settings.strip_tracking` | inherited |
-| `unshorten: bool` | override `settings.unshorten` | inherited |
+| `StripTracking: bool` | override `settings.StripTracking` | inherited |
+| `Unshorten: bool` | override `settings.Unshorten` | inherited |
 
 ## Built-in tracking parameter list
 
-These are always stripped when `strip_tracking: true`. User can extend via `tracking_params_extra` or replace via `tracking_params_override: true`.
+These are always stripped when `StripTracking: true`. User can extend via `TrackingParamsExtra` or replace via `TrackingParamsOverride: true`.
 
 ```
 utm_source, utm_medium, utm_campaign, utm_term, utm_content,
@@ -172,7 +172,7 @@ _ga, _gl, mc_eid, mc_cid, yclid, ref, ref_src
 
 ## Built-in shortener domain list
 
-Triggers the unshortener when picker would show AND URL matches. User can extend via `unshorten_domains_extra` or replace via `unshorten_domains_override: true`. See [link-processing.md](./link-processing.md#unshortener-triggering-rules).
+Triggers the Unshortener when picker would show AND URL matches. User can extend via `UnshortenDomainsExtra` or replace via `Unshorten_domains_override: true`. See [link-processing.md](./link-processing.md#Unshortener-triggering-rules).
 
 ```
 t.co, bit.ly, tinyurl.com, goo.gl, ow.ly, is.gd, buff.ly,
@@ -188,10 +188,10 @@ When the user picks a browser in the picker with a non-default remember option, 
 | Remember choice | Generated rule shape |
 |---|---|
 | `Just this once` | (no rule — transient decision) |
-| `Always company.atlassian.net` | `url_matches_any: ["company.atlassian.net"]` |
-| `Always *.atlassian.net` | `url_matches_any: ["*.atlassian.net"]` |
-| `Always Slack` | `process_in: ["slack"]` |
-| `Slack + company.atlassian.net` | `process_in: ["slack"], url_matches_any: ["company.atlassian.net"]` |
+| `Always company.atlassian.net` | `UrlMatchesAny: ["company.atlassian.net"]` |
+| `Always *.atlassian.net` | `UrlMatchesAny: ["*.atlassian.net"]` |
+| `Always Slack` | `ProcessIn: ["slack"]` |
+| `Slack + company.atlassian.net` | `ProcessIn: ["slack"], UrlMatchesAny: ["company.atlassian.net"]` |
 
 Generated rules get `priority: 50` (below user-written rules at 100+) and `origin: "remember"` for filtering in the management UI.
 
@@ -208,7 +208,7 @@ Config is validated at load. Errors include file path and a clear message:
 
 ```
 config.json:42 - unknown browser id 'firefox_wok' (typo?)
-config.json:58 - url_regex 'invalid[' has parse error: unterminated character class
+config.json:58 - UrlRegex 'invalid[' has parse error: unterminated character class
 ```
 
 On invalid config, router mode falls back to embedded defaults (still functional, just generic) and logs a warning. Picker mode shows a notification.

@@ -5,29 +5,27 @@ namespace AskMeFirst.Core.Config;
 
 public static class ConfigLoader
 {
-    private const string EMBEDDED_RESOURCE_NAME = "AskMeFirst.Core.Resources.DefaultConfig.jsonc";
+    private const string EmbeddedResourceName = "AskMeFirst.Core.Resources.DefaultConfig.jsonc";
 
-    public static Config LoadDefault()
+    public static AppConfig LoadDefault()
     {
         Assembly asm = typeof(ConfigLoader).Assembly;
-        using Stream? stream = asm.GetManifestResourceStream(EMBEDDED_RESOURCE_NAME)
+        using Stream stream = asm.GetManifestResourceStream(EmbeddedResourceName)
             ?? throw new InvalidOperationException(
-                $"Embedded resource '{EMBEDDED_RESOURCE_NAME}' not found. " +
+                $"Embedded resource '{EmbeddedResourceName}' not found. " +
                 $"Available: {string.Join(", ", asm.GetManifestResourceNames())}");
         return Parse(stream);
     }
 
-    public static Config LoadFromFile(string path)
+    public static AppConfig LoadFromFile(string path)
     {
         using FileStream fs = File.OpenRead(path);
         return Parse(fs);
     }
 
-    private static Config Parse(Stream stream)
+    private static AppConfig Parse(Stream stream)
     {
-        Config? config = JsonSerializer.Deserialize(
-            stream,
-            ConfigJsonContext.Default.Config);
+        AppConfig? config = JsonSerializer.Deserialize(stream, ConfigJsonContext.Default.AppConfig);
         return config ?? throw new InvalidOperationException("Config deserialized to null.");
     }
 }

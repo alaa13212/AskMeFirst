@@ -9,6 +9,7 @@ public static class WindowsBootstrap
     {
         IBrowserInventory inventory = new WindowsBrowserInventory();
         IUrlLauncher launcher = new WindowsUrlLauncher();
-        return new BootstrapContext(inventory, launcher, "windows");
+        IBrowserProfileDetector profiles = new WindowsBrowserProfileDetector();
+        return new BootstrapContext(inventory, launcher, profiles, "windows");
     }
 }

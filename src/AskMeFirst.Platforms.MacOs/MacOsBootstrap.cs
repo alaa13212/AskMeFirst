@@ -9,6 +9,7 @@ public static class MacOsBootstrap
     {
         IBrowserInventory inventory = new MacOsBrowserInventory();
         IUrlLauncher launcher = new MacOsUrlLauncher();
-        return new BootstrapContext(inventory, launcher, "macos");
+        IBrowserProfileDetector profiles = new MacOsBrowserProfileDetector();
+        return new BootstrapContext(inventory, launcher, profiles, "macos");
     }
 }

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using AskMeFirst;
 using Xunit;
 
 namespace AskMeFirst.Core.Tests;
@@ -20,7 +19,7 @@ public class CliTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains("askmefirst", stdout);
-        Assert.Contains("0.2.0", stdout);
+        Assert.Contains(ProgramInfo.Version, stdout);
     }
 
     [Fact]
