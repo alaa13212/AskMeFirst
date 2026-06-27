@@ -1,29 +1,28 @@
-# Handoff — 2026-06-27 (Phase 1 cleanup + profile detection)
+# Handoff — 2026-06-28
 
 > **First thing next session: read this file.**
 
 ## TL;DR
 
-Phases 0 and 1 complete. Phase 1 was extended with a round of polish from user feedback:
+Phases 0 and 1 complete. Phase 1 went through several rounds of polish and one structural refactor on top of the original MVP router:
 
-- `Program.cs` now dispatches via `ICommand` (one class per command, no central if/else).
-- Settings use `TimeSpan` instead of `*Hours` / `*Ms`.
-- JSON config dropped snake_case — PascalCase keys throughout (`DefaultBrowserId`, `StripTracking`, etc.).
-- All static `Regex` moved to `[GeneratedRegex]` source generators.
-- Windows + Linux `NormalizeId` use dictionary lookups, not chained `Contains` / `switch`.
-- **Firefox hash bug fixed**: `Firefox-308046B0AF4A39CB` (Mozilla's per-install hash) now resolves to plain `firefox` / `Mozilla Firefox`.
-- Profile detection shipped: `IBrowserProfileDetector` + `BrowserProfile`, Windows / Mac / Linux all implemented, `--profile <name>` flag wired end-to-end.
-- AOT binary grew 2.79 → 3.27 MB; cold start still 18–36 ms.
+- `ICommand` abstraction: each CLI verb is its own class implementing `ICommand`. `CommandRegistry` dispatches by name/alias, with explicit `RegisterDefault` for the dispatch fallback.
+- Per-command arg parsing: `CliArgsParser` and `CliArgs` are gone. Each command parses its own args. The dispatcher passes the full `userArgs` to every command.
+- Dynamic help: `HelpFormatter` reads from `CommandRegistry.All()` and renders column-aligned help with no hardcoded text.
+- Browser entity carries a launch strategy: `IBrowserLaunchStrategy` decides which CLI args to pass. Chromium uses `--profile-directory=<dir>`, Firefox uses `-P <name>`, default is url-only. The launcher is now ~10 lines — just spawn the process.
+- Profile detection: `IBrowserProfileDetector` + `BrowserProfile`. Windows/Mac/Linux all detect Chrome, Edge, Firefox, Brave, Chromium where applicable. `--profile <name>` flows end-to-end.
+- Cleanup: `Config` class renamed to `AppConfig` (namespace shadow). Settings use `TimeSpan`. JSON dropped snake_case → PascalCase. All static `Regex` are `[GeneratedRegex]`. Windows/Linux `NormalizeId` are dictionary lookups. Firefox registry hash suffix (`Firefox-308046B0AF4A39CB`) is stripped via regex.
+- `ICommand.IsDefault` is gone (bad practice — see "Decisions" below). The registry holds the default, not the command.
 
-**34/34 tests passing**, AOT builds for `win-x64` clean.
+**62/62 tests passing.** AOT binary **3.30 MB**, cold start **19–26 ms**.
 
 ## Where we are
 
 | Phase | Status | Notes |
 |---|---|---|
 | 0 — Bootstrap | ✅ Done | Build, test, AOT publish all working |
-| 1 — MVP router | ✅ Done + polished | ICommand, TimeSpan, PascalCase, GeneratedRegex, profile detection |
-| 2 — Rule engine | ⏭ Next | JSON config rules + predicates + actions |
+| 1 — MVP router | ✅ Done + polished | ICommand architecture, profile detection, browser-family launch strategies |
+| 2 — Rule engine | ⏭ Next | JSON config rules + predicates + actions + source-app detection |
 | 3 — Picker UI | 📋 Planned | Avalonia, two-panel layout |
 | 4 — OS integration | 📋 Planned | Win/Mac/Linux registration |
 | 5 — Link processing | 📋 Planned | Async Unshortener + tracking strip |
@@ -31,186 +30,152 @@ Phases 0 and 1 complete. Phase 1 was extended with a round of polish from user f
 
 Full plan: [`docs/roadmap.md`](./roadmap.md).
 
-## What was built
-
-### Project tree
+## Project tree
 
 ```
 src/
 ├── AskMeFirst.Core/                          ← pure BCL, no platform deps
 │   ├── AskMeFirst.Core.csproj
 │   ├── Models/
-│   │   ├── Browser.cs                        ← record(Id, DisplayName, ExecutablePath, Profile?)
-│   │   └── BrowserProfile.cs                 ← record(Name, DirectoryName, IsDefault)
+│   │   ├── Browser.cs                        ← Id, DisplayName, ExecutablePath, LaunchStrategy, Profile?
+│   │   └── BrowserProfile.cs                 ← Name, DirectoryName, IsDefault
 │   ├── Abstractions/
 │   │   ├── IBrowserInventory.cs
-│   │   ├── IBrowserProfileDetector.cs        ← NEW
+│   │   ├── IBrowserProfileDetector.cs
+│   │   ├── IBrowserLaunchStrategy.cs         ← BuildArguments(Uri, BrowserProfile?)
 │   │   ├── IUrlLauncher.cs
-│   │   └── ILogger.cs                        ← LogInfo/LogWarn/LogError
+│   │   └── ILogger.cs
 │   ├── Logging/ConsoleLogger.cs
-│   ├── Profiles/FirefoxProfilesParser.cs     ← NEW shared INI parser
+│   ├── Launch/                               ← browser-family arg strategies
+│   │   ├── ChromiumLaunchStrategy.cs         ← --profile-directory=<dir>
+│   │   ├── FirefoxLaunchStrategy.cs          ← -P <name>
+│   │   ├── DefaultLaunchStrategy.cs
+│   │   └── BrowserLaunchStrategies.cs        ← factory by browser id
+│   ├── Profiles/FirefoxProfilesParser.cs     ← shared profiles.ini parser
 │   ├── Config/
-│   │   ├── Config.cs                         ← Config record
+│   │   ├── AppConfig.cs                      ← (was Config.cs)
 │   │   ├── Settings.cs                       ← TimeSpan fields
 │   │   ├── BrowserSpec.cs
 │   │   ├── ConfigJsonContext.cs              ← PascalCase (no naming policy)
 │   │   └── ConfigLoader.cs
-│   ├── Commands/                             ← NEW
-│   │   ├── ICommand.cs                       ← Name / Aliases / Usage / Description / IsDefault / Execute
-│   │   ├── CommandRegistry.cs                ← name+alias → ICommand dispatch
-│   │   └── CommandNotFoundException.cs
-│   ├── Composition/BootstrapContext.cs       ← record(Inventory, Launcher, Profiles, PlatformName)
+│   ├── Commands/                             ← command infrastructure
+│   │   ├── ICommand.cs                       ← Name / Aliases / Usage / Description / Execute
+│   │   ├── CommandRegistry.cs                ← Register / RegisterDefault / Resolve / All
+│   │   ├── CommandNotFoundException.cs
+│   │   └── HelpFormatter.cs                  ← dynamic help from registry
+│   ├── Composition/BootstrapContext.cs
 │   ├── UrlRouter.cs                          ← honors Settings.DefaultBrowserId + profile resolution
-│   └── Resources/DefaultConfig.jsonc         ← PascalCase keys, TimeSpan strings
+│   └── Resources/DefaultConfig.jsonc         ← PascalCase keys, ISO-8601 TimeSpan
 │
 ├── AskMeFirst.Platforms.Windows/
 │   ├── WindowsBrowserInventory.cs            ← partial, dictionary-driven, Firefox hash strip
-│   ├── WindowsBrowserProfileDetector.cs      ← NEW (Chrome/Edge/Firefox)
-│   ├── WindowsUrlLauncher.cs                 ← --profile-directory= when Profile is set
+│   ├── WindowsBrowserProfileDetector.cs
+│   ├── WindowsUrlLauncher.cs                 ← ~10 lines; calls LaunchStrategy.BuildArguments
 │   └── WindowsBootstrap.cs
 │
 ├── AskMeFirst.Platforms.MacOs/
 │   ├── MacOsBrowserInventory.cs
-│   ├── MacOsBrowserProfileDetector.cs        ← NEW (Chrome/Edge/Firefox)
-│   ├── MacOsUrlLauncher.cs                   ← /usr/bin/open -a ... --args --profile-directory= <url>
+│   ├── MacOsBrowserProfileDetector.cs
+│   ├── MacOsUrlLauncher.cs                   ← /usr/bin/open -a ... --args <strategyArgs>
 │   └── MacOsBootstrap.cs
 │
 ├── AskMeFirst.Platforms.Linux/
 │   ├── LinuxBrowserInventory.cs              ← partial, dictionary + [GeneratedRegex]
-│   ├── LinuxBrowserProfileDetector.cs        ← NEW (Chromium + Firefox)
-│   ├── LinuxUrlLauncher.cs                   ← --profile-directory= when Profile is set
+│   ├── LinuxBrowserProfileDetector.cs
+│   ├── LinuxUrlLauncher.cs                   ← ~10 lines; calls LaunchStrategy.BuildArguments
 │   └── LinuxBootstrap.cs
 │
 └── AskMeFirst/                               ← thin CLI host
     ├── ProgramInfo.cs                        ← Version + ExecutableName (one place)
-    ├── Program.cs                            ← tiny dispatcher over ICommand
-    ├── Composition.cs                        ← Bootstrap() builds logger/inventory/launcher/profiles/config
-    ├── CliArgs.cs                            ← record(Url, BrowserId, ProfileName, Verbose)
-    ├── CliArgsException.cs
-    ├── CliArgsParser.cs                      ← <url> + --browser + --profile + --verbose
+    ├── Program.cs                            ← tiny dispatcher (~70 lines)
+    ├── Composition.cs                        ← Bootstrap(verbose, registry) builds CommandContext
+    ├── CliArgsException.cs                   ← thrown by command parsers
     └── Commands/
         ├── VersionCommand.cs
-        ├── HelpCommand.cs
+        ├── HelpCommand.cs                    ← HelpFormatter.Render(ctx.Registry)
         ├── BenchCommand.cs
         ├── ListCommand.cs                    ← shows profiles per browser
-        └── RouteCommand.cs                   ← IsDefault = true, parses CliArgs, runs UrlRouter
+        ├── RouteCommand.cs                   ← default; RouteArgs, ParseArgs
+        └── RouteArgs.cs                      ← (Url, BrowserId?, ProfileName?, Verbose)
 
 tests/
 └── AskMeFirst.Core.Tests/
-    ├── Fakes.cs                              ← + FakeProfileDetector
-    ├── UrlRouterTests.cs                     ← 12 tests (added profile matching, default-config)
+    ├── Fakes.cs                              ← TestBrowser.Make + FakeInventory/Launcher/Logger/ProfileDetector
+    ├── UrlRouterTests.cs                     ← 12 tests
     ├── ConfigLoaderTests.cs                  ← 2 tests
-    ├── CliArgsParserTests.cs                 ← 12 tests (added --profile)
-    └── CliTests.cs                           ← 8 tests
+    ├── RouteCommandTests.cs                  ← 9 tests (replaces CliArgsParserTests)
+    ├── HelpFormatterTests.cs                 ← 8 tests (incl. RegisterDefault_Twice_Throws)
+    ├── LaunchStrategyTests.cs                ← 17 tests (per-strategy + factory)
+    └── CliTests.cs                           ← 8 tests (--version, --help, --bench, --list, errors)
 ```
 
-## What changed in this session
+## Architecture highlights
 
-### 1. `ICommand` abstraction
-
-`Program.Main` went from a 110-line if/else chain to a 30-line dispatcher. Each command is its own class implementing `ICommand`:
+### Command pattern — `ICommand` + `CommandRegistry`
 
 ```csharp
 public interface ICommand
 {
     string Name { get; }
     IReadOnlyList<string> Aliases => [];
-    bool IsDefault => false;
     string Usage => Name;
     string Description => "";
     int Execute(string[] args, CommandContext ctx);
 }
+
+public sealed class CommandRegistry
+{
+    public CommandRegistry Register(ICommand command);
+    public CommandRegistry RegisterDefault(ICommand command);  // throws on double-default
+    public ICommand Resolve(string? firstArg);
+    public IReadOnlyList<ICommand> All();
+}
 ```
 
-`CommandRegistry` resolves by name or alias, falls back to the `IsDefault` command (the `RouteCommand`). Adding `--install`, `--uninstall`, `askmefirst config` later is now a single new file under `Commands/`.
+Each command parses its own args. The dispatcher (`Program.Main`) probes only `--verbose`/`-v` globally (needed for logger setup), then passes the full `userArgs` to the matched command.
 
-### 2. `TimeSpan` for durations
-
-`Settings.InventoryCacheHours` (int) and `Settings.UnshortenTimeoutMs` (int) are gone. Now:
+### Per-browser launch strategy
 
 ```csharp
-public TimeSpan InventoryCacheTtl { get; init; } = TimeSpan.FromHours(24);
-public TimeSpan UnshortenTimeout { get; init; } = TimeSpan.FromMilliseconds(1000);
+public interface IBrowserLaunchStrategy
+{
+    string[] BuildArguments(Uri url, BrowserProfile? profile);
+}
+
+public sealed record Browser
+{
+    public required string Id { get; init; }
+    public required string DisplayName { get; init; }
+    public required string ExecutablePath { get; init; }
+    public IBrowserLaunchStrategy LaunchStrategy { get; init; } = DefaultLaunchStrategy.Instance;
+    public BrowserProfile? Profile { get; init; }
+}
 ```
 
-JSON serialization uses ISO-8601 duration format automatically (`"1.00:00:00"`, `"00:00:01"`).
+- **Chromium** (Chrome/Edge/Brave/Opera/Vivaldi/Arc): `--profile-directory=<dir>`
+- **Firefox**: `-P <name>` (uses profile **Name**, not directory path)
+- **Default** (unknown / no profile support): url only
 
-### 3. PascalCase JSON
+Inventories assign the right strategy when constructing the `Browser`. Launchers just spawn the process with the strategy's args.
 
-`ConfigJsonContext` no longer applies `JsonKnownNamingPolicy.SnakeCaseLower`. Default = no policy = JSON keys match C# property names. `PropertyNameCaseInsensitive = true` is kept so both casings work, but the canonical form is now PascalCase.
+### Profile detection
 
-Updated files: `DefaultConfig.jsonc`, `samples/askmefirst.example.json`, and all doc examples in `rule-engine.md`, `link-processing.md`, `architecture.md`, `roadmap.md`.
+`IBrowserProfileDetector.Detect(browserId) -> IReadOnlyList<BrowserProfile>`:
 
-### 4. `[GeneratedRegex]` everywhere
+| Browser  | Windows                                                  | Mac                                                  | Linux                                              |
+|----------|----------------------------------------------------------|------------------------------------------------------|----------------------------------------------------|
+| Chrome   | `%LOCALAPPDATA%\Google\Chrome\User Data\*`               | `~/Library/Application Support/Google/Chrome/*`      | `~/.config/google-chrome/*`                        |
+| Edge     | `%LOCALAPPDATA%\Microsoft\Edge\User Data\*`              | `~/Library/Application Support/Microsoft Edge/*`     | `~/.config/microsoft-edge/*`                       |
+| Brave    | (registry; same as Chrome path layout)                   | (Mac finds `.app`)                                   | `~/.config/BraveSoftware/Brave-Browser/*`          |
+| Chromium | —                                                        | —                                                    | `~/.config/chromium/*`                             |
+| Firefox  | `%APPDATA%\Mozilla\Firefox\profiles.ini`                 | `~/Library/Application Support/Firefox/profiles.ini` | `~/.mozilla/firefox/profiles.ini`                  |
 
-`LinuxBrowserInventory` and `FirefoxProfilesParser` no longer allocate `Regex` instances at runtime. Each static regex is a partial method with the source generator. Same for the new Windows Firefox hash-suffix regex.
+Firefox INI parsing is shared via `FirefoxProfilesParser` in `Core/Profiles/`.
 
-### 5. Dictionary-based normalization
-
-`LinuxBrowserInventory.NormalizeId` now checks a `Dictionary<string, string>` keyed on the `.desktop` file's stem (`google-chrome`, `firefox-esr`, `microsoft-edge`, `vivaldi-stable`, etc.). Falls back to display-name substring matching only if the dict misses.
-
-`WindowsBrowserInventory.NormalizeId` and `NormalizeDisplayName` use two dictionaries. Both first run `StripFirefoxHash` to strip Mozilla's `-HHHHHHHHHHHHHHHH` suffix from the registry key name, so `Firefox-308046B0AF4A39CB` becomes plain `Firefox`.
-
-### 6. Profile detection
-
-`IBrowserProfileDetector.Detect(browserId) -> IReadOnlyList<BrowserProfile>`.
-
-| Browser  | Windows                                                  | Mac                                                       | Linux                                              |
-|----------|----------------------------------------------------------|-----------------------------------------------------------|----------------------------------------------------|
-| Chrome   | `%LOCALAPPDATA%\Google\Chrome\User Data\*` (Default, Profile N dirs) | `~/Library/Application Support/Google/Chrome/*`           | `~/.config/google-chrome/*`                        |
-| Edge     | `%LOCALAPPDATA%\Microsoft\Edge\User Data\*`              | `~/Library/Application Support/Microsoft Edge/*`          | `~/.config/microsoft-edge/*`                        |
-| Brave    | (same as Chrome registry key, different root)            | (same as Chrome, different root)                          | `~/.config/BraveSoftware/Brave-Browser/*`          |
-| Chromium | —                                                        | —                                                         | `~/.config/chromium/*`                             |
-| Firefox  | `%APPDATA%\Mozilla\Firefox\profiles.ini`                 | `~/Library/Application Support/Firefox/profiles.ini`      | `~/.mozilla/firefox/profiles.ini`                  |
-
-Firefox parsing is a shared `FirefoxProfilesParser` in `Core/Profiles/` so all three platforms use the same INI logic.
-
-`UrlRouter.ResolveProfile` takes a browser + optional profile name and returns a `Browser` with the resolved `Profile` set:
-- no `--profile` → default profile, falling back to first discovered
-- `--profile X` → exact match on name or directory, warn-and-fallback if not found
-- no profiles detected → pass through unchanged (allows non-profile browsers)
-
-### 7. `--profile` end-to-end
-
-`askmefirst <url> --browser chrome --profile "Profile 7"` works. The Windows launcher passes `--profile-directory=Profile 7` to chrome.exe. The Mac launcher uses `/usr/bin/open -a ... --args --profile-directory=Profile 7`. Linux passes the same `--profile-directory=` flag directly.
-
-### 8. Firefox `Mozilla-308046B0AF4A39CB` — was it just your machine?
-
-No, it's universal. Mozilla uses a per-install hash suffix on the `Clients\StartMenuInternet` registry key for Firefox to avoid collisions across reinstalls and per-user installs. Same behavior on retail machines. The fix is regex-driven and now covered by tests.
-
-## What's verified locally
-
-- ✅ `dotnet build` — clean, 0 warnings, 0 errors (6 source projects + 1 test project)
-- ✅ `dotnet test` — **34/34** passing in ~0.7 s
-- ✅ `dotnet publish -p:PublishProfile=Aot -r win-x64` — produces `askmefirst.exe` **3.27 MB**
-- ✅ Cold start: **18.4–36.4 ms** across 10 runs (Phase 1 baseline was 16–39 ms)
-- ✅ `--list` discovers 3 real browsers, all with profiles:
-  ```
-  firefox      Mozilla Firefox          C:\Program Files\Mozilla Firefox\firefox.exe
-      * Profiles/vc4ak1jq.Barrak-... Barrak
-        Profiles/0m6kw70o.Work        Work
-  chrome       Google Chrome            C:\...\chrome.exe
-        Profile 6 / Profile 7 / Profile 8
-  edge         Microsoft Edge           C:\...\msedge.exe
-      * Default / Default
-  ```
-- ✅ `askmefirst https://example.com --browser chrome --profile "Profile 7" --verbose` logs `[profile: Profile 7]` and opens Chrome with the right profile
-- ✅ Unknown `--profile "nope"` logs a warn, falls back to default profile (Profile 6 in user's setup)
-- ✅ Unknown `--browser` returns exit code 3 with the discovered list
-- ✅ `--no-such-flag` returns exit code 1 with usage hint
-
-## Style rules (READ THESE — non-obvious)
-
-User-level preferences, also in `~/.mavis/memory/user.md`:
-
-> **Comments describe WHAT, never WHY/HOW.** No plan-phase references, no requirement-doc references, no decision-history, no trivial info. Comment on symbols (classes / methods), not on instructions inside methods. Default to no comment.
-
-Also enforced in `.editorconfig`:
-
-> **NEVER use `var`** — always use explicit types.
-> **Prefer braces** even on single-line `if` statements.
-
-**One type per file** — split classes/records into their own `.cs` when adding to existing files.
+`UrlRouter.ResolveProfile`:
+- no `--profile` → default profile (or first discovered if no default marker)
+- `--profile X` → exact match on Name or DirectoryName
+- profile not found → warn and fall back to default
 
 ## Decisions recap (point to `docs/decisions-log.md` for full detail)
 
@@ -219,7 +184,7 @@ Also enforced in `.editorconfig`:
 | 1 | Project name: AskMeFirst |
 | 2-3 | C# + .NET 10 LTS + Native AOT |
 | 4 | No daemon for v1 |
-| 5 | Config: JSON (comment-tolerant parser, PascalCase) |
+| 5 | Config: JSON (comment-tolerant, PascalCase, ISO-8601 durations) |
 | 6 | No app tags |
 | 7 | No cross-OS config sync |
 | 8 | Rich rule schema (no `tag_in`) |
@@ -227,36 +192,92 @@ Also enforced in `.editorconfig`:
 | 10 | P2 browser profiles (auto-discovered) |
 | 11 | Picker philosophy A — rules-first fallback |
 | 12 | DI: hand-rolled composition root |
-| 13-15 | OS registration: StartMenuInternet / .app / xdg-mime (all with one-time user prompt) |
+| 13-15 | OS registration: StartMenuInternet / .app / xdg-mime |
 | 16 | Picker UI: centered modal, single screen |
 | 17 | Unshortener: picker-only + known shortener + async |
 | 18-19 | Built-in default lists + user extensions |
 | 20-21 | "Just this once" = forever; Esc = nothing opens |
 | 22-25 | MIT, no telemetry, unsigned macOS, manual download |
 
-## Bugs caught & fixed during this session
+### Decisions added this session
 
-1. **`UrlRouter` warning CS9113 (unread `config`)** — promoted to error by the build config. Fixed by making `Route` actually consult `config.Settings.DefaultBrowserId` when no `--browser` arg is passed. Added a test (`Route_ConfiguredDefaultBrowser_UsedWhenNoBrowserArg`).
-2. **Firefox `Mozilla-308046B0AF4A39CB` hash** — root-cause: Mozilla writes a per-install hash to the StartMenuInternet registry key. Fixed by a `[GeneratedRegex]` that strips `-HHHHHHHHHHHHHHHH` suffix before lookup. Result: `firefox` / `Mozilla Firefox`.
-3. **`Config` namespace shadow** — `AskMeFirst.Core.Config` (namespace) clashed with the `Config` property in `CommandContext`. Same shadow showed up in `UrlRouter` and tests. Fixed with `using AskMeConfig = AskMeFirst.Core.Config.Config;` alias.
+| # | Pick | Why |
+|---|---|---|
+| 26 | `ICommand` per-command parsing; no central parser | Single-responsibility — each command knows its own grammar. Removes the implicit coupling between RouteCommand and the rest of the CLI. |
+| 27 | `RegisterDefault` separate from `Register` | A boolean `IsDefault` flag on the command type lets two commands both claim default → invalid state. `RegisterDefault` enforces single-default. |
+| 28 | Dispatcher passes full `userArgs`; no slicing | Uniform command contract. Each command decides what to do with `args[0]`. |
+| 29 | `IBrowserLaunchStrategy` per browser family | Different browsers use different profile flags (`--profile-directory=` vs `-P <name>`). The browser entity owns this; the platform launcher stays thin. |
+| 30 | `Browser.Profile` typed as `BrowserProfile?` | Strategies need both `Name` and `DirectoryName`. A bare string loses the distinction. |
+| 31 | `HelpFormatter` in Core (not CLI project) | Reusable from any future host (GUI, daemon). Tests can exercise it without the CLI project. |
+| 32 | `Config` class renamed to `AppConfig` | The class lived in `AskMeFirst.Core.Config` namespace — every usage needed `using AskMeConfig = ...Config;` alias to avoid the shadow. Renaming the class removes the alias workaround. |
+| 33 | JSON config drops snake_case → PascalCase | No naming policy on the source generator. JSON keys = C# property names verbatim. `PropertyNameCaseInsensitive` retained so both casings parse. |
+| 34 | Static `Regex` → `[GeneratedRegex]` partials | AOT-compatible (no runtime allocation), faster first match. All 7 regex across 3 files converted. |
+| 35 | `NormalizeId` uses dictionary lookup, not chained `switch` / `Contains` | Easier to extend, less code, no chain fall-through bugs. |
+
+## What's verified locally
+
+- ✅ `dotnet build` — clean, 0 warnings, 0 errors (6 source projects + 1 test project)
+- ✅ `dotnet test` — **62/62** passing in ~0.7 s
+- ✅ `dotnet publish -p:PublishProfile=Aot -r win-x64` — produces `askmefirst.exe` **3.30 MB**
+- ✅ Cold start: **19–26 ms** across 10 runs (Phase 1 baseline was 16–39 ms)
+- ✅ `--list` discovers 3 real browsers with profiles:
+  ```
+  firefox      Mozilla Firefox          C:\Program Files\Mozilla Firefox\firefox.exe
+      * Profiles/vc4ak1jq.Barrak-1706255686136 Barrak
+        Profiles/0m6kw70o.Work Work
+  chrome       Google Chrome            C:\...\chrome.exe
+        Profile 6 / Profile 7 / Profile 8
+  edge         Microsoft Edge           C:\...\msedge.exe
+      * Default / Default
+  ```
+- ✅ `askmefirst https://example.com --browser chrome --profile "Profile 7" --verbose` → `chrome.exe --profile-directory=Profile 7 <url>` + `[profile: Profile 7]` log
+- ✅ `askmefirst https://example.com --browser firefox --profile "Work"` → `firefox.exe -P Work <url>`
+- ✅ Unknown `--profile "nope"` → warn + fall back to default profile
+- ✅ Unknown `--browser "lynx"` → exit 3 with discovered list
+- ✅ `--not-a-real-flag` → exit 1 with "Unknown flag" error (caught by RouteCommand)
+- ✅ No-args → prints help to stderr and exits 1
+- ✅ `--help` is dynamically generated from the registry
+
+## Style rules (READ THESE — non-obvious)
+
+User-level preferences, also in `~/.mavis/memory/user.md`:
+
+> **Comments describe WHAT, never WHY/HOW.** No plan-phase references, no requirement-doc references, no decision-history, no trivial info. Comment on symbols (classes / methods), not on instructions inside methods. Default to no comment.
+
+> **NEVER use `var`** — always use explicit types (`csharp_style_var_elsewhere = false:error`).
+
+> **Prefer braces** even on single-line `if` statements.
+
+> **One type per file** — split classes/records into their own `.cs` when adding to existing files.
+
+> **No `IsDefault` (or similar) flags on interface types.** Use explicit registry methods (e.g. `RegisterDefault`) to enforce single-default invariants at the call site, not by inspection.
+
+When you edit any file, prune comments that violate these.
+
+## Bugs caught during this session
+
+1. **`UrlRouter` warning CS9113 (unread `config`)** — promoted to error. Fixed by making `Route` actually consult `appConfig.Settings.DefaultBrowserId` when no `--browser` arg is passed. Added test `Route_ConfiguredDefaultBrowser_UsedWhenNoBrowserArg`.
+2. **Firefox `Mozilla-308046B0AF4A39CB` hash** — Mozilla writes a per-install hash to `HKLM\..\Clients\StartMenuInternet\Firefox-<hash>`. **Not just your setup** — universal. Fixed by a `[GeneratedRegex]` that strips `-HHHHHHHHHHHHHHHH` suffix before lookup.
+3. **`Config` namespace shadow** — `AskMeFirst.Core.Config` (namespace) shadowed the `Config` class. Resolved by renaming the class to `AppConfig` (eliminating the `AskMeConfig = ...` alias).
 4. **`WindowsBrowserInventory` missing `partial`** — adding `[GeneratedRegex]` requires the class to be partial. Fixed.
-5. **CA1859 on profile detectors** — the build flagged `IReadOnlyList<BrowserProfile>` return types on private helpers that internally build a `List<...>`. Changed to `List<BrowserProfile>` (the public surface stays `IReadOnlyList<...>` via the interface).
-6. **Regex anchored `^...$`** — initial Firefox-hash regex matched the whole registry name and stripped it to empty. Loosened to `-[\dA-F]{16}$` so only the suffix is stripped.
-7. **`[info] platform: ...` printing on every command** — `Composition.Bootstrap` was writing platform info unconditionally. Moved the log into `RouteCommand.Execute` so `--version` / `--help` / `--list` stay clean.
+5. **CA1859 on profile detectors** — `IReadOnlyList<...>` return types on private helpers internally build `List<...>`. Changed to `List<...>` (public surface stays `IReadOnlyList<...>` via interface).
+6. **Firefox hash regex anchored `^...$`** — initial regex matched the whole registry name and stripped it to empty. Loosened to `-[\dA-F]{16}$` so only the suffix is stripped.
+7. **`[info] platform: ...` printing on every command** — `Composition.Bootstrap` was writing platform info unconditionally. Moved into `RouteCommand.Execute` so `--version` / `--help` / `--list` stay clean.
+8. **`CommandRegistry.Register` lost auto-detect for `IsDefault`** — during refactor. `_default` stayed null → every unknown arg threw `CommandNotFoundException` instead of falling through to RouteCommand. Restored, then later removed entirely in favor of explicit `RegisterDefault`.
 
 ## Next session — Phase 2 (Rule engine + source detection)
 
-**Goal**: JSON config with priority-sorted rules, predicates (`ProcessIn`, `UrlMatchesAny`, `UrlRegex`, `TimeBetween`, `WeekdayIn`), actions (`browser`, `FocusExisting`, `StripTracking`); plus source-app detection per platform (parent process / NSWorkspace / /proc).
+**Goal**: JSON config with priority-sorted rules, predicates (`ProcessIn`, `UrlMatchesAny`, `UrlRegex`, `TimeBetween`, `WeekdayIn`), actions (`Browser`, `Profile`, `FocusExisting`, `StripTracking`); plus source-app detection per platform (parent process / NSWorkspace / /proc).
 
 **Tasks**:
 1. Promote embedded `DefaultConfig.jsonc` to user-overridable `~/.config/askmefirst/config.json` (XDG-aware lookup).
 2. `RuleEngine`: parse rule list, evaluate top-priority-match, fall back to `Settings.DefaultBrowserId`.
 3. `PredicateEvaluator`: pure-logic dispatch on predicate type → bool.
-4. `ISourceAppDetector` per platform (Windows: WMI/parent PID via P/Invoke; macOS: NSWorkspace; Linux: /proc/<pid>/comm of parent).
-5. Compose `RuleRouter` wrapping the existing `UrlRouter`.
+4. `ISourceAppDetector` per platform (Windows: WMI/parent PID via P/Invoke; macOS: NSWorkspace; Linux: `/proc/<pid>/comm` of parent).
+5. Compose `RuleRouter` wrapping the existing `UrlRouter`. The URL command's `Execute` becomes: `RuleRouter.Evaluate(url, sourceApp) → Browser`.
 6. CLI: `askmefirst <url>` (no `--browser`) now consults rules + source app.
 7. Update `samples/askmefirst.example.json` to drive integration tests.
-8. Consider adding `--install` / `--uninstall` commands (new `ICommand` files — trivial now).
+8. Consider `--install` / `--uninstall` commands (new `ICommand` files — trivial now).
 
 **Exit criteria**: a config with 10 rules routes correctly via unit tests + manual checks on each OS. Predicates all composable.
 
@@ -265,12 +286,13 @@ Also enforced in `.editorconfig`:
 - C# or Kotlin background — comfortable with both
 - Cares about "understanding all the code" — no magic, no heavy frameworks
 - Working style: detailed Q&A interview per design decision, one question at a time
-- Code-style rules (comment / var / braces / one-class-per-file) apply project-wide
+- Code-style rules (comment / var / braces / one-class-per-file / no-interface-flags) apply project-wide
+- Session preference: don't commit until asked. Review-friendly single big commit was OK for this handoff, but multi-commit logical groups are also welcome.
 
 ## How to pick up
 
 1. Read this file (`docs/HANDOFF.md`)
-2. Skim `docs/decisions-log.md` for context on locked choices
+2. Skim `docs/decisions-log.md` for context on locked choices (now 35 decisions)
 3. Glance at `docs/roadmap.md` for the phase plan
 4. Look at the comment rules in memory (`mavis memory show`)
 5. Continue with Phase 2 from "Tasks" above
