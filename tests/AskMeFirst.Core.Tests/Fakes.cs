@@ -1,6 +1,8 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Core.Tests;
 
@@ -59,4 +61,46 @@ internal sealed class FakeProfileDetector : IBrowserProfileDetector
             ? list
             : [];
     }
+}
+
+internal sealed class FakeSourceAppDetector : ISourceAppDetector
+{
+    public SourceApp? Value { get; set; }
+
+    public SourceApp? Detect() => Value;
+}
+
+internal sealed class FixedTimeProvider : TimeProvider
+{
+    private readonly DateTimeOffset now;
+
+    public FixedTimeProvider(DateTimeOffset now)
+    {
+        this.now = now;
+    }
+
+    public override DateTimeOffset GetUtcNow() => now;
+}
+
+internal static class TestConfig
+{
+    public static AppConfig WithRules(params Rule[] rules)
+    {
+        return new AppConfig
+        {
+            Settings = new Settings { DefaultBrowserId = "system" },
+            Rules = rules,
+        };
+    }
+}
+
+internal static class TestEvaluator
+{
+    public static PredicateEvaluator Default() => new(RoutingDefaults.Matchers());
+}
+
+internal static class TestResolvers
+{
+    public static IReadOnlyList<ITargetResolver> For(AppConfig appConfig, PredicateEvaluator evaluator) =>
+        RoutingDefaults.Resolvers(appConfig, evaluator);
 }

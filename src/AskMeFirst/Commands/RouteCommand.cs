@@ -1,4 +1,3 @@
-using AskMeFirst.Core;
 using AskMeFirst.Core.Commands;
 
 namespace AskMeFirst.Commands;
@@ -6,27 +5,21 @@ namespace AskMeFirst.Commands;
 public sealed class RouteCommand : ICommand
 {
     public string Name => "open";
-    public string Usage => "<url> [--browser <id>] [--profile <name>] [--verbose]";
+    public string Usage => "<url> [--browser <id>] [--profile <profileId>] [--verbose]";
     public string Description => "Route a URL to the chosen browser.";
 
     public int Execute(string[] args, CommandContext ctx)
     {
         RouteArgs parsed = ParseArgs(args);
         Console.Error.WriteLine($"[info] platform: {ctx.PlatformName}");
-        UrlRouter router = new(
-            ctx.Inventory,
-            ctx.Launcher,
-            ctx.Profiles,
-            ctx.Logger,
-            ctx.AppConfig);
-        return router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileName);
+        return ctx.Router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId);
     }
 
     public static RouteArgs ParseArgs(string[] args)
     {
         string? url = null;
         string? browserId = null;
-        string? profileName = null;
+        string? profileId = null;
         bool verbose = false;
 
         for (int i = 0; i < args.Length; i++)
@@ -46,7 +39,7 @@ public sealed class RouteCommand : ICommand
                     {
                         throw new CliArgsException("--profile requires a value.");
                     }
-                    profileName = args[++i];
+                    profileId = args[++i];
                     break;
                 case "--verbose" or "-v":
                     verbose = true;
@@ -72,6 +65,6 @@ public sealed class RouteCommand : ICommand
             throw new CliArgsException($"Not a valid http(s) URL: {url}");
         }
 
-        return new RouteArgs(parsed, browserId, profileName, verbose);
+        return new RouteArgs(parsed, browserId, profileId, verbose);
     }
 }

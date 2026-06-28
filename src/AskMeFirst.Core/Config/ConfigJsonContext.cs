@@ -10,4 +10,8 @@ namespace AskMeFirst.Core.Config;
 [JsonSerializable(typeof(AppConfig))]
 [JsonSerializable(typeof(Settings))]
 [JsonSerializable(typeof(BrowserSpec))]
+[JsonSerializable(typeof(ProfileSpec))]
+[JsonSerializable(typeof(Rule))]
+[JsonSerializable(typeof(RuleWhen))]
+[JsonSerializable(typeof(RuleThen))]
 internal partial class ConfigJsonContext : JsonSerializerContext;

@@ -1,9 +1,11 @@
 using System.Runtime.InteropServices;
+using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Logging;
+using AskMeFirst.Core.Routing;
 using AskMeFirst.Platforms.Linux;
 using AskMeFirst.Platforms.MacOs;
 using AskMeFirst.Platforms.Windows;
@@ -16,11 +18,43 @@ internal static class Composition
     {
         BootstrapContext ctx = SelectPlatform();
 
-        ILogger logger = new ConsoleLogger(verbose);
-        AppConfig appConfig = ConfigLoader.LoadDefault();
+        ConsoleLogger logger = new(verbose);
+        string configPath = ctx.ConfigPath.DefaultConfigPath;
+        AppConfig appConfig = ConfigLoader.LoadOrDefault(configPath);
+        logger.LogInfo($"config: {configPath} ({appConfig.Rules.Count} rules, {(File.Exists(configPath) ? "user" : "embedded")})");
+
+        if (!ConfigValidator.Validate(appConfig, logger))
+        {
+            logger.LogWarn("Falling back to embedded default config due to validation errors.");
+            appConfig = ConfigLoader.LoadDefault();
+        }
+
+        PredicateEvaluator evaluator = new(RoutingDefaults.Matchers());
+        IReadOnlyList<ITargetResolver> resolvers = RoutingDefaults.Resolvers(appConfig, evaluator);
+        ProfileResolver profileResolver = new(ctx.Profiles, appConfig.Profiles, logger);
+        TrackingStripper stripper = new(appConfig);
+        IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
+        RuleRouter router = new(
+            resolvers,
+            executor,
+            ctx.SourceApp,
+            ctx.Launcher,
+            logger,
+            TimeProvider.System);
 
         return new CommandContext(
-            logger, ctx.Inventory, ctx.Launcher, ctx.Profiles, appConfig, ctx.PlatformName, registry);
+            logger,
+            ctx.Inventory,
+            ctx.Launcher,
+            ctx.Profiles,
+            ctx.SourceApp,
+            ctx.ProcessNameNormalizer,
+            ctx.ConfigPath,
+            appConfig,
+            TimeProvider.System,
+            ctx.PlatformName,
+            registry,
+            router);
     }
 
     public static IBrowserInventory BuildInventory()

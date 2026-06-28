@@ -38,7 +38,7 @@ public class RouteCommandTests
 
         Assert.Equal(new Uri(expectedUrl), parsed.Url);
         Assert.Equal(expectedBrowser, parsed.BrowserId);
-        Assert.Equal(expectedProfile, parsed.ProfileName);
+        Assert.Equal(expectedProfile, parsed.ProfileId);
         Assert.Equal(expectedVerbose, parsed.Verbose);
     }
 
@@ -52,8 +52,8 @@ public class RouteCommandTests
     [Fact]
     public void ParseArgs_ProfileShortFlag_Works()
     {
-        RouteArgs parsed = RouteCommand.ParseArgs(["https://example.com", "-p", "Work"]);
-        Assert.Equal("Work", parsed.ProfileName);
+        RouteArgs parsed = RouteCommand.ParseArgs(["https://example.com", "-p", "firefox-work-profile"]);
+        Assert.Equal("firefox-work-profile", parsed.ProfileId);
     }
 
     [Fact]
