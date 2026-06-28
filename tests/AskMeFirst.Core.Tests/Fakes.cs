@@ -104,3 +104,14 @@ internal static class TestResolvers
     public static IReadOnlyList<ITargetResolver> For(AppConfig appConfig, PredicateEvaluator evaluator) =>
         RoutingDefaults.Resolvers(appConfig, evaluator);
 }
+
+internal sealed class RecordingPickerLauncher : IPickerLauncher
+{
+    public List<PickerRequest> Requests { get; } = [];
+
+    public PickerResult Show(PickerRequest request)
+    {
+        Requests.Add(request);
+        return new Cancelled();
+    }
+}

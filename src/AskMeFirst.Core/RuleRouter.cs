@@ -1,4 +1,5 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Core;
@@ -7,6 +8,8 @@ public sealed class RuleRouter(
     IReadOnlyList<ITargetResolver> resolvers,
     IRoutingExecutor executor,
     ISourceAppDetector sourceAppDetector,
+    IPickerLauncher pickerLauncher,
+    bool usePickerAsCatchAll,
     IUrlLauncher launcher,
     ILogger logger,
     TimeProvider timeProvider)
@@ -35,8 +38,14 @@ public sealed class RuleRouter(
                 break;
             }
         }
+
         if (intent is null)
         {
+            if (usePickerAsCatchAll)
+            {
+                PickerRequest request = BuildPickerRequest(ctx, url, sourceApp?.ProcessName);
+                return HandlePicker(request, url);
+            }
             logger.LogError(
                 "No rule matched and no default browser configured. " +
                 "Set Settings.DefaultBrowserId or add a rule.");
@@ -52,6 +61,7 @@ public sealed class RuleRouter(
         {
             Success success => LogAndLaunch(success, url),
             Failure failure => LogAndReturnFailure(failure),
+            ShowPicker showPicker => HandlePicker(showPicker.Request, url),
             _ => throw new InvalidOperationException($"Unknown outcome: {outcome.GetType().Name}"),
         };
 
@@ -71,5 +81,43 @@ public sealed class RuleRouter(
     {
         logger.LogError(failure.Message);
         return (int)failure.Code;
+    }
+
+    private PickerRequest BuildPickerRequest(RoutingContext ctx, Uri url, string? sourceApp)
+    {
+        IReadOnlyList<Browser> browsers = executor.ListAvailableBrowsers();
+        IReadOnlyList<PickerBrowserOption> options = browsers
+            .Select(b => new PickerBrowserOption(b, b.Profile))
+            .ToList();
+        return new PickerRequest(
+            OriginalUrl: url,
+            SourceApp: sourceApp,
+            UnshortenTask: null,
+            AvailableBrowsers: options);
+    }
+
+    private int HandlePicker(PickerRequest request, Uri url)
+    {
+        PickerResult result = pickerLauncher.Show(request);
+        return result switch
+        {
+            Cancelled => LogCancel(url),
+            Launched launched => LogAndLaunchResult(launched, url),
+            _ => throw new InvalidOperationException($"Unknown picker result: {result.GetType().Name}"),
+        };
+    }
+
+    private int LogCancel(Uri url)
+    {
+        logger.LogInfo($"User cancelled picker for {url}. URL dropped.");
+        return (int)RoutingExitCode.Success;
+    }
+
+    private int LogAndLaunchResult(Launched launched, Uri url)
+    {
+        string profileSuffix = launched.Browser.Profile is null ? "" : $" [profile: {launched.Browser.Profile.Name}]";
+        logger.LogInfo($"Picker chose {launched.Browser.DisplayName} ({launched.Browser.ExecutablePath}){profileSuffix} for {url}");
+        launcher.Launch(launched.Browser, launched.Url);
+        return (int)RoutingExitCode.Success;
     }
 }

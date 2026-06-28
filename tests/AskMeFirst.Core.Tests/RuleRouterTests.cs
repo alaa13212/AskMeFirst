@@ -24,10 +24,13 @@ public class RuleRouterTests
         ProfileResolver profileResolver = new(profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(inv, profileResolver, stripper, appConfig);
+        IPickerLauncher pickerLauncher = new RecordingPickerLauncher();
         return new RuleRouter(
             resolvers,
             executor,
             sourceApp,
+            pickerLauncher,
+            usePickerAsCatchAll: false,
             launcher,
             logger,
             new FixedTimeProvider(now ?? Monday10amUtc));

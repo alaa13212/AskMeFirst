@@ -5,6 +5,10 @@ All design decisions made during planning, with rationale. New contributors shou
 **Session date**: 2026-06-26
 **Status**: Planning closed. Phase 0 (bootstrap) starting.
 
+Phase 2 update (2026-06-28): decisions 45–54 added during Phase 2 code-quality pass. See [`docs/architecture.md`](./architecture.md) and the cumulative count below.
+
+Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`docs/phase-3-design.md`](./phase-3-design.md).
+
 ---
 
 ## 1. Project name: AskMeFirst
@@ -158,6 +162,137 @@ All design decisions made during planning, with rationale. New contributors shou
 
 ---
 
+## Phase 2 decisions (added 2026-06-28)
+
+## 45. Predicate evaluation: Strategy pattern (`IPredicateMatcher` per field)
+
+**Rationale**: Phase 2's `PredicateEvaluator.Matches` had a 237-line if-chain over 8 predicate fields. Strategy pattern lets each field own its match logic. Adding a predicate = one new class + register in `RoutingDefaults.Matchers()`. No edit to `PredicateEvaluator`.
+
+## 46. Rule routing: Strategy + Pipeline + Result type mix
+
+**Rationale**: `RuleRouter` had grown 9 dependencies and mixed responsibilities. Split into:
+- `ITargetResolver` strategy per selection mode (Explicit / Rule / Fallback)
+- `IRoutingExecutor` extracted as separate component
+- `RoutingOutcome` as discriminated union (Success / Failure)
+- `RoutingIntent` carries per-resolver metadata
+
+## 47. `RoutingIntent` carries `NotFoundExitCode` + `NotFoundMessagePrefix`
+
+**Rationale**: `IntentSource` enum inside `ResolveOutcome` leaked chain knowledge into the executor. Replaced with intent metadata that the executor reads opaquely — resolvers self-describe "if my target browser is missing, here's the exit code + message prefix."
+
+## 48. `RoutingOutcome` as discriminated union
+
+**Rationale**: Scattered `return 4` / `return 5` / `return 0` made routing exit codes hard to track. Abstract record + `Success` / `Failure` sealed records force callers to switch on outcome kind.
+
+## 49. `IRoutingExecutor` extracted as a separate component
+
+**Rationale**: Owns the lookup → profile → strip pipeline. `RuleRouter` no longer knows about inventory or stripper; one fewer responsibility per component.
+
+## 50. `RoutingExitCode` enum replaces magic ints
+
+**Rationale**: 0/2/3/4/5 scattered across routing logic was unreadable. Named members (`Success`, `NoBrowsersDiscovered`, `BrowserNotFound`, `RuleBrowserNotFound`, `NoRouteFound`) make switch statements self-documenting.
+
+## 51. `ProfileSpec` (config) and `BrowserProfile` (runtime) are distinct types
+
+**Rationale**: Config-side spec is the user's stable identity; runtime-side profile is what the platform layer discovered. Conflating them muddled ownership. Two types, clean mapping.
+
+## 52. Top-level `profiles:` section + `then.profileId` (stable ID)
+
+**Rationale**: Old `then.profile` matched on string (name/directory) — fragile. New `ProfileSpec.Id` is the stable handle. Rules reference profiles by ID, not by display string.
+
+## 53. `ConfigValidator` runs at load time
+
+**Rationale**: Unique IDs and reference resolution are best checked once at load. On any validation error → fall back to embedded defaults + log all errors. Keeps runtime routing logic trusting validated input.
+
+## 54. Profile mismatch is soft-fail; browser mismatch is hard-fail
+
+**Rationale**: A rule pointing at a missing profile should warn + fall back to default profile (user might have renamed it). A rule pointing at a missing browser should hard-fail with distinct exit code (user intent is unambiguous).
+
+---
+
+## Phase 3 decisions (added 2026-06-28)
+
+## 55. Picker integration: new `ShowPicker(PickerRequest)` outcome variant
+
+**Rationale**: The picker is a third routing outcome (gates on user input, doesn't launch anything), not a routing intent. Putting it in `RoutingOutcome` admits that to the type system — symmetric with the existing `Success`/`Failure` split. Resolvers stay focused on routing intent; the router handles the picker at the outcome-switch level.
+
+**Alternative rejected**: `PickerFallbackResolver` returning a sentinel `__picker__` `RoutingIntent`. Rejected because the executor would have to special-case the sentinel — same kind of chain-knowledge leak that Phase 2 decision #47 just removed.
+
+## 56. Single binary, in-process Avalonia, deferred init on `pick` command
+
+**Rationale**: Phase 9 distribution story (winget / brew / apt) requires a single binary. Splitting CLI and picker into two artifacts breaks that. Avalonia is statically linked but only initialized when the `pick` command fires — CLI cold-start (~46ms) is unchanged.
+
+**Implementation**: `Program.cs` dispatches: `pick` → builds Avalonia app, blocks on window close; everything else → today's CLI path, Avalonia untouched.
+
+## 57. Five remember radios per existing `rule-engine.md` table
+
+**Rationale**: Already documented in [`docs/rule-engine.md`](./rule-engine.md#rule-generation-from-picker-remember). Picker implements the documented schema; no new design needed. Radios are dynamic (3, 4, or 5 visible depending on whether source-app detection succeeded and whether URL has a host).
+
+## 58. Forget mechanism deferred to Phase 7+ management UI
+
+**Rationale**: The picker only fires on unruled URLs. Once a rule exists, the picker vanishes for that URL. v1 has no in-app path to "I changed my mind about a rule" — user must edit JSON. Phase 7+ management UI provides proper rule editing. Adding a half-baked forget CLI command now is scope creep.
+
+## 59. MVVM with CommunityToolkit.Mvvm (UI surfaces use standard toolkits)
+
+**Rationale**: Hot-path CLI uses minimalism (no DI framework, no CommunityToolkit.Mvvm). UI surfaces (picker, future management UI) use the standard MVVM toolkit — speed is no longer relevant because user latency dwarfs startup cost. Code structure matters more once a user is in front of the screen.
+
+**Cross-cutting principle**: "Hot-path CLI ≠ UI surface." CLI = no deps, hand-rolled composition. UI = standard toolkits, idiomatic patterns.
+
+## 60. State machine: flat `PickerStatus` enum + `[ObservableProperty]` + raw `Task`
+
+**Rationale**: ~5 transitions in one method (Loading → Resolving → Ready → Committing → Done). GoF state pattern earns its keep when state objects have entry/exit behavior. Here the only behavior is "set property," which `[ObservableProperty]` does for free. State pattern would be over-engineering.
+
+## 61. Unshortener cancellation on commit via `CancellationToken`
+
+**Rationale**: The unshortener Task starts before the picker shows and races against user input. If user commits before it resolves, cancel the Task — don't leave it running in the background. User choice stands regardless of resolution state (per architecture.md).
+
+## 62. Config write off-thread; UI closes immediately on commit
+
+**Rationale**: JSON write is ~ms but on slow disks or contention it could block. User shouldn't wait for the picker to write to disk. Close UI immediately, fire config write in background. Browser launch is sync (parent blocks until browser process starts).
+
+## 63. Silent fallback to original URL on unshortener failure
+
+**Rationale**: Network errors, DNS failures, redirect loops — picker shouldn't expose plumbing. On any unshortener exception or timeout, fall back to the original URL silently. User makes the decision based on the URL they clicked.
+
+## 64. Window position: source-app-center where easy, else active-monitor center
+
+**Rationale**: "Ask me first" needs visibility. Best position is over the source app (user just clicked a link there). Fall back to active-monitor center when source-app-window detection is hard (Linux DE-dependent, no portable API).
+
+**Implementation**:
+- Windows: `GetWindowRect` on parent PID (easy — we already have parent PID from source-app detection).
+- macOS: `CGWindowListCopyWindowInfo` with source app's PID (easy).
+- Linux: fall back to active-monitor center. Per-DE source-window detection is unmaintainable.
+
+## 65. Window modeless + always-on-top (not modal)
+
+**Rationale**: Modal blocks the user from the very thing they're routing to (e.g., they can't see the Slack link they're trying to remember context for). Modeless + always-on-top lets them glance at the source app, return, and pick. Visibility comes from always-on-top, not modal blocking.
+
+## 66. X / Esc / Cancel all → `PickerResult.Cancelled`
+
+**Rationale**: Single semantic for "user wants out." Reinforces existing decision #21: "Esc and closing the window cancel — no browser opens, URL is dropped."
+
+## 67. Standard Windows keyboard navigation
+
+**Rationale**: Tab cycles controls, arrows cycle within current group, 1-9 hotkeys for top 9 browser buttons, Enter on focused control commits, Esc cancels. Zero learning curve — every Windows dialog works this way.
+
+**Why not vim-style**: Single-screen picker doesn't warrant dual-mode complexity. Power users can still drive everything via Tab + arrows.
+
+## 68. Initial focus on first browser button; "Just this once" preselected
+
+**Rationale**: Default Enter = safe ignore-flow (one action: launch first browser with no rule written). Matches the existing decision #20: "Just this once" is the default remember semantic.
+
+## 69. `ProfileSpec.Pinned: bool` (default false)
+
+**Rationale**: Sidesteps the 1-9 hotkey limit cleanly. Users with >9 (browser, profile) tuples pin their favorites; picker shows pinned-only. Phase 7+ management UI provides pin/unpin surface.
+
+**Default behavior**: if no profiles are pinned, picker shows ALL profiles (sensible first-time-user default). Users opt into pinning via management UI.
+
+## 70. Post-commit browser-launch failure → OS notification (not silent, not picker re-show)
+
+**Rationale**: User clicked a link and made a decision. Silent failure is a UX hole. Re-showing the picker disrespects the user's commit. System-default-browser fallback surprises the user (they explicitly picked X, not default). OS notification is modern, non-intrusive, and informative ("Couldn't open Chrome. URL is in usage log so you can re-click.")
+
+---
+
 ## Summary table
 
 | # | Decision | Pick |
@@ -187,3 +322,29 @@ All design decisions made during planning, with rationale. New contributors shou
 | 23 | Telemetry | None |
 | 24 | macOS signing | Unsigned |
 | 25 | Update mechanism | Manual for v1; winget/brew/apt in Phase 9 |
+| 45 | Predicate evaluation | Strategy pattern (`IPredicateMatcher` per field) |
+| 46 | Rule routing | Strategy + Pipeline + Result type mix |
+| 47 | RoutingIntent metadata | `NotFoundExitCode` + `NotFoundMessagePrefix` (no enum leak) |
+| 48 | RoutingOutcome | Discriminated union (abstract record + Success/Failure) |
+| 49 | RoutingExecutor | Extracted as `IRoutingExecutor` separate component |
+| 50 | RoutingExitCode | Enum replaces magic ints |
+| 51 | ProfileSpec vs BrowserProfile | Distinct types (config-side vs runtime-side) |
+| 52 | Profile reference | Top-level `profiles:` section + `then.profileId` (stable ID) |
+| 53 | ConfigValidator | Runs at load time; fall back to defaults on error |
+| 54 | Profile mismatch | Soft-fail (warn + default); browser mismatch hard-fail |
+| 55 | Picker integration | `ShowPicker(PickerRequest)` outcome variant |
+| 56 | Packaging | Single binary, in-process Avalonia, deferred init |
+| 57 | Remember radios | 5 per `rule-engine.md` (dynamic count 3/4/5) |
+| 58 | Forget mechanism | Deferred to Phase 7+ management UI |
+| 59 | Picker MVVM | CommunityToolkit.Mvvm (UI surfaces = standard toolkits) |
+| 60 | State machine | Flat enum + `[ObservableProperty]` + raw `Task` |
+| 61 | Unshortener cancellation | `CancellationToken` cancel on commit |
+| 62 | Config write timing | Off-thread; UI closes immediately |
+| 63 | Unshortener error | Silent fallback to original URL |
+| 64 | Window position | Source-app-center where easy, else active-monitor center |
+| 65 | Window modal-ness | Modeless + always-on-top |
+| 66 | Cancel semantics | X / Esc / Cancel all → `PickerResult.Cancelled` |
+| 67 | Keyboard nav | Standard Windows (Tab, arrows, 1-9, Enter, Esc) |
+| 68 | Initial focus | First browser button; "Just this once" preselected |
+| 69 | ProfileSpec.Pinned | `bool` (default false); picker filters to pinned |
+| 70 | Post-commit failure | OS notification (not silent, not picker re-show) |

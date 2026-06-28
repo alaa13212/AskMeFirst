@@ -11,4 +11,6 @@ public sealed record ProfileSpec
     public string? Directory { get; init; }
 
     public string? DisplayName { get; init; }
+
+    public bool Pinned { get; init; }
 }

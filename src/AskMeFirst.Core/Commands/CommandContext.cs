@@ -15,4 +15,5 @@ public sealed record CommandContext(
     AppConfig AppConfig,
     TimeProvider TimeProvider,
     string PlatformName,
-    CommandRegistry Registry);
+    CommandRegistry Registry,
+    RuleRouter Router);

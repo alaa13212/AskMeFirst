@@ -34,10 +34,13 @@ internal static class Composition
         ProfileResolver profileResolver = new(ctx.Profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
+        IPickerLauncher pickerLauncher = new NoOpPickerLauncher(logger);
         RuleRouter router = new(
             resolvers,
             executor,
             ctx.SourceApp,
+            pickerLauncher,
+            usePickerAsCatchAll: false,
             ctx.Launcher,
             logger,
             TimeProvider.System);
