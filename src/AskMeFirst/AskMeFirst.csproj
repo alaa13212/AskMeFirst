@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AskMeFirst.Core\AskMeFirst.Core.csproj" />
+    <ProjectReference Include="..\AskMeFirst.Picker\AskMeFirst.Picker.csproj" />
     <ProjectReference Include="..\AskMeFirst.Platforms.Windows\AskMeFirst.Platforms.Windows.csproj" />
     <ProjectReference Include="..\AskMeFirst.Platforms.MacOs\AskMeFirst.Platforms.MacOs.csproj" />
     <ProjectReference Include="..\AskMeFirst.Platforms.Linux\AskMeFirst.Platforms.Linux.csproj" />

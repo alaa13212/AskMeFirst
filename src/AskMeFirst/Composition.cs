@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using AskMeFirst.Commands;
 using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
@@ -35,6 +36,7 @@ internal static class Composition
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
         IPickerLauncher pickerLauncher = new NoOpPickerLauncher(logger);
+        AskMeFirst.Picker.Services.AvaloniaPickerLauncher realPickerLauncher = new(logger);
         RuleRouter router = new(
             resolvers,
             executor,
@@ -44,6 +46,9 @@ internal static class Composition
             ctx.Launcher,
             logger,
             TimeProvider.System);
+
+        AskMeFirst.Picker.Services.AvaloniaPickerLauncher realPicker = new(logger);
+        registry.Register(new PickCommand(realPicker, ctx.SourceApp, ctx.Inventory, logger));
 
         return new CommandContext(
             logger,

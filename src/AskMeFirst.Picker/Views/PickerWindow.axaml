@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AskMeFirst.Picker.ViewModels"
+        x:Class="AskMeFirst.Picker.PickerWindow"
+        x:DataType="vm:PickerWindowViewModel"
+        Title="AskMeFirst — pick a browser"
+        Topmost="True"
+        CanResize="False"
+        ShowInTaskbar="True">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+    </Window.KeyBindings>
+
+    <Grid Margin="16" RowDefinitions="Auto,*,Auto">
+
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
+            <TextBlock Text="{Binding SourceAppLabel}"
+                       FontSize="12"
+                       Foreground="Gray"
+                       IsVisible="{Binding SourceAppLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding DisplayUrl}"
+                       FontSize="14"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="Resolving..."
+                       FontSize="11"
+                       Foreground="Gray"
+                       IsVisible="{Binding IsResolving}" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,16,*">
+
+            <Border Grid.Column="0"
+                    BorderBrush="LightGray"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Open with"
+                               FontWeight="Bold"
+                               Margin="0,0,0,8" />
+                    <ListBox ItemsSource="{Binding BrowserOptions}"
+                             SelectedIndex="{Binding SelectedBrowserIndex}"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:BrowserOptionViewModel">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding HotkeyLabel}"
+                                               Width="20"
+                                               FontWeight="Bold"
+                                               Foreground="DarkSlateGray"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayLabel}"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="2"
+                    BorderBrush="LightGray"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Remember"
+                               FontWeight="Bold"
+                               Margin="0,0,0,8" />
+                    <ListBox ItemsSource="{Binding RememberOptions}"
+                             SelectedIndex="{Binding SelectedRememberIndex}"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:RememberOptionViewModel">
+                                <StackPanel Opacity="{Binding ItemOpacity}">
+                                    <TextBlock Text="{Binding Label}" />
+                                    <TextBlock Text="{Binding UnavailableReason}"
+                                               FontSize="10"
+                                               Foreground="Gray"
+                                               IsVisible="{Binding IsReasonVisible}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+        </Grid>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,12,0,0">
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}" />
+            <Button Content="Open"
+                    Command="{Binding CommitCommand}"
+                    IsDefault="True" />
+        </StackPanel>
+
+    </Grid>
+</Window>
