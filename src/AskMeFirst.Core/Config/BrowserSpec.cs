@@ -8,5 +8,5 @@ public sealed record BrowserSpec
 
     public string Executable { get; init; } = "auto";
 
-    public string? Profile { get; init; }
+    public string? ProfileId { get; init; }
 }

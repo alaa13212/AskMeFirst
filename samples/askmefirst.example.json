@@ -1,5 +1,6 @@
 {
-  "_comment": "Example AskMeFirst config. Copy to the OS-standard location (see platform-integration.md) and edit.",
+  "_comment": "Example AskMeFirst config. Copy to the OS-standard location (see docs/platform-integration.md) and edit.",
+
   "Settings": {
     "DefaultBrowserId": null,
     "StripTracking": true,
@@ -18,39 +19,39 @@
   "UnshortenDomainsExtra": [],
   "UnshortenDomainsOverride": false,
 
+  "Profiles": [
+    { "Id": "chrome-personal-profile", "BrowserId": "chrome-personal", "Directory": "Default", "DisplayName": "Personal" },
+    { "Id": "chrome-work-profile",    "BrowserId": "chrome-work",    "Directory": "Profile 1", "DisplayName": "Work" },
+    { "Id": "firefox-personal-profile", "BrowserId": "firefox-personal", "Name": "default-release", "DisplayName": "Default" },
+    { "Id": "firefox-work-profile",   "BrowserId": "firefox-work",   "Name": "work", "DisplayName": "Work" }
+  ],
+
   "Browsers": [
-    {
-      "Id": "chrome-personal",
-      "DisplayName": "Chrome (Personal)",
-      "Executable": "auto",
-      "Profile": "Default"
-    },
-    {
-      "Id": "chrome-work",
-      "DisplayName": "Chrome (Work)",
-      "Executable": "auto",
-      "Profile": "Profile 1"
-    },
-    {
-      "Id": "firefox-personal",
-      "DisplayName": "Firefox",
-      "Executable": "auto",
-      "Profile": "default-release"
-    },
-    {
-      "Id": "firefox-work",
-      "DisplayName": "Firefox (Work)",
-      "Executable": "auto",
-      "Profile": "work"
-    }
+    { "Id": "chrome-personal", "DisplayName": "Chrome (Personal)", "Executable": "auto", "ProfileId": "chrome-personal-profile" },
+    { "Id": "chrome-work",    "DisplayName": "Chrome (Work)",    "Executable": "auto", "ProfileId": "chrome-work-profile" },
+    { "Id": "firefox-personal", "DisplayName": "Firefox",       "Executable": "auto", "ProfileId": "firefox-personal-profile" },
+    { "Id": "firefox-work",   "DisplayName": "Firefox (Work)",  "Executable": "auto", "ProfileId": "firefox-work-profile" }
   ],
 
   "Rules": [
     {
-      "Name": "Work links to Firefox Work",
-      "Priority": 100,
+      "Name": "GitHub PRs from work apps go to Chrome Work",
+      "Priority": 250,
       "When": {
-        "ProcessIn": ["slack", "outlook", "code", "teams"],
+        "ProcessIn": ["slack", "outlook"],
+        "UrlRegex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
+      },
+      "Then": {
+        "Browser": "chrome-work",
+        "ProfileId": "chrome-work-profile",
+        "StripTracking": true
+      }
+    },
+    {
+      "Name": "Work apps to Firefox Work profile",
+      "Priority": 200,
+      "When": {
+        "ProcessIn": ["slack", "outlook", "teams"],
         "UrlMatchesAny": [
           "*.atlassian.net",
           "*.github.com",
@@ -59,24 +60,14 @@
       },
       "Then": {
         "Browser": "firefox-work",
+        "ProfileId": "firefox-work-profile",
         "FocusExisting": true,
         "StripTracking": true
       }
     },
     {
-      "Name": "GitHub PRs from work apps go to Chrome Work",
-      "Priority": 90,
-      "When": {
-        "ProcessIn": ["slack", "outlook"],
-        "UrlRegex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
-      },
-      "Then": {
-        "Browser": "chrome-work"
-      }
-    },
-    {
       "Name": "YouTube always personal",
-      "Priority": 80,
+      "Priority": 180,
       "When": {
         "UrlMatchesAny": ["youtube.com", "youtu.be"]
       },
@@ -85,12 +76,71 @@
       }
     },
     {
-      "Name": "Work hours, weekday, anything not matched — Chrome Work",
-      "Priority": 10,
+      "Name": "Weekend: always personal Chrome",
+      "Priority": 100,
+      "When": {
+        "WeekdayIn": ["Sat", "Sun"]
+      },
+      "Then": {
+        "Browser": "chrome-personal"
+      }
+    },
+    {
+      "Name": "Work hours, weekday: default to Chrome Work",
+      "Priority": 50,
       "When": {
         "TimeBetween": "09:00-18:00",
         "WeekdayIn": ["Mon", "Tue", "Wed", "Thu", "Fri"]
       },
+      "Then": {
+        "Browser": "chrome-work"
+      }
+    },
+    {
+      "Name": "HTTPS only: Chrome Work",
+      "Priority": 40,
+      "When": {
+        "SchemeIn": ["https"]
+      },
+      "Then": {
+        "Browser": "chrome-work"
+      }
+    },
+    {
+      "Name": "HTTP only: Chrome personal",
+      "Priority": 35,
+      "When": {
+        "SchemeIn": ["http"]
+      },
+      "Then": {
+        "Browser": "chrome-personal"
+      }
+    },
+    {
+      "Name": "Amazon product pages go to Chrome personal",
+      "Priority": 30,
+      "When": {
+        "UrlMatchesAll": ["*.amazon.com", "*.amazon.com/dp/*"]
+      },
+      "Then": {
+        "Browser": "chrome-personal"
+      }
+    },
+    {
+      "Name": "Workday evening: prefer personal Chrome",
+      "Priority": 20,
+      "When": {
+        "TimeBetween": "18:00-23:59",
+        "WeekdayIn": ["Mon", "Tue", "Wed", "Thu", "Fri"]
+      },
+      "Then": {
+        "Browser": "chrome-personal"
+      }
+    },
+    {
+      "Name": "Catchall: any URL not matched",
+      "Priority": 0,
+      "When": {},
       "Then": {
         "Browser": "chrome-work"
       }

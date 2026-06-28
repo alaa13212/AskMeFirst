@@ -1,5 +1,7 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Composition;
+using AskMeFirst.Core.Config;
+using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.Linux;
 
@@ -10,6 +12,9 @@ public static class LinuxBootstrap
         IBrowserInventory inventory = new LinuxBrowserInventory();
         IUrlLauncher launcher = new LinuxUrlLauncher();
         IBrowserProfileDetector profiles = new LinuxBrowserProfileDetector();
-        return new BootstrapContext(inventory, launcher, profiles, "linux");
+        IProcessNameNormalizer normalizer = new LinuxProcessNameNormalizer();
+        ISourceAppDetector sourceApp = new LinuxSourceAppDetector(normalizer);
+        IConfigPathResolver configPath = new LinuxConfigPathResolver();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, "linux");
     }
 }

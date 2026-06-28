@@ -23,6 +23,15 @@ public static class ConfigLoader
         return Parse(fs);
     }
 
+    public static AppConfig LoadOrDefault(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            return LoadDefault();
+        }
+        return LoadFromFile(path);
+    }
+
     private static AppConfig Parse(Stream stream)
     {
         AppConfig? config = JsonSerializer.Deserialize(stream, ConfigJsonContext.Default.AppConfig);
