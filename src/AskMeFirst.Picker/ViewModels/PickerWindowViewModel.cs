@@ -73,6 +73,8 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
 
     public PickerResult Result => _result;
 
+    public bool IsSourceAppLabelVisible => !string.IsNullOrEmpty(SourceAppLabel);
+
     [RelayCommand]
     private void Commit()
     {

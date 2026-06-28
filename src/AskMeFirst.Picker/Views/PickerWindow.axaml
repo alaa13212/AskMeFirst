@@ -4,14 +4,10 @@
         x:Class="AskMeFirst.Picker.PickerWindow"
         x:DataType="vm:PickerWindowViewModel"
         x:CompileBindings="True"
-        Title="AskMeFirst — pick a browser"
+        Title="AskMeFirst pick a browser"
         Topmost="True"
         CanResize="False"
         ShowInTaskbar="True">
-
-    <Window.KeyBindings>
-        <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
-    </Window.KeyBindings>
 
     <Grid Margin="16" RowDefinitions="Auto,*,Auto">
 
@@ -19,7 +15,7 @@
             <TextBlock Text="{Binding SourceAppLabel}"
                        FontSize="12"
                        Foreground="Gray"
-                       IsVisible="{Binding SourceAppLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                       IsVisible="{Binding IsSourceAppLabelVisible}" />
             <TextBlock Text="{Binding DisplayUrl}"
                        FontSize="14"
                        TextWrapping="Wrap" />
@@ -45,7 +41,9 @@
                              SelectedIndex="{Binding SelectedBrowserIndex}"
                              Background="Transparent">
                         <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:BrowserOptionViewModel">
+                            <DataTemplate DataType="vm:BrowserOptionViewModel"
+                                          x:DataType="vm:BrowserOptionViewModel"
+                                          x:CompileBindings="True">
                                 <Grid ColumnDefinitions="Auto,*">
                                     <TextBlock Grid.Column="0"
                                                Text="{Binding HotkeyLabel}"
@@ -77,7 +75,9 @@
                              SelectedIndex="{Binding SelectedRememberIndex}"
                              Background="Transparent">
                         <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:RememberOptionViewModel">
+                            <DataTemplate DataType="vm:RememberOptionViewModel"
+                                          x:DataType="vm:RememberOptionViewModel"
+                                          x:CompileBindings="True">
                                 <StackPanel Opacity="{Binding ItemOpacity}">
                                     <TextBlock Text="{Binding Label}" />
                                     <TextBlock Text="{Binding UnavailableReason}"

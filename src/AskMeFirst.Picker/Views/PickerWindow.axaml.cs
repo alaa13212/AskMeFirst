@@ -1,5 +1,6 @@
 using AskMeFirst.Picker.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Input;
 
 namespace AskMeFirst.Picker;
 
@@ -7,16 +8,23 @@ public sealed partial class PickerWindow : Window
 {
     public PickerWindow()
     {
-        InitializeComponent();
+        Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
+        KeyDown += OnKeyDown;
     }
 
-    public PickerWindow(PickerWindowViewModel viewModel) : this()
+    public PickerWindow(PickerWindowViewModel viewModel)
     {
         DataContext = viewModel;
+        Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
+        KeyDown += OnKeyDown;
     }
 
-    private void InitializeComponent()
+    private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
+        if (e.Key == Key.Escape && DataContext is PickerWindowViewModel vm)
+        {
+            vm.CancelCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 }

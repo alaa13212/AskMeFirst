@@ -42,7 +42,7 @@ internal static class Composition
             executor,
             ctx.SourceApp,
             pickerLauncher,
-            usePickerAsCatchAll: false,
+            usePickerAsCatchAll: true,
             ctx.Launcher,
             logger,
             TimeProvider.System);
