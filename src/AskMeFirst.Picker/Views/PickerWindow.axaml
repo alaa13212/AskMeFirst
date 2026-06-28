@@ -3,6 +3,7 @@
         xmlns:vm="using:AskMeFirst.Picker.ViewModels"
         x:Class="AskMeFirst.Picker.PickerWindow"
         x:DataType="vm:PickerWindowViewModel"
+        x:CompileBindings="True"
         Title="AskMeFirst — pick a browser"
         Topmost="True"
         CanResize="False"
