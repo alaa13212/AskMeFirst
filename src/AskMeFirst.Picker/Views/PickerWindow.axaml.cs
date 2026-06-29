@@ -9,6 +9,9 @@ namespace AskMeFirst.Picker;
 
 public sealed partial class PickerWindow : Window
 {
+    private int _browserCursor;
+    private int _rememberCursor;
+
     public PickerWindow()
     {
         Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
@@ -41,31 +44,25 @@ public sealed partial class PickerWindow : Window
 
     private void FocusFirstBrowser()
     {
-        Button? first = FindBrowserButtons().FirstOrDefault();
-        first?.Focus();
+        List<Button> browsers = FindBrowserButtons();
+        if (browsers.Count == 0)
+        {
+            return;
+        }
+        _browserCursor = 0;
+        browsers[0].Focus();
     }
 
-    private IEnumerable<Button> FindBrowserButtons()
+    private List<Button> FindBrowserButtons()
     {
         return this.GetVisualDescendants().OfType<Button>()
-            .Where(b => b.Name == "PART_BrowserButton");
+            .Where(b => b.Name == "PART_BrowserButton")
+            .ToList();
     }
 
-    private IEnumerable<RadioButton> FindRememberRadios()
+    private List<RadioButton> FindRememberRadios()
     {
-        return this.GetVisualDescendants().OfType<RadioButton>();
-    }
-
-    private IEnumerable<InputElement> FindNavigableItems()
-    {
-        foreach (Button button in FindBrowserButtons())
-        {
-            yield return button;
-        }
-        foreach (RadioButton radio in FindRememberRadios())
-        {
-            yield return radio;
-        }
+        return this.GetVisualDescendants().OfType<RadioButton>().ToList();
     }
 
     private void OnBrowserClick(object? sender, RoutedEventArgs e)
@@ -112,16 +109,32 @@ public sealed partial class PickerWindow : Window
             return;
         }
 
-        if (e.Key is Key.Down or Key.Right)
+        if (e.Key is Key.Down or Key.Up)
         {
-            MoveFocus(1);
+            SyncCursorToFocus();
+            MoveInFocusedSection(e.Key == Key.Down ? 1 : -1);
             e.Handled = true;
             return;
         }
 
-        if (e.Key is Key.Up or Key.Left)
+        if (e.Key == Key.Right)
         {
-            MoveFocus(-1);
+            SyncCursorToFocus();
+            if (IsBrowserFocused())
+            {
+                FocusRememberAt(_rememberCursor);
+            }
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Left)
+        {
+            SyncCursorToFocus();
+            if (IsRememberFocused())
+            {
+                FocusBrowserAt(_browserCursor);
+            }
             e.Handled = true;
             return;
         }
@@ -143,18 +156,69 @@ public sealed partial class PickerWindow : Window
         }
     }
 
-    private void MoveFocus(int delta)
+    private void SyncCursorToFocus()
     {
-        List<InputElement> items = FindNavigableItems().ToList();
-        if (items.Count == 0)
+        List<Button> browsers = FindBrowserButtons();
+        for (int i = 0; i < browsers.Count; i++)
+        {
+            if (browsers[i].IsFocused)
+            {
+                _browserCursor = i;
+                return;
+            }
+        }
+        List<RadioButton> radios = FindRememberRadios();
+        for (int i = 0; i < radios.Count; i++)
+        {
+            if (radios[i].IsFocused)
+            {
+                _rememberCursor = i;
+                return;
+            }
+        }
+    }
+
+    private bool IsBrowserFocused() => FindBrowserButtons().Any(b => b.IsFocused);
+    private bool IsRememberFocused() => FindRememberRadios().Any(r => r.IsFocused);
+
+    private void FocusBrowserAt(int index)
+    {
+        List<Button> browsers = FindBrowserButtons();
+        if (browsers.Count == 0)
         {
             return;
         }
+        int clamped = ((index % browsers.Count) + browsers.Count) % browsers.Count;
+        _browserCursor = clamped;
+        browsers[clamped].Focus();
+    }
 
-        int currentIdx = items.FindIndex(item => item.IsFocused);
-        int nextIdx = currentIdx < 0
-            ? 0
-            : ((currentIdx + delta) % items.Count + items.Count) % items.Count;
-        items[nextIdx].Focus();
+    private void FocusRememberAt(int index)
+    {
+        List<RadioButton> radios = FindRememberRadios();
+        if (radios.Count == 0)
+        {
+            return;
+        }
+        int clamped = ((index % radios.Count) + radios.Count) % radios.Count;
+        _rememberCursor = clamped;
+        radios[clamped].Focus();
+    }
+
+    private void MoveInFocusedSection(int delta)
+    {
+        List<Button> browsers = FindBrowserButtons();
+        if (browsers.Any(b => b.IsFocused))
+        {
+            int next = ((_browserCursor + delta) % browsers.Count + browsers.Count) % browsers.Count;
+            FocusBrowserAt(next);
+            return;
+        }
+        List<RadioButton> radios = FindRememberRadios();
+        if (radios.Any(r => r.IsFocused))
+        {
+            int next = ((_rememberCursor + delta) % radios.Count + radios.Count) % radios.Count;
+            FocusRememberAt(next);
+        }
     }
 }

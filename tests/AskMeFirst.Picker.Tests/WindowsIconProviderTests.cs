@@ -78,28 +78,43 @@ public class WindowsIconProviderTests
     }
 
     [Fact]
-    public void GetProfileIconPng_FirefoxProfile_ReturnsPngFromProfileGroups()
+    public void GetProfileIconPng_FirefoxProfile_Barrak_ReturnsPng()
     {
-        string profilesIni = Path.Combine(
+        string groupsRoot = Path.Combine(
             Environment.GetEnvironmentVariable("APPDATA") ?? "",
-            @"Mozilla\Firefox\profiles.ini");
-        if (!File.Exists(profilesIni))
+            @"Mozilla\Firefox\Profile Groups");
+        if (!Directory.Exists(groupsRoot))
         {
             return;
         }
 
         WindowsIconProvider provider = new();
-        byte[]? bytesFullPath = provider.GetProfileIconPng(
+        byte[]? bytes = provider.GetProfileIconPng(
             "firefox",
-            new BrowserProfile(Name: "Work", DirectoryName: "Profiles/0m6kw70o.Work", IsDefault: false));
-        byte[]? bytesShort = provider.GetProfileIconPng(
-            "firefox",
-            new BrowserProfile(Name: "Work", DirectoryName: "0m6kw70o.Work", IsDefault: false));
+            new BrowserProfile(Name: "Barrak", DirectoryName: "Profiles/vc4ak1jq.Barrak-1706255686136", IsDefault: true));
 
-        Assert.NotNull(bytesFullPath);
-        Assert.NotNull(bytesShort);
-        Assert.True(IsPng(bytesFullPath!));
-        Assert.True(IsPng(bytesShort!));
+        Assert.NotNull(bytes);
+        Assert.True(IsPng(bytes!));
+    }
+
+    [Fact]
+    public void GetProfileIconPng_FirefoxProfile_Profile5_ReturnsPng()
+    {
+        string groupsRoot = Path.Combine(
+            Environment.GetEnvironmentVariable("APPDATA") ?? "",
+            @"Mozilla\Firefox\Profile Groups");
+        if (!Directory.Exists(groupsRoot))
+        {
+            return;
+        }
+
+        WindowsIconProvider provider = new();
+        byte[]? bytes = provider.GetProfileIconPng(
+            "firefox",
+            new BrowserProfile(Name: "Profile 5", DirectoryName: "Profiles/kXwwp1SX.Profile 2", IsDefault: false));
+
+        Assert.NotNull(bytes);
+        Assert.True(IsPng(bytes!));
     }
 
     private static bool IsPng(byte[] bytes) =>

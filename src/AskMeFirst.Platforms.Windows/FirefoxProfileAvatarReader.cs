@@ -95,13 +95,16 @@ public static class FirefoxProfileAvatarReader
     private static bool TableExists(SqliteConnection conn, string tableName)
     {
         using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=$name LIMIT 1";
-        SqliteParameter param = cmd.CreateParameter();
-        param.ParameterName = "$name";
-        param.Value = tableName;
-        cmd.Parameters.Add(param);
-        object? result = cmd.ExecuteScalar();
-        return result is not null;
+        cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
+        using SqliteDataReader reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            if (reader.GetString(0).Equals(tableName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static bool IsUuid(string s)

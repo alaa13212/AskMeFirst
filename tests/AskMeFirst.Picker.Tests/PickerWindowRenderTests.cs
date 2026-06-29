@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -510,6 +511,353 @@ public class PickerWindowRenderTests
         Assert.True(File.Exists(screenshotPath), $"File not found at {screenshotPath}");
         long size = new FileInfo(screenshotPath).Length;
         Assert.True(size > 1000, $"File too small: {size} bytes");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowUp_WithinBrowserSection_WrapsToLastBrowser()
+    {
+        PickerRequest request = MakeRequest(
+            "https://example.com",
+            browsers:
+            [
+                MakeBrowser("chrome", "Chrome"),
+                MakeBrowser("firefox", "Firefox"),
+                MakeBrowser("edge", "Edge"),
+            ]);
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<Button> buttons = FindBrowserButtons(window);
+        Assert.True(buttons[0].IsFocused);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Up,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(buttons[^1].IsFocused, "Up arrow from first browser should wrap to last browser.");
+        Assert.False(buttons[0].IsFocused);
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowDown_FromLastBrowser_WrapsToFirstBrowser()
+    {
+        PickerRequest request = MakeRequest(
+            "https://example.com",
+            browsers:
+            [
+                MakeBrowser("chrome", "Chrome"),
+                MakeBrowser("firefox", "Firefox"),
+                MakeBrowser("edge", "Edge"),
+            ]);
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<Button> buttons = FindBrowserButtons(window);
+        buttons[^1].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Down,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(buttons[0].IsFocused, "Down arrow from last browser should wrap to first browser.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowDown_FromLastBrowser_DoesNotCrossToRemember()
+    {
+        PickerRequest request = MakeRequest(
+            "https://example.com",
+            sourceApp: "slack",
+            browsers:
+            [
+                MakeBrowser("chrome", "Chrome"),
+                MakeBrowser("firefox", "Firefox"),
+                MakeBrowser("edge", "Edge"),
+            ]);
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<Button> buttons = FindBrowserButtons(window);
+        List<RadioButton> radios = FindRememberRadios(window);
+        buttons[^1].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Down,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(buttons[0].IsFocused, "Down arrow from last browser should wrap to first browser, not cross into Remember section.");
+        Assert.DoesNotContain(radios, r => r.IsFocused);
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowRight_FromBrowser_SwitchesToRemember()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        Assert.NotEmpty(radios);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Right,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(radios[0].IsFocused, "Right arrow from browser section should focus the first Remember radio.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowLeft_FromRemember_SwitchesToBrowser()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        List<Button> buttons = FindBrowserButtons(window);
+        radios[0].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Left,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(buttons[0].IsFocused, "Left arrow from Remember section should focus the first browser.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowUp_WithinRememberSection_WrapsToLastRadio()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        Assert.True(radios.Count > 1);
+        radios[0].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Up,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(radios[^1].IsFocused, "Up arrow from first radio should wrap to last radio.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowDown_FromLastRememberRadio_WrapsToFirstRadio()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        radios[^1].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Down,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(radios[0].IsFocused, "Down arrow from last radio should wrap to first radio.");
+    }
+
+    [AvaloniaFact]
+    public void Window_CursorsAreIndependent_AcrossSections()
+    {
+        PickerRequest request = MakeRequest(
+            "https://example.com",
+            sourceApp: "slack",
+            browsers:
+            [
+                MakeBrowser("chrome", "Chrome"),
+                MakeBrowser("firefox", "Firefox"),
+                MakeBrowser("edge", "Edge"),
+            ]);
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<Button> buttons = FindBrowserButtons(window);
+        List<RadioButton> radios = FindRememberRadios(window);
+        Assert.Equal(3, buttons.Count);
+        Assert.True(radios.Count > 1);
+
+        window.RaiseEvent(new KeyEventArgs { Key = Key.Down, RoutedEvent = InputElement.KeyDownEvent });
+        PumpLayout(window);
+        Assert.True(buttons[1].IsFocused, "Browser cursor advanced to middle.");
+
+        window.RaiseEvent(new KeyEventArgs { Key = Key.Right, RoutedEvent = InputElement.KeyDownEvent });
+        PumpLayout(window);
+        Assert.True(radios[0].IsFocused, "Switched to Remember at its own cursor (first radio).");
+
+        window.RaiseEvent(new KeyEventArgs { Key = Key.Down, RoutedEvent = InputElement.KeyDownEvent });
+        PumpLayout(window);
+        Assert.True(radios[1].IsFocused, "Remember cursor advanced to second radio.");
+
+        window.RaiseEvent(new KeyEventArgs { Key = Key.Left, RoutedEvent = InputElement.KeyDownEvent });
+        PumpLayout(window);
+        Assert.True(buttons[1].IsFocused, "Back in Browsers — restored middle cursor.");
+
+        window.RaiseEvent(new KeyEventArgs { Key = Key.Right, RoutedEvent = InputElement.KeyDownEvent });
+        PumpLayout(window);
+        Assert.True(radios[1].IsFocused, "Back in Remember — restored second-radio cursor.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowRight_FromRemember_StaysAtRememberCursor()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        radios[^1].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Right,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(radios[^1].IsFocused, "Right from Remember is a no-op; cursor stays.");
+    }
+
+    [AvaloniaFact]
+    public void Window_PressingArrowLeft_FromBrowser_StaysAtBrowserCursor()
+    {
+        PickerRequest request = MakeRequest(
+            "https://example.com",
+            browsers:
+            [
+                MakeBrowser("chrome", "Chrome"),
+                MakeBrowser("firefox", "Firefox"),
+                MakeBrowser("edge", "Edge"),
+            ]);
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<Button> buttons = FindBrowserButtons(window);
+        buttons[1].Focus();
+        PumpLayout(window);
+
+        window.RaiseEvent(new KeyEventArgs
+        {
+            Key = Key.Left,
+            RoutedEvent = InputElement.KeyDownEvent,
+        });
+        PumpLayout(window);
+
+        Assert.True(buttons[1].IsFocused, "Left from Browsers is a no-op; cursor stays.");
+    }
+
+    [AvaloniaFact]
+    public void Window_FocusedRadio_HasHighlightBackground()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm);
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        Assert.NotEmpty(radios);
+        radios[1].Focus();
+        PumpLayout(window);
+
+        Border card = Assert.IsType<Border>(radios[1].Content);
+        Assert.Contains("rememberOptionCard", card.Classes);
+
+        IBrush? bg = card.Background;
+        ISolidColorBrush? solid = bg as ISolidColorBrush;
+        Assert.NotNull(solid);
+        Color color = solid!.Color;
+        Assert.NotEqual(Color.FromArgb(0, 0, 0, 0), color);
+        Assert.True(color.R < 240 && color.B > 200, $"Focused card background should be light blue; got {color}");
+    }
+
+    [AvaloniaFact]
+    public void Window_RendersScreenshot_FocusedRadioHighlightVisible()
+    {
+        string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-radio-focus.png";
+        Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath)!);
+
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        using PickerWindowViewModel vm = new(request, new NullLogger());
+        Window window = new PickerWindow(vm)
+        {
+            Width = 720,
+            Height = 440,
+        };
+
+        window.Show();
+        PumpLayout(window);
+
+        List<RadioButton> radios = FindRememberRadios(window);
+        Assert.NotEmpty(radios);
+        radios[1].Focus();
+        PumpLayout(window);
+        Assert.True(radios[1].IsFocused);
+
+        WriteableBitmap? frame = window.CaptureRenderedFrame();
+        Assert.NotNull(frame);
+        frame!.Save(screenshotPath);
+        Assert.True(File.Exists(screenshotPath), $"File not found at {screenshotPath}");
+        long size = new FileInfo(screenshotPath).Length;
+        Assert.True(size > 1000, $"File too small: {size} bytes");
+    }
+
+    private static List<RadioButton> FindRememberRadios(Window window)
+    {
+        ItemsControl? rememberList = window.FindControl<ItemsControl>("RememberList");
+        Assert.NotNull(rememberList);
+        return rememberList!.GetVisualDescendants()
+            .OfType<RadioButton>()
+            .ToList();
     }
 
 #if WINDOWS
