@@ -1,5 +1,7 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Profiles;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Core;
@@ -10,6 +12,8 @@ public sealed class RuleRouter(
     ISourceAppDetector sourceAppDetector,
     IPickerLauncher pickerLauncher,
     bool usePickerAsCatchAll,
+    IReadOnlyList<ProfileSpec> profileSpecs,
+    IBrowserProfileDetector profileDetector,
     IUrlLauncher launcher,
     ILogger logger,
     TimeProvider timeProvider)
@@ -86,14 +90,13 @@ public sealed class RuleRouter(
     private PickerRequest BuildPickerRequest(RoutingContext ctx, Uri url, string? sourceApp)
     {
         IReadOnlyList<Browser> browsers = executor.ListAvailableBrowsers();
-        IReadOnlyList<PickerBrowserOption> options = browsers
-            .Select(b => new PickerBrowserOption(b, b.Profile))
-            .ToList();
+        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(browsers, profileDetector);
+        IReadOnlyList<PickerBrowserOption> filtered = PinnedProfileFilter.Filter(options, profileSpecs);
         return new PickerRequest(
             OriginalUrl: url,
             SourceApp: sourceApp,
             UnshortenTask: null,
-            AvailableBrowsers: options);
+            AvailableBrowsers: filtered);
     }
 
     private int HandlePicker(PickerRequest request, Uri url)

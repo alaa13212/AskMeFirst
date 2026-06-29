@@ -11,4 +11,5 @@ public sealed record BootstrapContext(
     ISourceAppDetector SourceApp,
     IProcessNameNormalizer ProcessNameNormalizer,
     IConfigPathResolver ConfigPath,
+    IIconProvider Icons,
     string PlatformName);

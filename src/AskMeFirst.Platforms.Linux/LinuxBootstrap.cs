@@ -15,6 +15,7 @@ public static class LinuxBootstrap
         IProcessNameNormalizer normalizer = new LinuxProcessNameNormalizer();
         ISourceAppDetector sourceApp = new LinuxSourceAppDetector(normalizer);
         IConfigPathResolver configPath = new LinuxConfigPathResolver();
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, "linux");
+        IIconProvider icons = new NullIconProvider();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, "linux");
     }
 }

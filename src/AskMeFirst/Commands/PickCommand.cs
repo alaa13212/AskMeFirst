@@ -4,7 +4,12 @@ using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Commands;
 
-public sealed class PickCommand(IPickerLauncher pickerLauncher, ISourceAppDetector sourceApp, IBrowserInventory inventory, ILogger logger) : ICommand
+public sealed class PickCommand(
+    IPickerLauncher pickerLauncher,
+    ISourceAppDetector sourceApp,
+    IBrowserInventory inventory,
+    IBrowserProfileDetector profileDetector,
+    ILogger logger) : ICommand
 {
     public string Name => "pick";
 
@@ -26,10 +31,8 @@ public sealed class PickCommand(IPickerLauncher pickerLauncher, ISourceAppDetect
             throw new CliArgsException($"Not a valid http(s) URL: {urlArg}");
         }
 
-        AskMeFirst.Core.Routing.SourceApp? source = sourceApp.Detect();
-        List<PickerBrowserOption> options = inventory.Discover()
-            .Select(b => new PickerBrowserOption(b, b.Profile))
-            .ToList();
+        SourceApp? source = sourceApp.Detect();
+        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profileDetector);
 
         PickerRequest request = new(
             OriginalUrl: url,

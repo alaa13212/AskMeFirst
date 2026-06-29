@@ -277,6 +277,14 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 
 **Why not vim-style**: Single-screen picker doesn't warrant dual-mode complexity. Power users can still drive everything via Tab + arrows.
 
+**Note (2026-06-29)**: Split-role arrow navigation — Up/Down cycles within the currently focused section only (browsers among themselves with wrap, radios among themselves with wrap); Left/Right switches sections using each section's own remembered cursor (no cross-section index transfer). Per-section `_browserCursor` + `_rememberCursor` fields; `SyncCursorToFocus()` reconciles them at the start of every keypress so external focus changes (Tab, click) don't drift. See [PickerWindow.axaml.cs](../../src/AskMeFirst.Picker/Views/PickerWindow.axaml.cs).
+
+## 67b. Radio option focus highlight mirrors browser button
+
+**Rationale**: Default Fluent `RadioButton` focus ring is too subtle for users to spot which remember option is currently keyboard-focused. Wrapped each radio's content in a `Border` with class `rememberOptionCard`; styled it identically to `PART_BrowserButton` (light blue `#E5F1FB` background + accent `#0F6CBD` border on focus, plus hover state). Same problem we solved for buttons in the prior session; applied the fix to radios for parity.
+
+**Alternative considered**: set `RadioButton.Background` / `BorderBrush` directly via `:focus` style. Tested mentally — Avalonia's default RadioButton template doesn't render those properties as a visible border, so a Border wrapper is required.
+
 ## 68. Initial focus on first browser button; "Just this once" preselected
 
 **Rationale**: Default Enter = safe ignore-flow (one action: launch first browser with no rule written). Matches the existing decision #20: "Just this once" is the default remember semantic.
@@ -290,6 +298,14 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 ## 70. Post-commit browser-launch failure → OS notification (not silent, not picker re-show)
 
 **Rationale**: User clicked a link and made a decision. Silent failure is a UX hole. Re-showing the picker disrespects the user's commit. System-default-browser fallback surprises the user (they explicitly picked X, not default). OS notification is modern, non-intrusive, and informative ("Couldn't open Chrome. URL is in usage log so you can re-click.")
+
+## 71. Arrow-key roles split between sections
+
+**Rationale**: Two-column picker needs two distinct roles — Up/Down cycle within the focused section (vertical list nav, with wrap), Left/Right switch sections (column nav, with each section's own remembered cursor). This matches every 2D grid picker / settings dialog in mainstream UIs and avoids the awkward "Up from last browser jumps to first radio" surprise of a flat list. Per-section cursors (`_browserCursor`, `_rememberCursor`) mean Right→Left round-trips restore the user's last position in each list independently.
+
+**Alternatives considered**:
+- **Flat ordered list** (earlier draft) — same key handles all four directions, walks `[browsers...] + [radios...]` with wrap. Rejected: conflated roles, jumped sections on Up/Down when user didn't expect it.
+- **2D grid with row-wrap** — Up/Down in browsers stays, but Right from last browser goes to first browser in next row. Rejected: 2-row layout doesn't justify the complexity.
 
 ---
 
@@ -345,6 +361,8 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 | 65 | Window modal-ness | Modeless + always-on-top |
 | 66 | Cancel semantics | X / Esc / Cancel all → `PickerResult.Cancelled` |
 | 67 | Keyboard nav | Standard Windows (Tab, arrows, 1-9, Enter, Esc) |
+| 67b | Radio focus highlight | Wrapped `Border.rememberOptionCard` styled identically to `PART_BrowserButton` |
 | 68 | Initial focus | First browser button; "Just this once" preselected |
 | 69 | ProfileSpec.Pinned | `bool` (default false); picker filters to pinned |
 | 70 | Post-commit failure | OS notification (not silent, not picker re-show) |
+| 71 | Arrow-key roles | Up/Down within section, Left/Right switch sections (per-section cursors) |

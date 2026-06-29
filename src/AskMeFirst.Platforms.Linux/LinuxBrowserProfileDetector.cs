@@ -32,8 +32,10 @@ public sealed class LinuxBrowserProfileDetector : IBrowserProfileDetector
         if (string.Equals(browserId, "firefox", StringComparison.OrdinalIgnoreCase))
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return FirefoxProfilesParser.Parse(
-                Path.Combine(home, ".mozilla", "firefox", "profiles.ini"));
+            string firefoxDir = Path.Combine(home, ".mozilla", "firefox");
+            string profilesIni = Path.Combine(firefoxDir, "profiles.ini");
+            string groupsRoot = Path.Combine(firefoxDir, "Profile Groups");
+            return FirefoxProfilesParser.Parse(profilesIni, groupsRoot);
         }
 
         return [];

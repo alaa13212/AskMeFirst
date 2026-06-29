@@ -1,4 +1,4 @@
-using System.Globalization;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using AskMeFirst.Core.Abstractions;
@@ -16,6 +16,7 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
 
     private readonly PickerRequest _request;
     private readonly IConfigWriter? _configWriter;
+    private readonly IIconProvider _icons;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
@@ -25,19 +26,23 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
     public PickerWindowViewModel(
         PickerRequest request,
         ILogger logger,
-        IConfigWriter? configWriter = null)
+        IConfigWriter? configWriter = null,
+        IIconProvider? icons = null)
     {
         _request = request;
         _logger = logger;
         _configWriter = configWriter;
+        _icons = icons ?? new NullIconProvider();
 
-        _displayUrl = request.OriginalUrl.ToString();
-        _sourceAppLabel = request.SourceApp is null ? "" : $"From {request.SourceApp}";
+        DisplayUrl = request.OriginalUrl.ToString();
+        SourceAppLabel = request.SourceApp is null ? "" : $"From {request.SourceApp}";
         BrowserOptions = BuildBrowserOptions(request);
         RememberOptions = BuildRememberOptions(request);
-        _selectedBrowserIndex = 0;
-        _selectedRememberIndex = 0;
-        _status = PickerStatus.Loading;
+        SelectedBrowserIndex = 0;
+        Status = PickerStatus.Loading;
+
+        RememberOptionViewModel firstAvailable = RememberOptions.First(o => o.IsAvailable);
+        firstAvailable.IsSelected = true;
 
         if (request.UnshortenTask is not null)
         {
@@ -45,22 +50,24 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         }
         else
         {
-            _status = PickerStatus.Ready;
+            Status = PickerStatus.Ready;
         }
     }
 
-    public IReadOnlyList<BrowserOptionViewModel> BrowserOptions { get; }
+    public ObservableCollection<BrowserOptionViewModel> BrowserOptions { get; }
 
-    public IReadOnlyList<RememberOptionViewModel> RememberOptions { get; }
+    public ObservableCollection<RememberOptionViewModel> RememberOptions { get; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CommitCommand))]
     private PickerStatus _status;
 
     [ObservableProperty]
-    private string _displayUrl;
+    private string _displayUrl = "";
 
     [ObservableProperty]
-    private string _sourceAppLabel;
+    [NotifyPropertyChangedFor(nameof(IsSourceAppLabelVisible))]
+    private string _sourceAppLabel = "";
 
     [ObservableProperty]
     private bool _isResolving;
@@ -68,20 +75,26 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     private int _selectedBrowserIndex;
 
-    [ObservableProperty]
-    private int _selectedRememberIndex;
+    public bool IsSourceAppLabelVisible => !string.IsNullOrEmpty(SourceAppLabel);
 
     public PickerResult Result => _result;
 
-    public bool IsSourceAppLabelVisible => !string.IsNullOrEmpty(SourceAppLabel);
-
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanCommit))]
     private void Commit()
     {
-        if (Status == PickerStatus.Committing || Status == PickerStatus.Done)
+        if (SelectedBrowserIndex < 0 || SelectedBrowserIndex >= BrowserOptions.Count)
         {
+            _logger.LogWarn("Commit aborted: no browser selected.");
             return;
         }
+
+        RememberOptionViewModel? rememberOpt = RememberOptions.FirstOrDefault(o => o.IsSelected);
+        if (rememberOpt is null)
+        {
+            _logger.LogWarn("Commit aborted: no remember option selected.");
+            return;
+        }
+
         Status = PickerStatus.Committing;
         _cts.Cancel();
 
@@ -92,7 +105,6 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
             browser = browser with { Profile = browserOpt.Profile };
         }
 
-        RememberOptionViewModel rememberOpt = RememberOptions[SelectedRememberIndex];
         if (rememberOpt.Kind != RememberKind.Once && _configWriter is not null)
         {
             Rule rule = BuildRememberRule(rememberOpt.Kind);
@@ -103,6 +115,8 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         _result = new Launched(browser, _request.OriginalUrl);
         Status = PickerStatus.Done;
     }
+
+    private bool CanCommit() => Status is PickerStatus.Ready or PickerStatus.Resolving;
 
     [RelayCommand]
     private void Cancel()
@@ -172,32 +186,32 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         }
     }
 
-    private static List<BrowserOptionViewModel> BuildBrowserOptions(PickerRequest request)
+    private ObservableCollection<BrowserOptionViewModel> BuildBrowserOptions(PickerRequest request)
     {
-        List<BrowserOptionViewModel> options = new(request.AvailableBrowsers.Count);
+        ObservableCollection<BrowserOptionViewModel> options = [];
         for (int i = 0; i < request.AvailableBrowsers.Count; i++)
         {
             PickerBrowserOption opt = request.AvailableBrowsers[i];
             int hotkey = i < 9 ? i + 1 : -1;
-            options.Add(new BrowserOptionViewModel(opt.Browser, opt.Profile, hotkey));
+            options.Add(new BrowserOptionViewModel(opt.Browser, opt.Profile, hotkey, _icons));
         }
         return options;
     }
 
-    private static RememberOptionViewModel[] BuildRememberOptions(PickerRequest request)
+    private static ObservableCollection<RememberOptionViewModel> BuildRememberOptions(PickerRequest request)
     {
         bool hasSource = !string.IsNullOrEmpty(request.SourceApp);
         string host = request.OriginalUrl.Host;
         bool hasHost = !string.IsNullOrEmpty(host);
 
-        return new RememberOptionViewModel[]
-        {
+        return
+        [
             new(RememberKind.Once, "Just this once"),
-            new(RememberKind.AlwaysExactHost, $"Always {host}", isAvailable: hasHost, unavailableReason: "No host in URL", displayUrlPattern: host),
-            new(RememberKind.AlwaysWildcardHost, $"Always *.{host}", isAvailable: hasHost, unavailableReason: "No host in URL", displayUrlPattern: $"*.{host}"),
-            new(RememberKind.AlwaysSource, $"Always {request.SourceApp ?? ""}", isAvailable: hasSource, unavailableReason: "Source app not detected", displaySourceName: request.SourceApp),
-            new(RememberKind.SourcePlusHost, $"{request.SourceApp ?? "?"} + {host}", isAvailable: hasSource && hasHost, unavailableReason: "Need source + host", displayUrlPattern: host, displaySourceName: request.SourceApp),
-        };
+            new(RememberKind.AlwaysExactHost, $"Always {host}", isAvailable: hasHost, unavailableReason: "No host in URL"),
+            new(RememberKind.AlwaysWildcardHost, $"Always *.{host}", isAvailable: hasHost, unavailableReason: "No host in URL"),
+            new(RememberKind.AlwaysSource, $"Always {request.SourceApp ?? ""}", isAvailable: hasSource, unavailableReason: "Source app not detected"),
+            new(RememberKind.SourcePlusHost, $"{request.SourceApp ?? "?"} + {host}", isAvailable: hasSource && hasHost, unavailableReason: "Need source + host"),
+        ];
     }
 
     private Rule BuildRememberRule(RememberKind kind)

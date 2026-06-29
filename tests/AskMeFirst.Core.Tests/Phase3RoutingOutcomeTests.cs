@@ -140,6 +140,8 @@ public class Phase3RoutingOutcomeTests
             sourceApp,
             picker,
             usePickerAsCatchAll,
+            empty.Profiles,
+            profiles,
             launcher,
             logger,
             new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));

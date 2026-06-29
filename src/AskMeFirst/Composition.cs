@@ -7,6 +7,7 @@ using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Logging;
 using AskMeFirst.Core.Routing;
+using AskMeFirst.Picker.Services;
 using AskMeFirst.Platforms.Linux;
 using AskMeFirst.Platforms.MacOs;
 using AskMeFirst.Platforms.Windows;
@@ -35,20 +36,20 @@ internal static class Composition
         ProfileResolver profileResolver = new(ctx.Profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
-        IPickerLauncher pickerLauncher = new NoOpPickerLauncher(logger);
-        AskMeFirst.Picker.Services.AvaloniaPickerLauncher realPickerLauncher = new(logger);
+        IPickerLauncher pickerLauncher = new AvaloniaPickerLauncher(logger, configWriter: null, icons: ctx.Icons);
         RuleRouter router = new(
             resolvers,
             executor,
             ctx.SourceApp,
             pickerLauncher,
             usePickerAsCatchAll: true,
+            appConfig.Profiles,
+            ctx.Profiles,
             ctx.Launcher,
             logger,
             TimeProvider.System);
 
-        AskMeFirst.Picker.Services.AvaloniaPickerLauncher realPicker = new(logger);
-        registry.Register(new PickCommand(realPicker, ctx.SourceApp, ctx.Inventory, logger));
+        registry.Register(new PickCommand(pickerLauncher, ctx.SourceApp, ctx.Inventory, ctx.Profiles, logger));
 
         return new CommandContext(
             logger,

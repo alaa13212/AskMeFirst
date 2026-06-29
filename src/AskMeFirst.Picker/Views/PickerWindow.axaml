@@ -7,9 +7,49 @@
         Title="AskMeFirst pick a browser"
         Topmost="True"
         CanResize="False"
-        ShowInTaskbar="True">
+        ShowInTaskbar="True"
+        Width="720"
+        Height="440">
 
-    <Grid Margin="16" RowDefinitions="Auto,*,Auto">
+    <Window.Styles>
+        <Style Selector="Button#PART_BrowserButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Button#PART_BrowserButton:pointerover">
+            <Setter Property="Background" Value="#F3F3F3" />
+        </Style>
+        <Style Selector="Button#PART_BrowserButton:focus">
+            <Setter Property="Background" Value="#E5F1FB" />
+            <Setter Property="BorderBrush" Value="#0F6CBD" />
+        </Style>
+        <Style Selector="Button#PART_BrowserButton:focus:pointerover">
+            <Setter Property="Background" Value="#CCE4F7" />
+        </Style>
+
+        <Style Selector="RadioButton.rememberOption Border.rememberOptionCard">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="-2,0" />
+        </Style>
+        <Style Selector="RadioButton.rememberOption:pointerover Border.rememberOptionCard">
+            <Setter Property="Background" Value="#F3F3F3" />
+        </Style>
+        <Style Selector="RadioButton.rememberOption:focus Border.rememberOptionCard">
+            <Setter Property="Background" Value="#E5F1FB" />
+            <Setter Property="BorderBrush" Value="#0F6CBD" />
+        </Style>
+        <Style Selector="RadioButton.rememberOption:focus:pointerover Border.rememberOptionCard">
+            <Setter Property="Background" Value="#CCE4F7" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="16" RowDefinitions="Auto,*">
 
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
             <TextBlock Text="{Binding SourceAppLabel}"
@@ -37,27 +77,60 @@
                                Text="Open with"
                                FontWeight="Bold"
                                Margin="0,0,0,8" />
-                    <ListBox ItemsSource="{Binding BrowserOptions}"
-                             SelectedIndex="{Binding SelectedBrowserIndex}"
-                             Background="Transparent">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:BrowserOptionViewModel"
-                                          x:DataType="vm:BrowserOptionViewModel"
-                                          x:CompileBindings="True">
-                                <Grid ColumnDefinitions="Auto,*">
-                                    <TextBlock Grid.Column="0"
-                                               Text="{Binding HotkeyLabel}"
-                                               Width="20"
-                                               FontWeight="Bold"
-                                               Foreground="DarkSlateGray"
-                                               VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding DisplayLabel}"
-                                               VerticalAlignment="Center" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <ScrollViewer>
+                        <ItemsControl Name="BrowserList" ItemsSource="{Binding BrowserOptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BrowserOptionViewModel">
+                                    <Button Name="PART_BrowserButton"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="8,6"
+                                            Margin="0,2"
+                                            Tag="{Binding}"
+                                            Click="OnBrowserClick"
+                                            IsTabStop="True">
+                                        <Grid ColumnDefinitions="24,36,*" VerticalAlignment="Center">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding HotkeyLabel}"
+                                                       Foreground="Gray"
+                                                       VerticalAlignment="Center" />
+                                            <Panel Grid.Column="1" Width="32" Height="32"
+                                                   VerticalAlignment="Center">
+                                                <Border Width="28" Height="28"
+                                                        CornerRadius="14"
+                                                        ClipToBounds="True"
+                                                        Background="#E0E0E0"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center">
+                                                    <Image Source="{Binding PrimaryIcon}"
+                                                           Stretch="UniformToFill" />
+                                                </Border>
+                                                <Border Width="14" Height="14"
+                                                        CornerRadius="7"
+                                                        ClipToBounds="True"
+                                                        Background="White"
+                                                        BorderBrush="White"
+                                                        BorderThickness="1"
+                                                        IsVisible="{Binding HasOverlay}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Bottom">
+                                                    <Image Source="{Binding OverlayIcon}"
+                                                           Stretch="Uniform" />
+                                                </Border>
+                                            </Panel>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding PrimaryLabel}" />
+                                                <TextBlock Text="{Binding SubtitleLabel}"
+                                                           FontSize="11"
+                                                           Foreground="Gray"
+                                                           IsVisible="{Binding IsSubtitleVisible}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
 
@@ -71,39 +144,36 @@
                                Text="Remember"
                                FontWeight="Bold"
                                Margin="0,0,0,8" />
-                    <ListBox ItemsSource="{Binding RememberOptions}"
-                             SelectedIndex="{Binding SelectedRememberIndex}"
-                             Background="Transparent">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:RememberOptionViewModel"
-                                          x:DataType="vm:RememberOptionViewModel"
-                                          x:CompileBindings="True">
-                                <StackPanel Opacity="{Binding ItemOpacity}">
-                                    <TextBlock Text="{Binding Label}" />
-                                    <TextBlock Text="{Binding UnavailableReason}"
-                                               FontSize="10"
-                                               Foreground="Gray"
-                                               IsVisible="{Binding IsReasonVisible}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <ScrollViewer>
+                        <ItemsControl Name="RememberList" ItemsSource="{Binding RememberOptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RememberOptionViewModel">
+                                    <RadioButton GroupName="remember"
+                                                 Classes="rememberOption"
+                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                 IsEnabled="{Binding IsAvailable}"
+                                                 HorizontalAlignment="Stretch"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 IsTabStop="True"
+                                                 Margin="0,2">
+                                        <Border Classes="rememberOptionCard">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Label}" />
+                                                <TextBlock Text="{Binding UnavailableReason}"
+                                                           FontSize="10"
+                                                           Foreground="Gray"
+                                                           IsVisible="{Binding IsReasonVisible}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </RadioButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
 
         </Grid>
-
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,12,0,0">
-            <Button Content="Cancel"
-                    Command="{Binding CancelCommand}" />
-            <Button Content="Open"
-                    Command="{Binding CommitCommand}"
-                    IsDefault="True" />
-        </StackPanel>
 
     </Grid>
 </Window>

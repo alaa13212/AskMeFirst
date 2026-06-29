@@ -282,18 +282,23 @@ public PixelPoint ComputeWindowPosition(Size windowSize, IScreenProvider screens
 
 X button, Esc key, and Cancel button all → `PickerResult.Cancelled`. Single semantic per existing decision #21.
 
+## Mouse Control
+
+Choose browser: One click commit
+Choose remember => choose browser: 2 clicks commit
+
 ## Keyboard navigation
 
 Standard Windows dialog feel:
 
-| Key | Action |
-|---|---|
+| Key | Action                                                                  |
+|---|-------------------------------------------------------------------------|
 | `Tab` / `Shift+Tab` | Cycle controls (browser buttons → remember radios → close button → wrap) |
-| `↑` / `↓` | Cycle within current panel (browser buttons OR remember radios) |
-| `←` / `→` | Same as Tab / Shift+Tab |
-| `1`–`9` | Direct-pick browser button (only first 9 have hotkeys) |
-| `Enter` | Commit current selection |
-| `Esc` | Cancel |
+| `↑` / `↓` | Cycle within current panel (browser buttons OR remember radios)         |
+| `←` / `→` | Same as Tab / Shift+Tab                                                 |
+| `1`–`9` | Direct-commit browser button (only first 9 have hotkeys)                |
+| `Enter` | Commit current selection                                                |
+| `Esc` | Cancel                                                                  |
 
 ### Initial focus
 

@@ -15,6 +15,7 @@ public static class WindowsBootstrap
         IProcessNameNormalizer normalizer = new WindowsProcessNameNormalizer();
         ISourceAppDetector sourceApp = new WindowsSourceAppDetector(normalizer);
         IConfigPathResolver configPath = new WindowsConfigPathResolver();
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, "windows");
+        IIconProvider icons = new WindowsIconProvider();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, "windows");
     }
 }

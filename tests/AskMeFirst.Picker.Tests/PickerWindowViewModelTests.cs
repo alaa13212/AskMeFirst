@@ -28,8 +28,8 @@ public class PickerWindowViewModelTests
         PickerWindowViewModel vm = new(request, logger);
 
         Assert.Equal(2, vm.BrowserOptions.Count);
-        Assert.Equal("Chrome", vm.BrowserOptions[0].DisplayLabel);
-        Assert.Equal("Firefox", vm.BrowserOptions[1].DisplayLabel);
+        Assert.Equal("Chrome", vm.BrowserOptions[0].PrimaryLabel);
+        Assert.Equal("Firefox", vm.BrowserOptions[1].PrimaryLabel);
     }
 
     [Fact]
@@ -83,11 +83,41 @@ public class PickerWindowViewModelTests
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         Assert.Equal(5, vm.RememberOptions.Count);
-        Assert.True(vm.RememberOptions[0].IsAvailable);   // Just this once
-        Assert.True(vm.RememberOptions[1].IsAvailable);   // Always host
-        Assert.True(vm.RememberOptions[2].IsAvailable);   // Always *.host
-        Assert.False(vm.RememberOptions[3].IsAvailable);  // Always Slack — no source
-        Assert.False(vm.RememberOptions[4].IsAvailable);  // Slack + host — no source
+        Assert.True(vm.RememberOptions[0].IsAvailable);
+        Assert.True(vm.RememberOptions[1].IsAvailable);
+        Assert.True(vm.RememberOptions[2].IsAvailable);
+        Assert.False(vm.RememberOptions[3].IsAvailable);
+        Assert.False(vm.RememberOptions[4].IsAvailable);
+    }
+
+    [Fact]
+    public void Constructor_DefaultsSelectedBrowserIndexToZero()
+    {
+        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
+        Browser firefox = new() { Id = "firefox", DisplayName = "Firefox", ExecutablePath = "/firefox", LaunchStrategy = BrowserLaunchStrategies.For("firefox") };
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome, firefox]);
+        PickerWindowViewModel vm = new(request, new TestLogger());
+
+        Assert.Equal(0, vm.SelectedBrowserIndex);
+    }
+
+    [Fact]
+    public void CommitCommand_CanExecute_ReadyAfterConstruction()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerWindowViewModel vm = new(request, new TestLogger());
+
+        Assert.True(vm.CommitCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Constructor_SelectsFirstRememberOption()
+    {
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerWindowViewModel vm = new(request, new TestLogger());
+
+        Assert.True(vm.RememberOptions[0].IsSelected);
+        Assert.False(vm.RememberOptions[1].IsSelected);
     }
 
     [Fact]
@@ -102,6 +132,21 @@ public class PickerWindowViewModelTests
         Launched launched = Assert.IsType<Launched>(vm.Result);
         Assert.Equal("chrome", launched.Browser.Id);
         Assert.Equal(new Uri("https://example.com"), launched.Url);
+    }
+
+    [Fact]
+    public void Commit_WithSelectedSecondBrowser_UsesThatBrowser()
+    {
+        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
+        Browser firefox = new() { Id = "firefox", DisplayName = "Firefox", ExecutablePath = "/firefox", LaunchStrategy = BrowserLaunchStrategies.For("firefox") };
+        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome, firefox]);
+        PickerWindowViewModel vm = new(request, new TestLogger());
+
+        vm.SelectedBrowserIndex = 1;
+        vm.CommitCommand.Execute(null);
+
+        Launched launched = Assert.IsType<Launched>(vm.Result);
+        Assert.Equal("firefox", launched.Browser.Id);
     }
 
     [Fact]
@@ -122,7 +167,7 @@ public class PickerWindowViewModelTests
             UnshortenTask: null,
             AvailableBrowsers: (browsers ?? []).Select(b => new PickerBrowserOption(b, b.Profile)).ToList());
 
-    private sealed class TestLogger : AskMeFirst.Core.Abstractions.ILogger
+    private sealed class TestLogger : Core.Abstractions.ILogger
     {
         public void LogInfo(string message) { }
         public void LogWarn(string message) { }

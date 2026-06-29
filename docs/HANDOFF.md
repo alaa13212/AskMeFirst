@@ -1,15 +1,20 @@
-# Handoff — 2026-06-28
+# Handoff — 2026-06-29
 
 > **First thing next session: read this file.**
 
 ## TL;DR
 
-Phases 0, 1, and 2 complete. This session was a **Phase 2 code-quality pass** — no new user-facing features, but two big structural changes:
+Phases 0–3 complete and the picker is **fully usable end-to-end on the user's actual machine**. This session was about getting Firefox 136+ Profile Groups and Chromium profile names right, then fixing the resulting avatar bug. Five sub-fixes, one revert, and a clean rewrite at the end:
 
-- **Routing refactor**: PredicateEvaluator + RuleRouter decomposed via Strategy + Pipeline + Result-type patterns. RoutingOutcome is now a discriminated union (`Success` / `Failure`) with `RoutingExitCode` enum. RoutingExecutor extracted as a separate component. 9-dep RuleRouter → 6 deps.
-- **Profiles first-class**: Top-level `profiles:` config section with `ProfileSpec { Id, BrowserId, Name?, Directory?, DisplayName? }`. Rules reference profiles by stable ID (`profileId`), not by name/directory string. `ProfileResolver` rewritten as ID-based lookup. `ConfigValidator` runs at load time (unique IDs, all `profileId` references resolve).
+1. **(Failed)** First tried to byte-scan Firefox's per-store SQLite like `FirefoxProfileAvatarReader` does. Too fragile — nested TEXT encoding inside SQLite cells rejected every real row.
+2. **(Win)** Switched to `Microsoft.Data.Sqlite` 10.0.9 + `SQLitePCLRaw.bundle_e_sqlite3` 3.0.2 — AOT-compatible in .NET 10. Added ~1.5 MB to the binary, worth it for correctness.
+3. **Firefox profile detection** now expands each `[ProfileN]` in `profiles.ini` into ALL selectable sub-profiles in its `<StoreID>.sqlite`. **Verified on this machine: 4 profiles across 2 groups** (Barrak=1 default, Work=3 — Profile 5, Test Profile 2, plus the auto-default Work).
+4. **Profile name polish**:
+   - Firefox: SQLite rows named `"Original profile"` get renamed to the INI group name (Work/Barrak) so users see meaningful labels. Custom names like "Profile 5", "Test Profile 2" pass through.
+   - Chrome/Edge/Brave/Chromium: new `ChromiumProfileNames` parses `<User Data>/Local State` JSON's `profile.info_cache[<dir>].name`. Real names ("Ali Albarrak", "kgg.co", "Remal") instead of "Profile 6/7/8".
+5. **Firefox avatar lookup rewrite**: replaced byte-scanning with a cross-store SQLite query (`SELECT avatar FROM Profiles WHERE path LIKE '%<dirTail>'`). Old code required the StoreID from `profiles.ini` first, which silently failed for SQLite-only profiles like "Profile 5" — which is exactly the one the user noticed missing its image.
 
-**161/161 tests passing.** AOT binary **4.19 MB** (was 4.15 MB; +40 KB for the extra types). Cold start ~46 ms.
+**273/273 tests passing** (204 Core + 69 Picker; +20 since last handoff). AOT binary **18.50 MB** (was 17.00 MB; +1.5 MB SQLite native lib).
 
 ---
 
@@ -20,8 +25,8 @@ Phases 0, 1, and 2 complete. This session was a **Phase 2 code-quality pass** �
 | 0 — Bootstrap | ✅ Done | Build, test, AOT publish all working |
 | 1 — MVP router | ✅ Done + polished | ICommand architecture, profile detection, browser-family launch strategies |
 | 2 — Rule engine | ✅ Done + refactored | Rules + predicates + actions + source-app detection + tracking strip + profiles-first-class |
-| 3 — Picker UI | ⏭ Next | Avalonia, two-panel layout |
-| 4 — OS integration | 📋 Planned | Win/Mac/Linux registration |
+| 3 — Picker UI | ✅ Done | Two-line profile-first labels, full keyboard nav, one-click commit, window close on Done, source-app centering, PinnedProfileFilter wired |
+| 4 — OS integration | 📋 Planned | Win/Mac/Linux registration + per-platform `ISourceAppWindowLocator` impls |
 | 5 — Link processing | 📋 Planned | Async Unshortener (tracking strip already done) |
 | 6 — Polish | 📋 Planned | Bench command, README, examples, config ↔ inventory mapping |
 
@@ -29,305 +34,253 @@ Full plan: [`docs/roadmap.md`](./roadmap.md).
 
 ---
 
-## Project tree
+## What's verified locally
+
+- ✅ `dotnet build` — clean, 0 warnings, 0 errors
+- ✅ `dotnet test` — **273/273 passing** in ~2 s
+  - 204 in `AskMeFirst.Core.Tests` (+15 since last handoff: 5 FirefoxProfileStoreScanner, 7 ChromiumProfileNames, 6 FirefoxProfilesParser end-to-end, 1 integration assertion + 1 dump test)
+  - 69 in `AskMeFirst.Picker.Tests` (+9 since last handoff: 7 FirefoxProfileAvatarReader, 2 real-data Firefox icon tests)
+- ✅ `dotnet publish -p:PublishProfile=Aot -r win-x64` — produces `askmefirst.exe` **18.50 MB** (+1.5 MB for SQLite native lib)
+- ✅ AOT binary `--version` and `--list` work end-to-end
+- ✅ Verified on user's actual Firefox state: 4 profiles across 2 groups, correct names, avatars load for Barrak + Profile 5
+
+**Live `--list` output:**
 
 ```
-src/
-├── AskMeFirst.Core/                          ← pure BCL, no platform deps
-│   ├── Models/
-│   │   ├── Browser.cs                        ← Id, DisplayName, ExecutablePath, LaunchStrategy, Profile?
-│   │   └── BrowserProfile.cs                 ← Name, DirectoryName, IsDefault (UNCHANGED)
-│   ├── Abstractions/                         ← IBrowserInventory, IBrowserProfileDetector,
-│   │                                          IBrowserLaunchStrategy, IUrlLauncher, ILogger
-│   ├── Logging/ConsoleLogger.cs
-│   ├── Launch/                               ← browser-family arg strategies
-│   │   ├── ChromiumLaunchStrategy.cs
-│   │   ├── FirefoxLaunchStrategy.cs
-│   │   ├── DefaultLaunchStrategy.cs
-│   │   └── BrowserLaunchStrategies.cs
-│   ├── Profiles/FirefoxProfilesParser.cs
-│   ├── Config/
-│   │   ├── AppConfig.cs                      ← + Profiles (NEW), Rules, TrackingParamsExtra
-│   │   ├── Settings.cs
-│   │   ├── BrowserSpec.cs                    ← Profile → ProfileId
-│   │   ├── ProfileSpec.cs                    ← NEW: Id, BrowserId, Name?, Directory?, DisplayName?
-│   │   ├── Rule.cs
-│   │   ├── RuleWhen.cs
-│   │   ├── RuleThen.cs                       ← Profile → ProfileId
-│   │   ├── IConfigPathResolver.cs
-│   │   ├── ConfigPath.cs
-│   │   ├── ConfigJsonContext.cs              ← + ProfileSpec
-│   │   ├── ConfigLoader.cs
-│   │   └── ConfigValidator.cs                ← NEW: unique IDs, profileId references resolve
-│   ├── Commands/
-│   │   ├── ICommand.cs
-│   │   ├── CommandContext.cs                 ← + Router
-│   │   ├── CommandRegistry.cs
-│   │   ├── CommandNotFoundException.cs
-│   │   └── HelpFormatter.cs
-│   ├── Composition/BootstrapContext.cs
-│   ├── Routing/                              ← REFACTORED
-│   │   ├── RoutingContext.cs                 ← + ExplicitBrowserId, ExplicitProfileId
-│   │   ├── RoutingDecision.cs                ← ProfileName → ProfileId
-│   │   ├── RoutingIntent.cs                  ← NEW: BrowserId, ProfileId, StripTrackingOverride,
-│   │   │                                      NotFoundExitCode, NotFoundMessagePrefix
-│   │   ├── RoutingOutcome.cs                 ← NEW: abstract record + Success + Failure
-│   │   ├── RoutingExitCode.cs                ← NEW: enum (Success=0, NoBrowsersDiscovered=2,
-│   │   │                                      BrowserNotFound=3, RuleBrowserNotFound=4, NoRouteFound=5)
-│   │   ├── IRoutingExecutor.cs               ← NEW: RoutingOutcome Execute(intent, url)
-│   │   ├── RoutingExecutor.cs                ← NEW: lookup → profile → strip pipeline
-│   │   ├── ITargetResolver.cs                ← NEW: RoutingIntent? Resolve(ctx)
-│   │   ├── RoutingDefaults.cs                ← NEW: Matchers() + Resolvers(appConfig, evaluator)
-│   │   ├── Resolvers/                        ← NEW (3 classes):
-│   │   │   ├── ExplicitOverrideResolver.cs   ← picks up --browser/--profile CLI flags
-│   │   │   ├── RuleMatchingResolver.cs       ← evaluates rules via RuleEngine
-│   │   │   └── SettingsFallbackResolver.cs   ← falls back to Settings.DefaultBrowserId
-│   │   ├── IPredicateMatcher.cs              ← NEW: bool Matches(RuleWhen, RoutingContext)
-│   │   ├── PredicateEvaluator.cs             ← was 237 lines (8 ifs), now ~25 (dispatches matchers)
-│   │   ├── GlobMatcher.cs                    ← NEW: static helper for glob→regex (shared cache)
-│   │   ├── Matchers/                         ← NEW (8 classes, one per predicate field):
-│   │   │   ├── ProcessInMatcher.cs
-│   │   │   ├── UrlMatchesAnyMatcher.cs
-│   │   │   ├── UrlMatchesAllMatcher.cs
-│   │   │   ├── UrlRegexMatcher.cs
-│   │   │   ├── SchemeInMatcher.cs
-│   │   │   ├── TimeBetweenMatcher.cs
-│   │   │   ├── WeekdayInMatcher.cs
-│   │   │   └── BrowserRunningMatcher.cs
-│   │   ├── RuleEngine.cs                     ← now takes PredicateEvaluator as parameter
-│   │   ├── ProfileResolver.cs                ← REWRITTEN: takes ProfileSpec list,
-│   │   │                                      resolves by profileId (BrowserId match check)
-│   │   ├── TrackingStripper.cs               ← now instance class (DI); static helpers preserved
-│   │   ├── ISourceAppDetector.cs
-│   │   ├── IProcessNameNormalizer.cs
-│   │   └── SourceApp.cs
-│   ├── UrlRouter.cs                          ← legacy; still used by RuleRouter for explicit routes
-│   ├── RuleRouter.cs                         ← REWRITTEN: 9 deps → 6 deps
-│   │                                          (resolvers, executor, sourceApp, launcher, logger, time)
-│   │                                          Owns: detect source → iterate resolvers → call executor
-│   │                                          → switch on Success/Failure outcome
-│   └── Resources/DefaultConfig.jsonc         ← + "Profiles": []
+Discovered 3 browser(s):
+  firefox      Mozilla Firefox          C:\Program Files\Mozilla Firefox\firefox.exe
+      * Profiles\vc4ak1jq.Barrak-1706255686136 Barrak
+        Profiles\kXwwp1SX.Profile 2 Profile 5
+        Profiles\8j1IVuga.Profile 1 Test Profile 2
+        Profiles\0m6kw70o.Work Work
+  chrome       Google Chrome            C:\Program Files\Google\Chrome\Application\chrome.exe
+        Profile 6            Ali Albarrak
+        Profile 8            kgg.co
+        Profile 7            Remal
+  edge         Microsoft Edge           C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+      * Default              Profile 1
+```
 
-├── AskMeFirst.Platforms.Windows/
-├── AskMeFirst.Platforms.MacOs/
-├── AskMeFirst.Platforms.Linux/               ← platform bootstraps + inventories + detectors
+---
 
-└── AskMeFirst/                               ← thin CLI host
-    ├── ProgramInfo.cs
-    ├── Program.cs
-    ├── Composition.cs                        ← wires routing chain + ConfigValidator
-    ├── CliArgsException.cs
-    └── Commands/
-        ├── VersionCommand.cs
-        ├── HelpCommand.cs
-        ├── BenchCommand.cs
-        ├── ListCommand.cs
-        ├── RouteCommand.cs                   ← uses ctx.Router.Route(...)
-        └── RouteArgs.cs                      ← ProfileName → ProfileId
+## Decisions recap (this session)
 
-tests/
-└── AskMeFirst.Core.Tests/                    ← 161 tests total
-    ├── Fakes.cs                              ← + TestEvaluator, TestResolvers
-    ├── UrlRouterTests.cs
-    ├── ConfigLoaderTests.cs
-    ├── RouteCommandTests.cs
-    ├── HelpFormatterTests.cs
-    ├── LaunchStrategyTests.cs
-    ├── CliTests.cs
-    ├── PredicateEvaluatorTests.cs            ← uses instance PredicateEvaluator + GlobMatcher
-    ├── RuleEngineTests.cs                    ← passes evaluator explicitly
-    ├── TrackingStripperTests.cs
-    ├── RuleRouterTests.cs                    ← BuildRouter constructs full routing chain
-    ├── MatcherTests.cs                       ← NEW: 11 tests, one per matcher in isolation
-    ├── ResolverTests.cs                      ← NEW: 7 tests, one per resolver + chain precedence
-    ├── ProfileResolverTests.cs               ← REWRITTEN for profileId API: 9 tests
-    ├── RoutingExecutorTests.cs               ← NEW: 9 tests (no-browsers, browser-missing,
-    │                                          strip on/off/override, profile resolution)
-    └── ConfigValidatorTests.cs               ← NEW: 10 tests (unique IDs, references resolve,
-                                               browser profileId refs)
+| # | Pick | Why |
+|---|---|---|
+| 67 | ~~Byte-scan Firefox per-store SQLite~~ **REVERTED** in this session | First attempt: same fragile pattern as `FirefoxProfileAvatarReader`. Turned out SQLite TEXT values nest inside cells with length-prefix varints — my naive `Profiles\<path>` scan was matching random substrings in Nimbus telemetry blobs and rejecting every real row. |
+| 68 | **`Microsoft.Data.Sqlite` 10.0.9 + `SQLitePCLRaw.bundle_e_sqlite3` 3.0.2** for both profile store reads AND avatar reads | AOT-compatible in .NET 10. ~1.5 MB binary cost is worth correctness. Pinned bundle version explicitly to avoid transitive `SQLitePCLRaw.lib.e_sqlite3` 2.x with known CVE. |
+| 69 | `BrowserProfile` gains optional `GroupId` + `GroupName` fields with default `null` | Existing positional constructions (`new BrowserProfile(name, dir, isDefault)`) keep compiling at all 32 call sites. GroupId = StoreID from `profiles.ini`. GroupName = the INI row's `Name` (the user-given group label like "Work" or "Barrak"). |
+| 70 | Firefox parser **expands** each INI profile into ALL sub-profiles in its store, instead of just enriching the single INI entry | `profiles.ini` only lists the currently-selected sub-profile per group. To show all 4 profiles (1 Barrak + 3 Work), the parser must enumerate SQLite rows. |
+| 71 | Firefox SQLite rows named `"Original profile"` (case-insensitive) get renamed to the INI group name | That's Firefox's placeholder for unmodified defaults. User-facing label should be the user-given name. Custom names (Profile 5, Test Profile 2) pass through unchanged. |
+| 72 | New `ChromiumProfileNames.Read(userDataRoot)` for Chrome/Edge/Brave/Chromium | Reads `<User Data>/Local State` JSON's `profile.info_cache[<dir>].name`. All three platform detectors call it before emitting `BrowserProfile`s. Falls back to directory name if `Local State` missing/malformed. |
+| 73 | Firefox avatar reader uses cross-store SQLite query, NOT StoreID-from-INI | Old code required looking up the profile's StoreID via `profiles.ini` first — failed for SQLite-only profiles like "Profile 5". New approach: enumerate `<groupsRoot>/*.sqlite`, run `SELECT avatar FROM Profiles WHERE path LIKE '%<dirTail>'` against each until found. Removed `FindFirefoxStoreId` helper entirely. |
+
+---
+
+## Files changed this session
+
+### Source
+
+```
+src/AskMeFirst.Core/
+├── AskMeFirst.Core.csproj              ← MODIFIED: +Microsoft.Data.Sqlite 10.0.9, +SQLitePCLRaw.bundle_e_sqlite3 3.0.2
+├── Models/
+│   └── BrowserProfile.cs               ← MODIFIED: +GroupId, +GroupName (nullable, defaulted)
+└── Profiles/
+    ├── FirefoxProfilesParser.cs        ← REWRITTEN: new Parse(ini, groupsRoot) overload; reads StoreID; expands SQLite rows; renames "Original profile" to group name
+    ├── FirefoxProfileStoreScanner.cs   ← REWRITTEN: Microsoft.Data.Sqlite-based; was byte-scan
+    └── ChromiumProfileNames.cs         ← NEW: parses Local State JSON for Chromium profile display names
+
+src/AskMeFirst.Platforms.Windows/
+├── FirefoxProfileAvatarReader.cs      ← REWRITTEN: Microsoft.Data.Sqlite-based; cross-store query; was byte-scan
+└── WindowsIconProvider.cs              ← SIMPLIFIED: removed FindFirefoxStoreId helper
+
+src/AskMeFirst.Platforms.MacOs/
+└── MacOsBrowserProfileDetector.cs      ← MODIFIED: uses ChromiumProfileNames
+
+src/AskMeFirst.Platforms.Linux/
+└── LinuxBrowserProfileDetector.cs      ← MODIFIED: uses ChromiumProfileNames
+```
+
+### Tests
+
+```
+tests/AskMeFirst.Core.Tests/
+├── AskMeFirst.Core.Tests.csproj       ← MODIFIED: +Microsoft.Data.Sqlite 10.0.9
+├── FirefoxProfileStoreScannerTests.cs  ← REWRITTEN: 5 tests using real SQLite fixtures
+├── FirefoxProfilesParserTests.cs       ← REWRITTEN: 7 tests including the "Original profile" rename
+├── ChromiumProfileNamesTests.cs        ← NEW: 7 tests
+└── FirefoxProfilesIntegrationTests.cs  ← NEW: 2 real-data tests
+
+tests/AskMeFirst.Picker.Tests/
+├── AskMeFirst.Picker.Tests.csproj      ← MODIFIED: +Microsoft.Data.Sqlite 10.0.9
+├── FirefoxProfileAvatarReaderTests.cs  ← NEW: 7 tests
+└── WindowsIconProviderTests.cs         ← MODIFIED: replaced 1 obsolete test with 2 real-data Firefox icon tests (Barrak, Profile 5)
+```
+
+### Docs
+
+```
+docs/HANDOFF.md                         ← THIS FILE
 ```
 
 ---
 
 ## Architecture highlights
 
-### Command pattern — `ICommand` + `CommandRegistry` (UNCHANGED)
+### Firefox profile expansion
 
 ```csharp
-public interface ICommand
+public static IReadOnlyList<BrowserProfile> Parse(string iniPath, string? groupsRoot)
 {
-    string Name { get; }
-    IReadOnlyList<string> Aliases => [];
-    string Usage => Name;
-    string Description => "";
-    int Execute(string[] args, CommandContext ctx);
-}
+    IReadOnlyList<IniRow> iniRows = ReadIni(iniPath);
+    if (iniRows.Count == 0) return [];
 
-public sealed class CommandRegistry
-{
-    public CommandRegistry Register(ICommand command);
-    public CommandRegistry RegisterDefault(ICommand command);
-    public ICommand Resolve(string? firstArg);
-    public IReadOnlyList<ICommand> All();
-}
-```
+    List<BrowserProfile> result = [];
+    HashSet<string> emittedTail = new(StringComparer.OrdinalIgnoreCase);
 
-### Predicate evaluation — Strategy pattern
-
-```csharp
-public interface IPredicateMatcher
-{
-    bool Matches(RuleWhen ruleWhen, RoutingContext ctx);
-}
-
-public sealed class PredicateEvaluator(IReadOnlyList<IPredicateMatcher> matchers)
-{
-    public bool Matches(RuleWhen ruleWhen, RoutingContext ctx)
+    foreach (IniRow row in iniRows)
     {
-        foreach (IPredicateMatcher m in matchers)
-            if (!m.Matches(ruleWhen, ctx)) return false;
-        return true;
+        if (row.Path is null || string.IsNullOrEmpty(row.StoreId))
+        {
+            if (row.Path is not null) EmitIniOnly(row, result, emittedTail);
+            continue;
+        }
+
+        string sqlitePath = Path.Combine(groupsRoot ?? "", $"{row.StoreId}.sqlite");
+        if (!File.Exists(sqlitePath))
+        {
+            EmitIniOnly(row, result, emittedTail);
+            continue;
+        }
+
+        IReadOnlyList<FirefoxProfileStoreEntry> storeEntries =
+            FirefoxProfileStoreScanner.Read(sqlitePath);
+
+        foreach (FirefoxProfileStoreEntry entry in storeEntries)
+        {
+            string tail = ExtractTailSegment(entry.Path);
+            if (!emittedTail.Add(tail)) continue;
+
+            string name = ResolveEntryName(entry, row);
+            bool isDefault = IsPathMatch(entry.Path, row.Path) && row.IsDefault;
+
+            result.Add(new BrowserProfile(
+                Name: name,
+                DirectoryName: entry.Path,
+                IsDefault: isDefault,
+                GroupId: row.StoreId,
+                GroupName: row.Name));
+        }
     }
+
+    return result
+        .OrderBy(p => p.IsDefault ? 0 : 1)
+        .ThenBy(p => p.GroupName ?? p.Name, StringComparer.OrdinalIgnoreCase)
+        .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
 }
-```
 
-Each matcher owns one predicate field. Returns `true` if field is null/empty (predicate inactive) OR predicate evaluates true. Adding a new predicate = one new class + register in `RoutingDefaults.Matchers()`. No edit to `PredicateEvaluator`.
-
-### Rule routing — Strategy + Pipeline + Result type
-
-```csharp
-public interface ITargetResolver { RoutingIntent? Resolve(RoutingContext ctx); }
-
-public sealed record RoutingIntent(
-    string BrowserId, string? ProfileId, bool? StripTrackingOverride,
-    RoutingExitCode NotFoundExitCode,     // what exit code if executor can't find browser
-    string NotFoundMessagePrefix);        // what message prefix ("Browser" / "Rule matched browser")
-
-public abstract record RoutingOutcome;
-public sealed record Success(Browser Browser, Uri FinalUrl, Uri OriginalUrl) : RoutingOutcome;
-public sealed record Failure(RoutingExitCode Code, string Message) : RoutingOutcome;
-
-public interface IRoutingExecutor { RoutingOutcome Execute(RoutingIntent intent, Uri url); }
-
-public sealed class RuleRouter(
-    IReadOnlyList<ITargetResolver> resolvers,
-    IRoutingExecutor executor,
-    ISourceAppDetector sourceAppDetector,
-    IUrlLauncher launcher,
-    ILogger logger,
-    TimeProvider timeProvider)
+private static string ResolveEntryName(FirefoxProfileStoreEntry entry, IniRow row)
 {
-    public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
-    {
-        // 1. detect source app
-        // 2. build RoutingContext
-        // 3. iterate resolvers — first non-null intent wins
-        // 4. if no intent → log + return NoRouteFound
-        // 5. executor.Execute(intent, url) → outcome
-        // 6. switch outcome: Success → log + launch, Failure → log + return exit code
-    }
+    bool isFirefoxDefaultName = !string.IsNullOrWhiteSpace(entry.Name)
+        && string.Equals(entry.Name.Trim(), "Original profile", StringComparison.OrdinalIgnoreCase);
+
+    if (!isFirefoxDefaultName && !string.IsNullOrWhiteSpace(entry.Name))
+        return entry.Name!;
+
+    return row.Name ?? ExtractTailSegment(entry.Path);
 }
 ```
 
-Key design point: **`NotFoundExitCode` + `NotFoundMessagePrefix` live on the intent itself, set by each resolver**. The executor reads them opaquely — no chain knowledge leaks into the executor. Resolvers self-describe "if my target browser is missing, here's the exit code + message prefix to use."
-
-### Profile resolution — ID-based lookup
+### Firefox avatar lookup (cross-store)
 
 ```csharp
-public sealed class ProfileResolver(
-    IBrowserProfileDetector detector,
-    IReadOnlyList<ProfileSpec> profileSpecs,
-    ILogger logger)
+public static byte[]? ReadAvatarPng(string groupsRoot, string profileDirTail)
 {
-    public Browser Resolve(Browser browser, string? profileId)
+    if (string.IsNullOrEmpty(groupsRoot) || !Directory.Exists(groupsRoot))
+        return null;
+
+    string? avatarId = FindAvatarId(groupsRoot, profileDirTail);
+    if (string.IsNullOrEmpty(avatarId) || !IsUuid(avatarId))
+        return null;
+
+    string avatarPath = Path.Combine(groupsRoot, "avatars", avatarId);
+    if (!File.Exists(avatarPath)) return null;
+
+    byte[] bytes = File.ReadAllBytes(avatarPath);
+    return IsPng(bytes) ? bytes : null;
+}
+
+private static string? FindAvatarId(string groupsRoot, string profileDirTail)
+{
+    foreach (string sqlitePath in Directory.EnumerateFiles(groupsRoot, "*.sqlite"))
     {
-        if (profileId is null) return DefaultProfile(browser);
-
-        ProfileSpec? spec = FindSpec(profileId);
-        if (spec is null) { log error + return DefaultProfile(browser); }
-        if (spec.BrowserId != browser.Id) { log error + return DefaultProfile(browser); }
-
-        // find detected profile matching spec.Name OR spec.Directory
-        BrowserProfile? match = ...;
-        if (match is null) { log warn + return DefaultProfile(browser); }
-        return browser with { Profile = match };
+        string? result = QueryAvatarId(sqlitePath, profileDirTail);
+        if (!string.IsNullOrEmpty(result)) return result;
     }
+    return null;
+}
+
+private static string? QueryAvatarId(string sqlitePath, string profileDirTail)
+{
+    using SqliteConnection conn = new($"Data Source={sqlitePath};Mode=ReadOnly");
+    conn.Open();
+    if (!TableExists(conn, "Profiles")) return null;
+
+    using SqliteCommand cmd = conn.CreateCommand();
+    cmd.CommandText = "SELECT avatar FROM Profiles WHERE path LIKE $pattern";
+    SqliteParameter p = cmd.CreateParameter();
+    p.ParameterName = "$pattern";
+    p.Value = "%" + profileDirTail;
+    cmd.Parameters.Add(p);
+
+    return cmd.ExecuteScalar() as string;
 }
 ```
 
-Profile mismatch is **soft-fail** (warn + fall back to default). Browser mismatch is **hard-fail** (exit 4).
-
-### Config validation — at load time
+### Chromium profile names
 
 ```csharp
-ConfigValidator.Validate(appConfig, logger);  // logs errors if any
-// if invalid → fall back to embedded defaults (matches docs/rule-engine.md design)
-```
+public static IReadOnlyDictionary<string, string> Read(string userDataRoot)
+{
+    Dictionary<string, string> result = [];
+    string localState = Path.Combine(userDataRoot, "Local State");
+    if (!File.Exists(localState)) return result;
 
-Checks:
-- `ProfileSpec.Id` is unique (case-insensitive)
-- Every rule's `ProfileId` resolves to a declared spec
-- Every `BrowserSpec.ProfileId` resolves to a declared spec
+    using FileStream fs = new(localState, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+    using JsonDocument doc = JsonDocument.Parse(fs);
+    if (!doc.RootElement.TryGetProperty("profile", out JsonElement profile)) return result;
+    if (!profile.TryGetProperty("info_cache", out JsonElement cache)) return result;
+
+    foreach (JsonProperty entry in cache.EnumerateObject())
+    {
+        if (entry.Value.TryGetProperty("name", out JsonElement nameElement)
+            && nameElement.ValueKind == JsonValueKind.String)
+        {
+            string? displayName = nameElement.GetString();
+            if (!string.IsNullOrWhiteSpace(displayName))
+                result[entry.Name] = displayName!;
+        }
+    }
+
+    return result;
+}
+```
 
 ---
 
-## Profiles-first-class config schema
+## Bugs caught this session
 
-```jsonc
-{
-  "profiles": [
-    { "id": "chrome-personal-profile", "browserId": "chrome-personal", "directory": "Default", "displayName": "Personal" },
-    { "id": "firefox-work-profile",   "browserId": "firefox-work",   "name": "work",         "displayName": "Work" }
-  ],
+1. **Firefox picker showed only 2 profiles, expected 4 across 2 groups** — `profiles.ini` only references the currently-selected sub-profile per group. First fix: byte-scan SQLite (broke). Final fix: switch to `Microsoft.Data.Sqlite`, parser now expands each INI row into all sub-profiles.
 
-  "rules": [
-    { "when": { "processIn": ["slack"] },
-      "then": { "browser": "firefox-work", "profileId": "firefox-work-profile" } }
-  ]
-}
-```
+2. **Firefox "Original profile" placeholder shown to users** — SQLite rows for unmodified defaults have `name="Original profile"`. Renamed to the INI group name ("Work", "Barrak") so users see meaningful labels.
 
-`ProfileSpec` is the only place to declare a profile. Rule references it by stable ID.
+3. **Chromium profiles shown as "Profile 6/7/8"** — Chrome/Edge store display names in `<User Data>/Local State`, not in the directory name. Added `ChromiumProfileNames` reader.
 
----
+4. **Firefox "Profile 5" had no avatar** — Old avatar reader required the profile's StoreID from `profiles.ini`, but "Profile 5" isn't in `profiles.ini` (only the INI's currently-selected sub-profile is). Replaced with cross-store SQLite query — now finds avatars for any profile in any store.
 
-## Decisions recap (point to `docs/decisions-log.md` for full detail)
-
-| # | Pick |
-|---|---|
-| 1-44 | (Previous) |
-| 45 | `IPredicateMatcher` per-predicate-field (Strategy pattern over the 8 predicate fields) |
-| 46 | `ITargetResolver` per-selection-mode (Strategy: Explicit / Rule / Fallback) |
-| 47 | `RoutingIntent` carries `NotFoundExitCode` + `NotFoundMessagePrefix` instead of `IntentSource` enum — keeps chain knowledge inside resolvers, executor reads opaquely |
-| 48 | `RoutingOutcome` is a discriminated union (abstract record + `Success` / `Failure`) — eliminates scattered `return 4` / `return 5` etc. |
-| 49 | `IRoutingExecutor` extracted as separate component — owns the lookup→profile→strip pipeline; RuleRouter doesn't know about inventory or stripper anymore |
-| 50 | `RoutingExitCode` enum replaces magic ints 0/2/3/4/5 with named members |
-| 51 | `ProfileSpec` is a config-side entity; `BrowserProfile` (unchanged) is runtime-side. Two distinct types. |
-| 52 | Top-level `profiles:` section + rule `then.profileId` (stable ID) replaces rule `then.profile` (string match) |
-| 53 | `ConfigValidator` runs at load time; on any error → fall back to embedded defaults + log all errors |
-| 54 | Profile mismatch is soft-fail (warn + default); browser mismatch is hard-fail (distinct exit code) |
-
-### Why this refactor — the user's review notes (verbatim)
-
-> "We can abstract PredicateEvaluator.Matches(). The many if can be separate matchers implementing one interface"
-> "How can we clean RuleRouter. Give me options" (chose Strategy + Pipeline + Result type mix)
-> "The exit codes are still magic ints. 2, 5, 0, 4, 3 make them enum for readability"
-> "Use discriminated union RoutingOutcome"
-> "Make ResolveOutcome() a separate component IRoutingExecutor"
-> "intent.Source == IntentSource.RuleMatch inside ResolveOutcome leaks chain knowledge back into the router" → replaced with intent.NotFoundExitCode + NotFoundMessagePrefix
-> "I'd like profiles to be a first class citizen not an afterthought" → top-level profiles section + ConfigValidator + ProfileId throughout
-
----
-
-## What's verified locally
-
-- ✅ `dotnet build` — clean, 0 warnings, 0 errors
-- ✅ `dotnet test` — **161/161** passing in ~0.8 s
-- ✅ `dotnet publish -p:PublishProfile=Aot -r win-x64` — produces `askmefirst.exe` **4.19 MB**
-- ✅ Cold start: ~46 ms
-- ✅ `--list` discovers 3 real browsers with profiles
-- ✅ CLI smoke: `--version` → exit 0, `--browser notreal` → exit 3 with `"Browser 'notreal' not found. Discovered: firefox, chrome, edge"`, `--browser chrome --profile <id>` → exit 0
-- ✅ With sample config installed: rule→browser→profile chain works; undeclared browser IDs surface as exit 4 with `"Rule matched browser 'X' not found. Discovered: ..."`
+5. **`Microsoft.Data.Sqlite 9.0.0` pulled in vulnerable `SQLitePCLRaw.lib.e_sqlite3` 2.1.10** (CVE GHSA-2m69-gcr7-jv3q) — explicitly pinned `SQLitePCLRaw.bundle_e_sqlite3` to 3.0.2 (latest, no known CVEs).
 
 ---
 
@@ -351,25 +304,13 @@ When editing any file, prune comments that violate these.
 
 ---
 
-## Bugs caught during Phase 2 (cumulative)
+## Toolchain notes
 
-### From earlier Phase 2 work:
-1. **`StartsWith(string)` analyzer warning** (CA1310) — replaced with explicit `StringComparison.Ordinal`.
-2. **`pid.ToString()` analyzer warning** (CA1305) on macOS detector — replaced with `pid.ToString(CultureInfo.InvariantCulture)`.
-3. **`CA1859` on `ConsoleLogger logger`** in Composition — promoted to concrete type for perf hint.
-4. **Glob semantics** — initial impl anchored `*` against `hostPath` with `[^.]*`. Failed for `*.example.com` (docs require matching bare apex too). Special-cased leading `*.` to `(prefix\.)?` so `*.example.com` matches `example.com`, `www.example.com`, `smile.example.com` (single-level). `**` matches across dots for deep subdomains. Also: `*` excludes `/` (single path segment); use `**` to cross path segments.
-5. **`*` matching nothing useful** — `*` is `[^./]*`, which matches only single non-dot non-slash segments. Use `**` to mean "anything". Fixed one test that wrote `UrlMatchesAny = ["*"]` to use `["**"]`.
-6. **Rule priority inversion in test config** — GitHub PR rule at priority 190 was lower than the generic work-apps-at-github rule at priority 200, so PRs always hit the generic rule. Bumped GitHub PR to 250 (above work-apps).
-7. **JSON deserialization resets `IReadOnlyList<>` defaults to null** — source-gen with init properties overrode `= []` default when the JSON omitted the field. Made `BuildTrackerSet` defensive (`?? []`). Future-proof: `ConfigValidator` uses `?? []` defensively on `config.Profiles`, `config.Rules`, `config.Browsers`.
-8. **Embedding `→` arrow in JSON string** — PowerShell mangled the unicode `→` when writing the sample config to $APPDATA. Stripped from the example config (use plain words).
-
-### This session:
-9. **CA1716 on `when` parameter name** — `when` is a contextual keyword in C# (since switch expressions). Renamed to `ruleWhen` in `IPredicateMatcher.Matches` and all 8 matcher implementations.
-10. **CA1859 in `ProfileResolver`** — `IReadOnlyList<...>` returned by private helper; analyzer wanted concrete `List<...>`. Switched to `detected[0]` index access where possible.
-11. **Chain knowledge leak** — `intent.Source == IntentSource.RuleMatch` inside `ResolveOutcome` was resolvers whispering into the executor. Replaced `IntentSource` enum with `NotFoundExitCode` + `NotFoundMessagePrefix` on the intent — set by resolvers, read opaquely by executor.
-12. **`PredicateEvaluator.MatchesGlob` removed** — moved glob logic to `GlobMatcher` static class; `GlobToRegex_Cases` test updated to call `GlobMatcher.Matches` directly.
-13. **CLI `--verbose --version` routes to RouteCommand** — `args[0]` is `--verbose`, no command registered, falls through to default. Behavior unchanged from Phase 1; not a regression.
-14. **CLI tests initially failed in batch** — process spawning inconsistency; resolved by re-running.
+- .NET 10 LTS
+- AOT publish target: `dotnet publish -c Release -r win-x64 -p:PublishProfile=Aot`
+- Native packages pulled in: `Microsoft.Data.Sqlite` 10.0.9, `SQLitePCLRaw.bundle_e_sqlite3` 3.0.2, `Avalonia.*` 11.2.2, `SkiaSharp` 2.88.9
+- Binary size: 18.50 MB (up from 17.00 MB — +1.5 MB SQLite native)
+- SQLite tests use real file-backed `SqliteConnection` (not in-memory `:memory:`) because `Mode=ReadOnly` doesn't work on shared memory DBs
 
 ---
 
@@ -387,7 +328,7 @@ When editing any file, prune comments that violate these.
 ## How to pick up
 
 1. Read this file (`docs/HANDOFF.md`)
-2. Skim `docs/decisions-log.md` for context on locked choices (now 54 decisions)
+2. Skim `docs/decisions-log.md` for context on locked choices (now 73 decisions)
 3. Glance at `docs/roadmap.md` for the phase plan
 4. Look at the comment rules in memory (`mavis memory show`)
-5. Pick a phase: **Phase 3 (Picker UI)** or **Phase 6 (Polish: README, --bench, browser inventory ↔ config `Executable: auto` mapping)**
+5. Pick a phase: **Phase 4 (OS integration + per-platform source-app-window-locator)** or **Phase 5 (Unshortener)** — Phase 3 polish (avatars verified, recent-picks display) is also a good next step

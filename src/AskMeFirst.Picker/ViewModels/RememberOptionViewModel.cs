@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace AskMeFirst.Picker.ViewModels;
 
 public enum RememberKind
@@ -9,22 +11,18 @@ public enum RememberKind
     SourcePlusHost,
 }
 
-public sealed class RememberOptionViewModel
+public sealed partial class RememberOptionViewModel : ObservableObject
 {
     public RememberOptionViewModel(
         RememberKind kind,
         string label,
         bool isAvailable = true,
-        string unavailableReason = "",
-        string? displayUrlPattern = null,
-        string? displaySourceName = null)
+        string unavailableReason = "")
     {
         Kind = kind;
         Label = label;
         IsAvailable = isAvailable;
         UnavailableReason = unavailableReason;
-        DisplayUrlPattern = displayUrlPattern;
-        DisplaySourceName = displaySourceName;
         ItemOpacity = isAvailable ? 1.0 : 0.5;
         IsReasonVisible = !isAvailable;
     }
@@ -37,11 +35,10 @@ public sealed class RememberOptionViewModel
 
     public string UnavailableReason { get; }
 
-    public string? DisplayUrlPattern { get; }
-
-    public string? DisplaySourceName { get; }
-
     public double ItemOpacity { get; }
 
     public bool IsReasonVisible { get; }
+
+    [ObservableProperty]
+    private bool _isSelected;
 }

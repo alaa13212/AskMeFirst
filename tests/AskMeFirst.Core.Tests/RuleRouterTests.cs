@@ -31,6 +31,8 @@ public class RuleRouterTests
             sourceApp,
             pickerLauncher,
             usePickerAsCatchAll: false,
+            appConfig.Profiles,
+            profiles,
             launcher,
             logger,
             new FixedTimeProvider(now ?? Monday10amUtc));
