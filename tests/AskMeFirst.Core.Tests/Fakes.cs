@@ -88,7 +88,6 @@ internal static class TestConfig
     {
         return new AppConfig
         {
-            Settings = new Settings { DefaultBrowserId = "system" },
             Rules = rules,
         };
     }

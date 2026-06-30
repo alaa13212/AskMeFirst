@@ -51,8 +51,8 @@ public sealed class RuleRouter(
                 return HandlePicker(request, url);
             }
             logger.LogError(
-                "No rule matched and no default browser configured. " +
-                "Set Settings.DefaultBrowserId or add a rule.");
+                "No rule matched. " +
+                "Add a rule.");
             return (int)RoutingExitCode.NoRouteFound;
         }
 

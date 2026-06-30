@@ -128,7 +128,7 @@ public class Phase3RoutingOutcomeTests
         FakeLogger logger,
         bool usePickerAsCatchAll)
     {
-        AppConfig empty = new() { Settings = new Settings { DefaultBrowserId = null }, Rules = [] };
+        AppConfig empty = new() { Rules = [] };
         PredicateEvaluator evaluator = TestEvaluator.Default();
         IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(empty, evaluator);
         ProfileResolver profileResolver = new(profiles, empty.Profiles, logger);

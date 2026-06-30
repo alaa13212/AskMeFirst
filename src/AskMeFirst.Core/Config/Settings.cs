@@ -2,8 +2,6 @@
 
 public sealed record Settings
 {
-    public string? DefaultBrowserId { get; init; }
-
     public bool StripTracking { get; init; } = true;
 
     public bool Unshorten { get; init; }

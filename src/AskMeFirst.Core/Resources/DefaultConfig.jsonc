@@ -1,8 +1,7 @@
 {
-  "_comment": "Embedded default config. Phase 2: rule schema in place; empty Rules list = no auto-routing. Falls back to Settings.DefaultBrowserId.",
+  "_comment": "Embedded default config. Phase 2: rule schema in place; empty Rules list = no auto-routing. No default browser = picker catchall.",
 
   "Settings": {
-    "DefaultBrowserId": "system",
     "StripTracking": true,
     "Unshorten": false,
     "InventoryCacheTtl": "1.00:00:00",

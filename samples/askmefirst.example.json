@@ -2,7 +2,6 @@
   "_comment": "Example AskMeFirst config. Copy to the OS-standard location (see docs/platform-integration.md) and edit.",
 
   "Settings": {
-    "DefaultBrowserId": null,
     "StripTracking": true,
     "Unshorten": false,
     "InventoryCacheTtl": "1.00:00:00",
