@@ -383,3 +383,7 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 ## 74. `SkiaSharp` retained in the Windows platform project
 
 **Rationale**: `WindowsIconProvider` extracts an `HICON` via Win32 then PNG-encodes via `SKImage.Encode(SKEncodedImageFormat.Png, 100)`. Avalonia's rendering layer uses Skia internally but does not expose `SKImage`/`SKBitmap`/`SKEncodedImageFormat` publicly, so referencing `SkiaSharp` directly in the platform project is the minimum path to PNG output. Not used by Avalonia; not used by picker rendering.
+
+## 75. `Rule.Origin` field added to the config schema
+
+**Rationale**: Distinguishes user-authored rules (`"user"`, the default) from picker-generated remember rules (`"remember"`). Forwards-compatible — existing configs without the field round-trip fine since `Origin` defaults to `"user"`. The Phase 7 management UI will filter / sort / bulk-delete by origin; Phase 3 picker writes `Origin = "remember"` on every persisted rule.

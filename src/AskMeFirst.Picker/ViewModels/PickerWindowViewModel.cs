@@ -244,12 +244,13 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
             StripTracking = true,
         };
 
-        return new Rule
+return new Rule
         {
             Name = name,
             Priority = 50,
             When = when,
             Then = then,
+            Origin = "remember",
         };
     }
 

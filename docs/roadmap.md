@@ -68,8 +68,6 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 
 **Exit criteria**: ambiguous URLs show the picker; selecting a browser opens it and remembers the choice via "remember" rules.
 
-**Exit criteria**: ambiguous URLs show the picker; selecting a browser opens it and remembers the choice via "remember" rules.
-
 ---
 
 ## Phase 4 — OS integration (1 week)
@@ -102,6 +100,7 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 
 - [ ] `--bench` command with CI-enforced budgets
 - [ ] Browser profile auto-discovery (P2 implementation)
+- [ ] Inventory cache: persist discovered browsers + profiles to `config.browsers` / `config.profiles` so repeat invocations skip re-discovery. Per-platform cache file (executable paths differ across OS); mtime + manual `askmefirst refresh` for invalidation; cache merges with user-written specs (user wins). Replaces the current "every CLI invocation re-discovers" pattern from `rule-engine.md:218`.
 - [ ] Embedded browser icons in picker
 - [ ] User-facing README + screenshots
 - [ ] `samples/askmefirst.example.json` polished
@@ -113,7 +112,7 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 
 ## Phase 7 (optional) — Management UI (1-2 weeks)
 
-- [ ] `askmefirst config` opens a webview at localhost
+- [ ] `askmefirst config` opens a avaloniaui
 - [ ] Browse / edit / sort / pin browsers and profiles
 - [ ] Edit rule command and add custom
 - [ ] Test browsers (open https://example.com)

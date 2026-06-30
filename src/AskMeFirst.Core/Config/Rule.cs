@@ -9,4 +9,6 @@ public sealed record Rule
     public RuleWhen When { get; init; } = new();
 
     public RuleThen Then { get; init; } = new();
+
+    public string Origin { get; init; } = "user";
 }
