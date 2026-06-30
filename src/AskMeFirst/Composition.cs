@@ -36,7 +36,8 @@ internal static class Composition
         ProfileResolver profileResolver = new(ctx.Profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
-        IPickerLauncher pickerLauncher = new AvaloniaPickerLauncher(logger, configWriter: null, icons: ctx.Icons);
+        IConfigWriter configWriter = new JsonConfigWriter(configPath, logger);
+        IPickerLauncher pickerLauncher = new AvaloniaPickerLauncher(logger, configWriter, icons: ctx.Icons);
         RuleRouter router = new(
             resolvers,
             executor,
