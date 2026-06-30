@@ -11,7 +11,9 @@ public sealed class LinuxNotifier(ILogger logger) : INotifier
         {
             using Process p = new();
             p.StartInfo.FileName = "notify-send";
-            p.StartInfo.Arguments = $"--urgency=critical \"{title}\" \"{message}\"";
+            p.StartInfo.ArgumentList.Add("--urgency=critical");
+            p.StartInfo.ArgumentList.Add(title);
+            p.StartInfo.ArgumentList.Add(message);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.CreateNoWindow = true;
             p.Start();

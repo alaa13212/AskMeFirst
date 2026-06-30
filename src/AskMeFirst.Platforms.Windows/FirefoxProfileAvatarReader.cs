@@ -62,13 +62,14 @@ public static class FirefoxProfileAvatarReader
             using SqliteConnection conn = new($"Data Source={sqlitePath};Mode=ReadOnly");
             conn.Open();
 
-            if (!SqliteTable.Exists(conn, "Profiles"))
+            string? tableName = SqliteTable.GetActualName(conn, "Profiles");
+            if (tableName is null)
             {
                 return null;
             }
 
             using SqliteCommand cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT avatar FROM Profiles WHERE path LIKE $pattern";
+            cmd.CommandText = $"SELECT avatar FROM \"{tableName}\" WHERE path LIKE $pattern";
             SqliteParameter p = cmd.CreateParameter();
             p.ParameterName = "$pattern";
             p.Value = "%" + profileDirTail;

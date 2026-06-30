@@ -6,6 +6,11 @@ public static class SqliteTable
 {
     public static bool Exists(SqliteConnection connection, string tableName)
     {
+        return GetActualName(connection, tableName) is not null;
+    }
+
+    public static string? GetActualName(SqliteConnection connection, string tableName)
+    {
         using SqliteCommand cmd = connection.CreateCommand();
         cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
         using SqliteDataReader reader = cmd.ExecuteReader();
@@ -13,9 +18,9 @@ public static class SqliteTable
         {
             if (reader.GetString(0).Equals(tableName, StringComparison.OrdinalIgnoreCase))
             {
-                return true;
+                return reader.GetString(0);
             }
         }
-        return false;
+        return null;
     }
 }

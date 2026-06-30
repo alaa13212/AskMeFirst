@@ -9,11 +9,10 @@ public sealed class MacNotifier(ILogger logger) : INotifier
     {
         try
         {
-            string escapedTitle = title.Replace("\"", "\\\"");
-            string escapedMessage = message.Replace("\"", "\\\"");
             using Process p = new();
             p.StartInfo.FileName = "osascript";
-            p.StartInfo.Arguments = $"-e \"display notification \\\"{escapedMessage}\\\" with title \\\"{escapedTitle}\\\"\"";
+            p.StartInfo.ArgumentList.Add("-e");
+            p.StartInfo.ArgumentList.Add($"display notification \"{message.Replace("\"", "\\\"")}\" with title \"{title.Replace("\"", "\\\"")}\"");
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.CreateNoWindow = true;
             p.Start();

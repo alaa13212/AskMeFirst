@@ -14,19 +14,20 @@ public static class FirefoxProfileStoreScanner
             using SqliteConnection conn = new($"Data Source={sqlitePath};Mode=ReadOnly");
             conn.Open();
 
-            if (!SqliteTable.Exists(conn, "profiles"))
+            string? tableName = SqliteTable.GetActualName(conn, "profiles");
+            if (tableName is null)
             {
                 return [];
             }
 
-            if (!ColumnExists(conn, "profiles", "name"))
+            if (!ColumnExists(conn, tableName, "name"))
             {
                 return [];
             }
 
             List<FirefoxProfileStoreEntry> entries = [];
             using SqliteCommand cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT name, path FROM profiles";
+            cmd.CommandText = $"SELECT name, path FROM \"{tableName}\"";
             using SqliteDataReader reader = cmd.ExecuteReader();
             while (reader.Read())
             {

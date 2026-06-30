@@ -19,7 +19,10 @@ public sealed class WindowsNotifier(ILogger logger) : INotifier
         {
             using Process p = new();
             p.StartInfo.FileName = "msg.exe";
-            p.StartInfo.Arguments = $"* /TIME:5 \"{title}\" \"{message}\"";
+            p.StartInfo.ArgumentList.Add("*");
+            p.StartInfo.ArgumentList.Add("/TIME:5");
+            p.StartInfo.ArgumentList.Add(title);
+            p.StartInfo.ArgumentList.Add(message);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.CreateNoWindow = true;
             p.Start();
