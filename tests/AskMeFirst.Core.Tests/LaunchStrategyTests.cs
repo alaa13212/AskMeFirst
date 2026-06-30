@@ -1,6 +1,7 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Profiles;
 using Xunit;
 
 namespace AskMeFirst.Core.Tests;
@@ -41,20 +42,35 @@ public class LaunchStrategyTests
     }
 
     [Fact]
-    public void Firefox_WithProfile_UsesNameWithDashPFlag()
+    public void Firefox_WithProfile_UsesAbsoluteProfilePath()
     {
         BrowserProfile profile = new("default-release", "Profiles/vc4ak1jq.default-release", IsDefault: true);
         string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
-        Assert.Equal(["-P", "default-release", "https://example.com/"], args);
+        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "Profiles/vc4ak1jq.default-release");
+        Assert.Equal(["-profile", expectedPath, "https://example.com/"], args);
     }
 
     [Fact]
-    public void Firefox_WithProfile_UsesNameNotDirectoryPath()
+    public void Firefox_WithProfile_PreservesAbsolutePath()
     {
-        BrowserProfile profile = new("Work", "Profiles/0m6kw70o.Work", IsDefault: false);
+        string absolute = Path.Combine(FirefoxProfilesRoot.Get(), "abc.Work");
+        BrowserProfile profile = new("Work", absolute, IsDefault: false);
         string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
-        Assert.Contains("Work", args);
-        Assert.DoesNotContain("Profiles/0m6kw70o.Work", args);
+        Assert.Equal(["-profile", absolute, "https://example.com/"], args);
+    }
+
+    [Fact]
+    public void Firefox_GroupChild_UsesPathSoFirefoxCanResolve()
+    {
+        BrowserProfile groupChild = new(
+            Name: "Work",
+            DirectoryName: "Profiles/0m6kw70o.Work",
+            IsDefault: false);
+        string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, groupChild);
+        Assert.DoesNotContain("-P", args);
+        Assert.Contains("-profile", args);
+        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "Profiles/0m6kw70o.Work");
+        Assert.Contains(expectedPath, args);
     }
 
     [Fact]

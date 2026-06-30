@@ -1,5 +1,6 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Profiles;
 
 namespace AskMeFirst.Core.Launch;
 
@@ -14,6 +15,10 @@ public sealed class FirefoxLaunchStrategy : IBrowserLaunchStrategy
             return [url.ToString()];
         }
 
-        return ["-P", profile.Name, url.ToString()];
+        string absolutePath = Path.IsPathRooted(profile.DirectoryName)
+            ? profile.DirectoryName
+            : Path.Combine(FirefoxProfilesRoot.Get(), profile.DirectoryName);
+
+        return ["-profile", absolutePath, url.ToString()];
     }
 }
