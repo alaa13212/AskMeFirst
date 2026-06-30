@@ -42,8 +42,6 @@ jobs:
         include:
           - os: ubuntu-latest
             rid: linux-x64
-          - os: ubuntu-latest
-            rid: linux-arm64
           - os: windows-latest
             rid: win-x64
           - os: macos-latest
@@ -56,21 +54,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Install aarch64 cross-toolchain + qemu
-        if: matrix.os == 'ubuntu-latest' && matrix.rid == 'linux-arm64'
-        run: |
-          # Multiarch setup: install arm64 libc into /lib (where qemu-user-static
-          # looks for it). libc6-arm64-cross puts the loader under
-          # /usr/aarch64-linux-gnu/lib/, which qemu doesn't search.
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static libc6:arm64
-          # Prepend the cross bin dir to PATH so the AOT post-link objcopy
-          # resolves to the aarch64 build of binutils.
-          echo "/usr/aarch64-linux-gnu/bin" >> "$GITHUB_PATH"
-          # Register binfmt so the kernel dispatches aarch64 ELF to qemu-user-static.
-          sudo update-binfmts --display qemu-aarch64 || true
 
       - name: Publish (Native AOT)
         run: dotnet publish src/AskMeFirst/AskMeFirst.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o ./publish/${{ matrix.rid }}
