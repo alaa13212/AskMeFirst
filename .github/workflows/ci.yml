@@ -85,8 +85,12 @@ jobs:
               BIN=./publish/${{ matrix.rid }}/askmefirst
               ;;
           esac
+          # Use bash's `time` builtin + TIMEFORMAT for portable timing across
+          # Linux (no /usr/bin/time in some images), macOS (where /usr/bin/time
+          # is BSD-style and rejects -f), and Windows bash (msys, no /usr/bin/time).
+          TIMEFORMAT='%R'
           for i in 1 2 3; do
-            /usr/bin/time -f "%e" "$BIN" --version > /dev/null
+            { time "$BIN" --version > /dev/null; } 2>&1 | tail -n 1
           done
 
       - name: Upload artifact
