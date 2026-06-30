@@ -8,12 +8,9 @@ public sealed record ScreenInfo(IReadOnlyList<ScreenBounds> All)
     {
         get
         {
-            foreach (ScreenBounds s in All)
+            if(All.FirstOrDefault(s => s.IsPrimary) is {  } primary)
             {
-                if (s.IsPrimary)
-                {
-                    return s;
-                }
+                return primary;
             }
             return All.Count > 0 ? All[0] : new ScreenBounds(0, 0, 1920, 1080, IsPrimary: true);
         }

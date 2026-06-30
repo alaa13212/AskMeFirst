@@ -27,9 +27,7 @@ public sealed class BrowserOptionViewModel : IDisposable
             ? hotkey.ToString(CultureInfo.InvariantCulture)
             : "";
 
-        byte[]? profilePic = profile is null
-            ? null
-            : icons.GetProfileIconPng(browser.Id, profile);
+        byte[]? profilePic = profile is null ? null : icons.GetProfileIconPng(browser.Id, profile);
         byte[]? browserPic = icons.GetBrowserIconPng(browser.Id, browser.ExecutablePath);
 
         _primaryBytes = profilePic ?? browserPic;
