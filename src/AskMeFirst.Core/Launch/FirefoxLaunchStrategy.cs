@@ -15,10 +15,21 @@ public sealed class FirefoxLaunchStrategy : IBrowserLaunchStrategy
             return [url.ToString()];
         }
 
-        string absolutePath = Path.IsPathRooted(profile.DirectoryName)
-            ? profile.DirectoryName
-            : Path.Combine(FirefoxProfilesRoot.Get(), profile.DirectoryName);
+        return ["-profile", ResolveProfilePath(profile.DirectoryName), url.ToString()];
+    }
 
-        return ["-profile", absolutePath, url.ToString()];
+    private static string ResolveProfilePath(string directoryName)
+    {
+        if (Path.IsPathRooted(directoryName))
+        {
+            return directoryName;
+        }
+
+        string normalized = directoryName.StartsWith("Profiles/", StringComparison.OrdinalIgnoreCase)
+            || directoryName.StartsWith("Profiles\\", StringComparison.OrdinalIgnoreCase)
+            ? directoryName["Profiles/".Length..]
+            : directoryName;
+
+        return Path.Combine(FirefoxProfilesRoot.Get(), normalized);
     }
 }

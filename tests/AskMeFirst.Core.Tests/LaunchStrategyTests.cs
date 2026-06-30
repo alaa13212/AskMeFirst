@@ -46,7 +46,16 @@ public class LaunchStrategyTests
     {
         BrowserProfile profile = new("default-release", "Profiles/vc4ak1jq.default-release", IsDefault: true);
         string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
-        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "Profiles/vc4ak1jq.default-release");
+        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "vc4ak1jq.default-release");
+        Assert.Equal(["-profile", expectedPath, "https://example.com/"], args);
+    }
+
+    [Fact]
+    public void Firefox_WithProfile_HandlesBareTail()
+    {
+        BrowserProfile profile = new("legacy", "abc.default", IsDefault: false);
+        string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
+        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "abc.default");
         Assert.Equal(["-profile", expectedPath, "https://example.com/"], args);
     }
 
@@ -69,7 +78,7 @@ public class LaunchStrategyTests
         string[] args = FirefoxLaunchStrategy.Instance.BuildArguments(SampleUrl, groupChild);
         Assert.DoesNotContain("-P", args);
         Assert.Contains("-profile", args);
-        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "Profiles/0m6kw70o.Work");
+        string expectedPath = Path.Combine(FirefoxProfilesRoot.Get(), "0m6kw70o.Work");
         Assert.Contains(expectedPath, args);
     }
 

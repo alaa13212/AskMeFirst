@@ -2,9 +2,7 @@ name: build
 
 on:
   push:
-    branches: [master, phase-3]
-  pull_request:
-    branches: [master, phase-3]
+    branches: [master]
   workflow_dispatch:
 
 env:
@@ -33,8 +31,6 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        # Filter string mirrors tests/AskMeFirst.Picker.Tests/TestCategories.cs (Name + ReleaseVisual).
-        # If you rename either constant, update this line.
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal" --filter "Category!=ReleaseVisual"
 
   publish:
@@ -65,7 +61,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.rid == 'linux-arm64'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static libc6-arm64-cross
           # The AOT post-link step (objcopy --only-keep-debug) calls objcopy
           # unqualified; the host's stock /usr/bin/objcopy is x86-only and
           # rejects the aarch64 ELF. Prepend the cross bin dir to PATH so
@@ -73,6 +69,8 @@ jobs:
           echo "/usr/aarch64-linux-gnu/bin" >> "$GITHUB_PATH"
           # Register binfmt so the kernel dispatches aarch64 ELF to qemu-user-static.
           # Without this the smoke + cold-start tests fail with "Exec format error".
+          # qemu-user-static also needs /lib/ld-linux-aarch64.so.1 (provided by
+          # libc6-arm64-cross above).
           sudo update-binfmts --display qemu-aarch64 || true
 
       - name: Publish (Native AOT)
