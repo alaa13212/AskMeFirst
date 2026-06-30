@@ -47,7 +47,18 @@ public sealed class PickCommand : ICommand
 
     private static int LaunchAndReturn(Launched launched, CommandContext ctx)
     {
-        ctx.Launcher.Launch(launched.Browser, launched.Url);
-        return 0;
+        try
+        {
+            ctx.Launcher.Launch(launched.Browser, launched.Url);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            ctx.Logger.LogError($"Browser launch failed: {ex.Message}");
+            ctx.Notifier.Show(
+                title: "Couldn't open browser",
+                message: $"Couldn't open {launched.Browser.DisplayName} for {launched.Url}. The URL is in your recent picks; try again.");
+            return (int)RoutingExitCode.BrowserNotFound;
+        }
     }
 }

@@ -17,6 +17,7 @@ public sealed class RuleRouter(
     IBrowserProfileDetector profileDetector,
     IUrlLauncher launcher,
     ILogger logger,
+    INotifier notifier,
     TimeProvider timeProvider)
 {
     public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
@@ -70,7 +71,7 @@ public sealed class RuleRouter(
             _ => throw new InvalidOperationException($"Unknown outcome: {outcome.GetType().Name}"),
         };
 
-    private int LogAndLaunch(Success success, Uri url)
+private int LogAndLaunch(Success success, Uri url)
     {
         string profileSuffix = success.Browser.Profile is null ? "" : $" [profile: {success.Browser.Profile.Name}]";
         logger.LogInfo($"Routing {url} → {success.Browser.DisplayName} ({success.Browser.ExecutablePath}){profileSuffix}");
@@ -78,8 +79,7 @@ public sealed class RuleRouter(
         {
             logger.LogInfo($"stripped tracking params → {success.FinalUrl}");
         }
-        launcher.Launch(success.Browser, success.FinalUrl);
-        return (int)RoutingExitCode.Success;
+        return TryLaunch(success.Browser, success.FinalUrl, success.Browser.DisplayName, url);
     }
 
     private int LogAndReturnFailure(Failure failure)
@@ -121,7 +121,23 @@ public sealed class RuleRouter(
     {
         string profileSuffix = launched.Browser.Profile is null ? "" : $" [profile: {launched.Browser.Profile.Name}]";
         logger.LogInfo($"Picker chose {launched.Browser.DisplayName} ({launched.Browser.ExecutablePath}){profileSuffix} for {url}");
-        launcher.Launch(launched.Browser, launched.Url);
-        return (int)RoutingExitCode.Success;
+        return TryLaunch(launched.Browser, launched.Url, launched.Browser.DisplayName, url);
+    }
+
+    private int TryLaunch(Browser browser, Uri target, string displayName, Uri originalUrl)
+    {
+        try
+        {
+            launcher.Launch(browser, target);
+            return (int)RoutingExitCode.Success;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Browser launch failed: {ex.Message}");
+            notifier.Show(
+                title: "Couldn't open browser",
+                message: $"Couldn't open {displayName} for {originalUrl}. The URL is in your recent picks; try again.");
+            return (int)RoutingExitCode.BrowserNotFound;
+        }
     }
 }

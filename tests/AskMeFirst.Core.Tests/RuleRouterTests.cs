@@ -1,4 +1,5 @@
 using AskMeFirst.Core;
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
@@ -36,6 +37,7 @@ public class RuleRouterTests
             profiles,
             launcher,
             logger,
+            new NullNotifier(),
             new FixedTimeProvider(now ?? Monday10amUtc));
     }
 

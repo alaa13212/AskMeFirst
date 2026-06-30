@@ -19,4 +19,5 @@ public sealed record CommandContext(
     CommandRegistry Registry,
     RuleRouter Router,
     IPickerLauncher PickerLauncher,
-    IRecentPicksLog RecentPicks);
+    IRecentPicksLog RecentPicks,
+    INotifier Notifier);

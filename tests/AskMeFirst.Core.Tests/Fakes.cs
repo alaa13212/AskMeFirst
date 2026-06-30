@@ -114,3 +114,23 @@ internal sealed class RecordingPickerLauncher : IPickerLauncher
         return new Cancelled();
     }
 }
+
+internal sealed class FakeNotifier : INotifier
+{
+    public List<(string Title, string Message)> Calls { get; } = [];
+
+    public void Show(string title, string message)
+    {
+        Calls.Add((title, message));
+    }
+}
+
+internal sealed class ThrowingLauncher : IUrlLauncher
+{
+    public Exception ToThrow { get; set; } = new InvalidOperationException("launch failed");
+
+    public void Launch(Browser browser, Uri url)
+    {
+        throw ToThrow;
+    }
+}

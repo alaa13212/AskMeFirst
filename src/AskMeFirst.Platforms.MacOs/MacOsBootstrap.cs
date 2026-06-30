@@ -1,6 +1,7 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
+using AskMeFirst.Core.Logging;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.MacOs;
@@ -9,6 +10,7 @@ public static class MacOsBootstrap
 {
     public static BootstrapContext Create()
     {
+        ConsoleLogger logger = new(verbose: false);
         IBrowserInventory inventory = new MacOsBrowserInventory();
         IUrlLauncher launcher = new MacOsUrlLauncher();
         IBrowserProfileDetector profiles = new MacOsBrowserProfileDetector();
@@ -16,6 +18,7 @@ public static class MacOsBootstrap
         ISourceAppDetector sourceApp = new MacOsSourceAppDetector(normalizer);
         IConfigPathResolver configPath = new MacOsConfigPathResolver();
         IIconProvider icons = new MacIconProvider();
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, "macos");
+        INotifier notifier = new MacNotifier(logger);
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, "macos");
     }
 }

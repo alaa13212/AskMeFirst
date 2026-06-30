@@ -51,6 +51,7 @@ internal static class Composition
             ctx.Profiles,
             ctx.Launcher,
             logger,
+            ctx.Notifier,
             TimeProvider.System);
 
         return new CommandContext(
@@ -67,7 +68,8 @@ internal static class Composition
             registry,
             router,
             pickerLauncher,
-            recentPicks);
+            recentPicks,
+            ctx.Notifier);
     }
 
     public static IBrowserInventory BuildInventory()

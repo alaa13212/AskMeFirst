@@ -145,6 +145,7 @@ public class RuleRouterPickerTests
             profiles,
             launcher,
             logger,
+            new NullNotifier(),
             new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));
     }
 
