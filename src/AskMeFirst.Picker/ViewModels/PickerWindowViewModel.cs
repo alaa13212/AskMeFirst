@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
@@ -17,6 +18,7 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
     private readonly PickerRequest _request;
     private readonly IConfigWriter? _configWriter;
     private readonly IIconProvider _icons;
+    private readonly IRecentPicksLog _recentPicks;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
@@ -27,12 +29,14 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         PickerRequest request,
         ILogger logger,
         IConfigWriter? configWriter = null,
-        IIconProvider? icons = null)
+        IIconProvider? icons = null,
+        IRecentPicksLog? recentPicks = null)
     {
         _request = request;
         _logger = logger;
         _configWriter = configWriter;
         _icons = icons ?? new NullIconProvider();
+        _recentPicks = recentPicks ?? new NoOpRecentPicksLog();
 
         DisplayUrl = request.OriginalUrl.ToString();
         SourceAppLabel = request.SourceApp is null ? "" : $"From {request.SourceApp}";
@@ -105,11 +109,21 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
             browser = browser with { Profile = browserOpt.Profile };
         }
 
+        bool ruleWritten = false;
         if (rememberOpt.Kind != RememberKind.Once && _configWriter is not null)
         {
             Rule rule = BuildRememberRule(rememberOpt.Kind);
             _ = WriteRuleAsync(rule);
+            ruleWritten = true;
         }
+
+        _recentPicks.Append(new RecentPickEntry(
+            Timestamp: DateTimeOffset.UtcNow,
+            Url: _request.OriginalUrl,
+            SourceApp: _request.SourceApp,
+            BrowserId: browser.Id,
+            ProfileId: browser.Profile?.DirectoryName,
+            RuleWritten: ruleWritten));
 
         _logger.LogInfo($"Picker committed: {browser.DisplayName} ({rememberOpt.Kind})");
         _result = new Launched(browser, _request.OriginalUrl);

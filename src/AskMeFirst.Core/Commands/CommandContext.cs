@@ -1,4 +1,5 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Routing;
 
@@ -17,4 +18,5 @@ public sealed record CommandContext(
     string PlatformName,
     CommandRegistry Registry,
     RuleRouter Router,
-    IPickerLauncher PickerLauncher);
+    IPickerLauncher PickerLauncher,
+    IRecentPicksLog RecentPicks);

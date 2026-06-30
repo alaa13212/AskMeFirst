@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using AskMeFirst.Commands;
 using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
@@ -38,6 +39,7 @@ internal static class Composition
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
         IConfigWriter configWriter = new JsonConfigWriter(configPath, logger);
         IPickerLauncher pickerLauncher = new AvaloniaPickerLauncher(logger, configWriter, icons: ctx.Icons);
+        IRecentPicksLog recentPicks = new FileRecentPicksLog(configPath, logger);
         RuleRouter router = new(
             resolvers,
             executor,
@@ -64,7 +66,8 @@ internal static class Composition
             ctx.PlatformName,
             registry,
             router,
-            pickerLauncher);
+            pickerLauncher,
+            recentPicks);
     }
 
     public static IBrowserInventory BuildInventory()
