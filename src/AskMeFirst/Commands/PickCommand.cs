@@ -1,15 +1,9 @@
-using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Commands;
 
-public sealed class PickCommand(
-    IPickerLauncher pickerLauncher,
-    ISourceAppDetector sourceApp,
-    IBrowserInventory inventory,
-    IBrowserProfileDetector profileDetector,
-    ILogger logger) : ICommand
+public sealed class PickCommand : ICommand
 {
     public string Name => "pick";
 
@@ -31,8 +25,8 @@ public sealed class PickCommand(
             throw new CliArgsException($"Not a valid http(s) URL: {urlArg}");
         }
 
-        SourceApp? source = sourceApp.Detect();
-        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profileDetector);
+        SourceApp? source = ctx.SourceApp.Detect();
+        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(ctx.Inventory.Discover(), ctx.Profiles);
 
         PickerRequest request = new(
             OriginalUrl: url,
@@ -40,8 +34,8 @@ public sealed class PickCommand(
             UnshortenTask: null,
             AvailableBrowsers: options);
 
-        logger.LogInfo($"Opening picker for {url} (source: {source?.ProcessName ?? "unknown"})");
-        PickerResult result = pickerLauncher.Show(request);
+        ctx.Logger.LogInfo($"Opening picker for {url} (source: {source?.ProcessName ?? "unknown"})");
+        PickerResult result = ctx.PickerLauncher.Show(request);
 
         return result switch
         {

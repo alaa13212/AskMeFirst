@@ -9,6 +9,7 @@ namespace AskMeFirst.Core;
 public sealed class RuleRouter(
     IReadOnlyList<ITargetResolver> resolvers,
     IRoutingExecutor executor,
+    IBrowserInventory browserInventory,
     ISourceAppDetector sourceAppDetector,
     IPickerLauncher pickerLauncher,
     bool usePickerAsCatchAll,
@@ -89,7 +90,7 @@ public sealed class RuleRouter(
 
     private PickerRequest BuildPickerRequest(RoutingContext ctx, Uri url, string? sourceApp)
     {
-        IReadOnlyList<Browser> browsers = executor.ListAvailableBrowsers();
+        IReadOnlyList<Browser> browsers = browserInventory.Discover();
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(browsers, profileDetector);
         IReadOnlyList<PickerBrowserOption> filtered = PinnedProfileFilter.Filter(options, profileSpecs);
         return new PickerRequest(

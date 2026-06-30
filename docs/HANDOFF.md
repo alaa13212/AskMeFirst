@@ -110,7 +110,7 @@ tests/AskMeFirst.Core.Tests/
 ├── FirefoxProfileStoreScannerTests.cs  ← REWRITTEN: 5 tests using real SQLite fixtures
 ├── FirefoxProfilesParserTests.cs       ← REWRITTEN: 7 tests including the "Original profile" rename
 ├── ChromiumProfileNamesTests.cs        ← NEW: 7 tests
-└── FirefoxProfilesIntegrationTests.cs  ← NEW: 2 real-data tests
+└── RuleRouterPickerTests.cs            ← NEW: 7 tests for picker-as-catch-all on RuleRouter
 
 tests/AskMeFirst.Picker.Tests/
 ├── AskMeFirst.Picker.Tests.csproj      ← MODIFIED: +Microsoft.Data.Sqlite 10.0.9

@@ -1,4 +1,5 @@
 #if WINDOWS
+using AskMeFirst.Core.Data;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Platforms.Windows;
 using Xunit;
@@ -23,7 +24,7 @@ public class WindowsIconProviderTests
 
         Assert.NotNull(bytes);
         Assert.True(bytes!.Length > 0);
-        Assert.True(IsPng(bytes));
+        Assert.True(PngSignature.Matches(bytes));
     }
 
     [Fact]
@@ -39,7 +40,7 @@ public class WindowsIconProviderTests
 
         Assert.NotNull(bytes);
         Assert.True(bytes!.Length > 0);
-        Assert.True(IsPng(bytes));
+        Assert.True(PngSignature.Matches(bytes));
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class WindowsIconProviderTests
             "chrome",
             new BrowserProfile(Name: "Default", DirectoryName: "Default", IsDefault: true));
 
-        Assert.True(bytes is null || IsPng(bytes));
+        Assert.True(bytes is null || PngSignature.Matches(bytes));
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class WindowsIconProviderTests
             new BrowserProfile(Name: "Barrak", DirectoryName: "Profiles/vc4ak1jq.Barrak-1706255686136", IsDefault: true));
 
         Assert.NotNull(bytes);
-        Assert.True(IsPng(bytes!));
+        Assert.True(PngSignature.Matches(bytes!));
     }
 
     [Fact]
@@ -114,11 +115,8 @@ public class WindowsIconProviderTests
             new BrowserProfile(Name: "Profile 5", DirectoryName: "Profiles/kXwwp1SX.Profile 2", IsDefault: false));
 
         Assert.NotNull(bytes);
-        Assert.True(IsPng(bytes!));
+        Assert.True(PngSignature.Matches(bytes!));
     }
 
-    private static bool IsPng(byte[] bytes) =>
-        bytes.Length >= 4 &&
-        bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
 }
 #endif

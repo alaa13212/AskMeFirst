@@ -31,6 +31,4 @@ public sealed class RoutingExecutor(
         Uri finalUrl = strip ? stripper.Strip(url) : url;
         return new Success(resolved, finalUrl, url);
     }
-
-    public IReadOnlyList<Browser> ListAvailableBrowsers() => inventory.Discover();
 }

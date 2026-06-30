@@ -28,6 +28,7 @@ public class RuleRouterTests
         return new RuleRouter(
             resolvers,
             executor,
+            inv,
             sourceApp,
             pickerLauncher,
             usePickerAsCatchAll: false,

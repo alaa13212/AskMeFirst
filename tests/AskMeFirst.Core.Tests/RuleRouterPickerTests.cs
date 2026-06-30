@@ -7,7 +7,7 @@ using Xunit;
 
 namespace AskMeFirst.Core.Tests;
 
-public class Phase3RoutingOutcomeTests
+public class RuleRouterPickerTests
 {
     [Fact]
     public void ShowPicker_IsValidRoutingOutcome()
@@ -137,6 +137,7 @@ public class Phase3RoutingOutcomeTests
         return new RuleRouter(
             resolvers,
             executor,
+            inv,
             sourceApp,
             picker,
             usePickerAsCatchAll,

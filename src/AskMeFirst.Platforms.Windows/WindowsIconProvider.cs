@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 using Microsoft.Win32;
 using SkiaSharp;
 
@@ -110,7 +111,7 @@ public sealed class WindowsIconProvider : IIconProvider
             return null;
         }
 
-        string dirName = ExtractTailSegment(profile.DirectoryName);
+        string dirName = PathTail.Segment(profile.DirectoryName);
         return FirefoxProfileAvatarReader.ReadAvatarPng(groupsRoot, dirName);
     }
 
@@ -121,7 +122,7 @@ public sealed class WindowsIconProvider : IIconProvider
             return profile.DirectoryName;
         }
 
-        string dirName = ExtractTailSegment(profile.DirectoryName);
+        string dirName = PathTail.Segment(profile.DirectoryName);
 
         string? localAppData = Environment.GetEnvironmentVariable("LOCALAPPDATA");
         string? appData = Environment.GetEnvironmentVariable("APPDATA");
@@ -158,13 +159,6 @@ public sealed class WindowsIconProvider : IIconProvider
             }
         }
         return null;
-    }
-
-    private static string ExtractTailSegment(string path)
-    {
-        string normalized = path.Replace('/', '\\');
-        int lastSlash = normalized.LastIndexOf('\\');
-        return lastSlash >= 0 ? normalized[(lastSlash + 1)..] : normalized;
     }
 
     private static (string Path, int Index) ParseDefaultIcon(string raw, string fallbackExe)

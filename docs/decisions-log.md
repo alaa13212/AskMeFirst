@@ -366,3 +366,20 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 | 69 | ProfileSpec.Pinned | `bool` (default false); picker filters to pinned |
 | 70 | Post-commit failure | OS notification (not silent, not picker re-show) |
 | 71 | Arrow-key roles | Up/Down within section, Left/Right switch sections (per-section cursors) |
+| 72 | IIconProvider seam | Cross-OS surface; NullIconProvider on Linux/macOS pending real implementations |
+| 73 | SQLitePCLRaw.bundle_e_sqlite3 | Explicit reference overrides Microsoft.Data.Sqlite 10.x default SourceGear native |
+| 74 | SkiaSharp in WindowsIconProvider | PNG-encodes GDI bitmap bytes; Avalonia's internal Skia isn't exposed publicly |
+
+## Phase 3 review feedback (added 2026-06-30)
+
+## 72. `IIconProvider` stays as a cross-OS surface
+
+**Rationale**: Resolved by keeping it. Folding icon resolution into `IBrowserInventory` or `Browser` would force every `Browser` record to carry a potentially large byte array eagerly, on platforms (Linux/macOS) where the picker still has to handle the "no icon" case. Per-platform implementations (`WindowsIconProvider`, future `LinuxIconProvider`/`MacIconProvider`) plus `NullIconProvider` for stubs keeps the picker code path-agnostic.
+
+## 73. `SQLitePCLRaw.bundle_e_sqlite3` kept as an explicit `PackageReference`
+
+**Rationale**: Microsoft.Data.Sqlite 10.x resolves to the SourceGear native by default. `SQLitePCLRaw.bundle_e_sqlite3` overrides that with the bundled `e_sqlite3` native so the Core library ships one consistent SQLite implementation regardless of the host OS's installed libsqlite. Without the explicit reference the Core library would dynamically link against whatever the consumer provides via `SQLitePCLRaw.provider.*` registration — fine for apps, fragile for a redistributable library distributed as NativeAOT.
+
+## 74. `SkiaSharp` retained in the Windows platform project
+
+**Rationale**: `WindowsIconProvider` extracts an `HICON` via Win32 then PNG-encodes via `SKImage.Encode(SKEncodedImageFormat.Png, 100)`. Avalonia's rendering layer uses Skia internally but does not expose `SKImage`/`SKBitmap`/`SKEncodedImageFormat` publicly, so referencing `SkiaSharp` directly in the platform project is the minimum path to PNG output. Not used by Avalonia; not used by picker rendering.

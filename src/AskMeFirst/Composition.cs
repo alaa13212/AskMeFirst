@@ -40,6 +40,7 @@ internal static class Composition
         RuleRouter router = new(
             resolvers,
             executor,
+            ctx.Inventory,
             ctx.SourceApp,
             pickerLauncher,
             usePickerAsCatchAll: true,
@@ -48,8 +49,6 @@ internal static class Composition
             ctx.Launcher,
             logger,
             TimeProvider.System);
-
-        registry.Register(new PickCommand(pickerLauncher, ctx.SourceApp, ctx.Inventory, ctx.Profiles, logger));
 
         return new CommandContext(
             logger,
@@ -63,7 +62,8 @@ internal static class Composition
             TimeProvider.System,
             ctx.PlatformName,
             registry,
-            router);
+            router,
+            pickerLauncher);
     }
 
     public static IBrowserInventory BuildInventory()

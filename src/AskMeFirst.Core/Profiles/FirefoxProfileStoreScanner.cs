@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Data;
 using Microsoft.Data.Sqlite;
 
 namespace AskMeFirst.Core.Profiles;
@@ -13,7 +14,7 @@ public static class FirefoxProfileStoreScanner
             using SqliteConnection conn = new($"Data Source={sqlitePath};Mode=ReadOnly");
             conn.Open();
 
-            if (!TableExists(conn, "profiles"))
+            if (!SqliteTable.Exists(conn, "profiles"))
             {
                 return [];
             }
@@ -42,21 +43,6 @@ public static class FirefoxProfileStoreScanner
         {
             return [];
         }
-    }
-
-    private static bool TableExists(SqliteConnection conn, string tableName)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
-        using SqliteDataReader reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            if (reader.GetString(0).Equals(tableName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static bool ColumnExists(SqliteConnection conn, string tableName, string columnName)

@@ -16,4 +16,5 @@ public sealed record CommandContext(
     TimeProvider TimeProvider,
     string PlatformName,
     CommandRegistry Registry,
-    RuleRouter Router);
+    RuleRouter Router,
+    IPickerLauncher PickerLauncher);

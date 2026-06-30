@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 
 namespace AskMeFirst.Core.Profiles;
 
@@ -18,97 +19,80 @@ public static partial class FirefoxProfilesParser
             return [];
         }
 
-        Dictionary<string, IniRow> groupNameByStore = [];
-        foreach (IniRow row in iniRows)
-        {
-            if (!string.IsNullOrEmpty(row.StoreId) && !groupNameByStore.ContainsKey(row.StoreId!))
-            {
-                groupNameByStore[row.StoreId!] = row;
-            }
-        }
-
+        HashSet<string> seenTails = new(StringComparer.OrdinalIgnoreCase);
         List<BrowserProfile> result = [];
-        HashSet<string> emittedTail = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (IniRow row in iniRows)
         {
-            if (row.Path is null || string.IsNullOrEmpty(row.StoreId))
+            foreach (BrowserProfile profile in Expand(row, groupsRoot))
             {
-                if (row.Path is not null)
+                if (seenTails.Add(PathTail.Segment(profile.DirectoryName)))
                 {
-                    string tail = ExtractTailSegment(row.Path);
-                    if (emittedTail.Add(tail))
-                    {
-                        result.Add(new BrowserProfile(
-                            Name: row.Name ?? row.Path,
-                            DirectoryName: row.Path,
-                            IsDefault: row.IsDefault,
-                            GroupId: null,
-                            GroupName: null));
-                    }
+                    result.Add(profile);
                 }
-                continue;
-            }
-
-            string sqlitePath = Path.Combine(groupsRoot ?? "", $"{row.StoreId}.sqlite");
-            if (!File.Exists(sqlitePath))
-            {
-                string tail = ExtractTailSegment(row.Path);
-                if (emittedTail.Add(tail))
-                {
-                    result.Add(new BrowserProfile(
-                        Name: row.Name ?? row.Path,
-                        DirectoryName: row.Path,
-                        IsDefault: row.IsDefault,
-                        GroupId: row.StoreId,
-                        GroupName: row.Name));
-                }
-                continue;
-            }
-
-            IReadOnlyList<FirefoxProfileStoreEntry> storeEntries = FirefoxProfileStoreScanner.Read(sqlitePath);
-            if (storeEntries.Count == 0)
-            {
-                string tail = ExtractTailSegment(row.Path);
-                if (emittedTail.Add(tail))
-                {
-                    result.Add(new BrowserProfile(
-                        Name: row.Name ?? row.Path,
-                        DirectoryName: row.Path,
-                        IsDefault: row.IsDefault,
-                        GroupId: row.StoreId,
-                        GroupName: row.Name));
-                }
-                continue;
-            }
-
-            foreach (FirefoxProfileStoreEntry entry in storeEntries)
-            {
-                string tail = ExtractTailSegment(entry.Path);
-                if (!emittedTail.Add(tail))
-                {
-                    continue;
-                }
-
-                string name = ResolveEntryName(entry, row);
-
-                bool isDefault = IsPathMatch(entry.Path, row.Path) && row.IsDefault;
-
-                result.Add(new BrowserProfile(
-                    Name: name,
-                    DirectoryName: entry.Path,
-                    IsDefault: isDefault,
-                    GroupId: row.StoreId,
-                    GroupName: row.Name));
             }
         }
 
-        return result
+        return Sort(result);
+    }
+
+    private static IEnumerable<BrowserProfile> Expand(IniRow row, string? groupsRoot)
+    {
+        bool hasStore = !string.IsNullOrEmpty(row.StoreId);
+
+        if (row.Path is null)
+        {
+            yield break;
+        }
+
+        if (!hasStore)
+        {
+            yield return new BrowserProfile(
+                Name: row.Name ?? row.Path,
+                DirectoryName: row.Path,
+                IsDefault: row.IsDefault,
+                GroupId: null,
+                GroupName: null);
+            yield break;
+        }
+
+        IReadOnlyList<FirefoxProfileStoreEntry> storeEntries = ReadStoreEntries(row.StoreId!, groupsRoot);
+        if (storeEntries.Count == 0)
+        {
+            yield return new BrowserProfile(
+                Name: row.Name ?? row.Path,
+                DirectoryName: row.Path,
+                IsDefault: row.IsDefault,
+                GroupId: row.StoreId,
+                GroupName: row.Name);
+            yield break;
+        }
+
+        foreach (FirefoxProfileStoreEntry entry in storeEntries)
+        {
+            yield return new BrowserProfile(
+                Name: ResolveEntryName(entry, row),
+                DirectoryName: entry.Path,
+                IsDefault: IsPathMatch(entry.Path, row.Path) && row.IsDefault,
+                GroupId: row.StoreId,
+                GroupName: row.Name);
+        }
+    }
+
+    private static IReadOnlyList<FirefoxProfileStoreEntry> ReadStoreEntries(string storeId, string? groupsRoot)
+    {
+        string sqlitePath = Path.Combine(groupsRoot ?? "", $"{storeId}.sqlite");
+        return File.Exists(sqlitePath)
+            ? FirefoxProfileStoreScanner.Read(sqlitePath)
+            : [];
+    }
+
+    private static List<BrowserProfile> Sort(IEnumerable<BrowserProfile> profiles) =>
+        profiles
             .OrderBy(p => p.IsDefault ? 0 : 1)
             .ThenBy(p => p.GroupName ?? p.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
 
     private static IReadOnlyList<IniRow> ReadIni(string iniPath)
     {
@@ -167,16 +151,9 @@ public static partial class FirefoxProfilesParser
         return [.. rows.Values];
     }
 
-    private static string ExtractTailSegment(string path)
-    {
-        string normalized = path.Replace('/', '\\');
-        int lastSlash = normalized.LastIndexOf('\\');
-        return lastSlash >= 0 ? normalized[(lastSlash + 1)..] : normalized;
-    }
-
     private static bool IsPathMatch(string a, string b)
     {
-        return string.Equals(ExtractTailSegment(a), ExtractTailSegment(b), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(PathTail.Segment(a), PathTail.Segment(b), StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveEntryName(FirefoxProfileStoreEntry entry, IniRow row)
@@ -189,7 +166,7 @@ public static partial class FirefoxProfilesParser
             return entry.Name!;
         }
 
-        return row.Name ?? ExtractTailSegment(entry.Path);
+        return row.Name ?? PathTail.Segment(entry.Path);
     }
 
     private sealed record IniRow(string? Name, string? Path, bool IsDefault, string? StoreId);

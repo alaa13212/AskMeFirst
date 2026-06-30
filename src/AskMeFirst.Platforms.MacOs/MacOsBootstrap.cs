@@ -15,7 +15,7 @@ public static class MacOsBootstrap
         IProcessNameNormalizer normalizer = new MacOsProcessNameNormalizer();
         ISourceAppDetector sourceApp = new MacOsSourceAppDetector(normalizer);
         IConfigPathResolver configPath = new MacOsConfigPathResolver();
-        IIconProvider icons = new NullIconProvider();
+        IIconProvider icons = new MacIconProvider();
         return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, "macos");
     }
 }

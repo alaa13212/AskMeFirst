@@ -1,11 +1,10 @@
+using AskMeFirst.Core.Data;
 using Microsoft.Data.Sqlite;
 
 namespace AskMeFirst.Platforms.Windows;
 
 public static class FirefoxProfileAvatarReader
 {
-    private static readonly byte[] PngMagic = [0x89, 0x50, 0x4E, 0x47];
-
     public static byte[]? ReadAvatarPng(string groupsRoot, string profileDirTail)
     {
         if (string.IsNullOrEmpty(groupsRoot) || !Directory.Exists(groupsRoot))
@@ -19,7 +18,7 @@ public static class FirefoxProfileAvatarReader
             return null;
         }
 
-        if (!IsUuid(avatarId))
+        if (!Guid.TryParseExact(avatarId, "D", out _))
         {
             return null;
         }
@@ -40,12 +39,7 @@ public static class FirefoxProfileAvatarReader
             return null;
         }
 
-        if (!IsPng(bytes))
-        {
-            return null;
-        }
-
-        return bytes;
+        return PngSignature.Matches(bytes) ? bytes : null;
     }
 
     private static string? FindAvatarId(string groupsRoot, string profileDirTail)
@@ -68,7 +62,7 @@ public static class FirefoxProfileAvatarReader
             using SqliteConnection conn = new($"Data Source={sqlitePath};Mode=ReadOnly");
             conn.Open();
 
-            if (!TableExists(conn, "Profiles"))
+            if (!SqliteTable.Exists(conn, "Profiles"))
             {
                 return null;
             }
@@ -90,66 +84,5 @@ public static class FirefoxProfileAvatarReader
         {
         }
         return null;
-    }
-
-    private static bool TableExists(SqliteConnection conn, string tableName)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
-        using SqliteDataReader reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            if (reader.GetString(0).Equals(tableName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static bool IsUuid(string s)
-    {
-        if (s.Length != 36)
-        {
-            return false;
-        }
-        for (int i = 0; i < 36; i++)
-        {
-            byte b = (byte)s[i];
-            bool isHex = (b >= (byte)'0' && b <= (byte)'9') || (b >= (byte)'a' && b <= (byte)'f');
-            bool isDash = b == (byte)'-';
-            bool dashPos = i == 8 || i == 13 || i == 18 || i == 23;
-            if (dashPos)
-            {
-                if (!isDash)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                if (!isHex)
-                {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private static bool IsPng(byte[] bytes)
-    {
-        if (bytes.Length < PngMagic.Length)
-        {
-            return false;
-        }
-        for (int i = 0; i < PngMagic.Length; i++)
-        {
-            if (bytes[i] != PngMagic[i])
-            {
-                return false;
-            }
-        }
-        return true;
     }
 }
