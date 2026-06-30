@@ -33,7 +33,9 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+        # Filter string mirrors tests/AskMeFirst.Picker.Tests/TestCategories.cs (Name + ReleaseVisual).
+        # If you rename either constant, update this line.
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal" --filter "Category!=ReleaseVisual"
 
   publish:
     name: publish (${{ matrix.os }} / ${{ matrix.rid }})

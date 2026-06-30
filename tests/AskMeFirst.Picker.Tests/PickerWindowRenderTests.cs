@@ -385,6 +385,7 @@ public class PickerWindowRenderTests
     }
 
     [AvaloniaFact]
+    [Trait(TestCategories.Name, TestCategories.ReleaseVisual)]
     public void Window_RendersScreenshot_WithAllItems()
     {
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker.png";
@@ -421,6 +422,7 @@ public class PickerWindowRenderTests
     }
 
     [AvaloniaFact]
+    [Trait(TestCategories.Name, TestCategories.ReleaseVisual)]
     public void Window_RendersScreenshot_WithProfilesPerBrowser()
     {
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-profiles.png";
@@ -465,6 +467,7 @@ public class PickerWindowRenderTests
     }
 
     [AvaloniaFact]
+    [Trait(TestCategories.Name, TestCategories.ReleaseVisual)]
     public void Window_RendersScreenshot_FocusedButtonVisible()
     {
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-focus.png";
@@ -821,6 +824,7 @@ public class PickerWindowRenderTests
     }
 
     [AvaloniaFact]
+    [Trait(TestCategories.Name, TestCategories.ReleaseVisual)]
     public void Window_RendersScreenshot_FocusedRadioHighlightVisible()
     {
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-radio-focus.png";
@@ -862,6 +866,7 @@ public class PickerWindowRenderTests
 
 #if WINDOWS
     [AvaloniaFact]
+    [Trait(TestCategories.Name, TestCategories.ReleaseVisual)]
     public void Window_RendersScreenshot_WithRealBrowserIcons()
     {
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-icons.png";
