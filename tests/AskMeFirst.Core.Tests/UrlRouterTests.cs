@@ -10,15 +10,13 @@ public class UrlRouterTests
         FakeInventory inv,
         FakeLauncher launcher,
         FakeProfileDetector profiles,
-        FakeLogger logger,
-        AppConfig? appConfig = null)
+        FakeLogger logger)
     {
         return new UrlRouter(
             inv,
             launcher,
             profiles,
-            logger,
-            appConfig ?? ConfigLoader.LoadDefault());
+            logger);
     }
 
     [Fact]
@@ -68,22 +66,6 @@ public class UrlRouterTests
         UrlRouter router = BuildRouter(inv, launcher, profiles, logger);
 
         int code = router.Route(new Uri("https://example.com"), "CHROME", profileName: null);
-
-        Assert.Equal(0, code);
-        Assert.Equal(chrome.Id, launcher.Launches[0].Browser.Id);
-    }
-
-    [Fact]
-    public void Route_SystemKeyword_FallsBackToFirstDiscovered()
-    {
-        Browser chrome = TestBrowser.Make("chrome", "Chrome", @"C:\chrome.exe");
-        FakeInventory inv = new() { Browsers = [chrome] };
-        FakeLauncher launcher = new();
-        FakeProfileDetector profiles = new();
-        FakeLogger logger = new();
-        UrlRouter router = BuildRouter(inv, launcher, profiles, logger);
-
-        int code = router.Route(new Uri("https://example.com"), "system", profileName: null);
 
         Assert.Equal(0, code);
         Assert.Equal(chrome.Id, launcher.Launches[0].Browser.Id);
@@ -212,24 +194,4 @@ public class UrlRouterTests
         Assert.Contains(logger.Warns, w => w.Contains("'nope'"));
     }
 
-    [Fact]
-    public void Route_ConfiguredDefaultBrowser_UsedWhenNoBrowserArg()
-    {
-        AppConfig config = new()
-        {
-            Settings = new Settings { DefaultBrowserId = "firefox" },
-        };
-        Browser chrome = TestBrowser.Make("chrome", "Chrome", @"C:\chrome.exe");
-        Browser firefox = TestBrowser.Make("firefox", "Firefox", @"C:\firefox.exe");
-        FakeInventory inv = new() { Browsers = [chrome, firefox] };
-        FakeLauncher launcher = new();
-        FakeProfileDetector profiles = new();
-        FakeLogger logger = new();
-        UrlRouter router = BuildRouter(inv, launcher, profiles, logger, config);
-
-        int code = router.Route(new Uri("https://example.com"), null, null);
-
-        Assert.Equal(0, code);
-        Assert.Equal(firefox.Id, launcher.Launches[0].Browser.Id);
-    }
 }

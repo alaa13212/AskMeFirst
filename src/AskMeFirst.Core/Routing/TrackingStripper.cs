@@ -16,10 +16,10 @@ public sealed class TrackingStripper
 
     public TrackingStripper(AppConfig config)
     {
-        this.trackers = BuildTrackerSet(config);
+        trackers = BuildTrackerSet(config);
     }
 
-    public Uri Strip(Uri url) => Strip(url, this.trackers);
+    public Uri Strip(Uri url) => Strip(url, trackers);
 
     public static IReadOnlySet<string> BuildTrackerSet(AppConfig config)
     {

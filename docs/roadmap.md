@@ -49,12 +49,22 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 
 ## Phase 3 — Picker UI (1 week)
 
-- [ ] Avalonia project + theming
+**Status**: 🚧 Started 2026-06-28. Design locked via grill session. Vertical slice in progress.
+
+Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
+
+- [ ] AskMeFirst.Picker project + Avalonia + CommunityToolkit.Mvvm packages
+- [ ] `RoutingOutcome.ShowPicker(PickerRequest)` variant + tests
+- [ ] `ProfileSpec.Pinned` field + picker filters to pinned-only
 - [ ] Picker window with two-panel layout (browser buttons + remember radios)
-- [ ] Keyboard navigation (arrows, Tab, 1-N hotkeys, Enter, Esc)
-- [ ] Live URL display with unshortener status
-- [ ] Picker writes "remember" rules
-- [ ] Recent-picks list (from JSONL log)
+- [ ] Keyboard navigation (Tab cycles, arrows within panel, 1-9 hotkeys, Enter commits, Esc cancels)
+- [ ] Live URL display with unshortener status (1s timeout, cancel on commit, silent fallback on error)
+- [ ] MVVM ViewModels (`PickerWindowViewModel`, `BrowserOptionViewModel`, `RememberOptionViewModel`)
+- [ ] Window position: source-app-center where easy, else active-monitor center
+- [ ] Modeless + always-on-top; X / Esc / Cancel all close without launching
+- [ ] Picker writes "remember" rules per `docs/rule-engine.md` table (5 radios)
+- [ ] Recent-picks JSONL append-only log
+- [ ] Post-commit browser-launch failure → OS notification (not silent)
 
 **Exit criteria**: ambiguous URLs show the picker; selecting a browser opens it and remembers the choice via "remember" rules.
 
@@ -90,6 +100,7 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 
 - [ ] `--bench` command with CI-enforced budgets
 - [ ] Browser profile auto-discovery (P2 implementation)
+- [ ] Inventory cache: persist discovered browsers + profiles to `config.browsers` / `config.profiles` so repeat invocations skip re-discovery. Per-platform cache file (executable paths differ across OS); mtime + manual `askmefirst refresh` for invalidation; cache merges with user-written specs (user wins). Replaces the current "every CLI invocation re-discovers" pattern from `rule-engine.md:218`.
 - [ ] Embedded browser icons in picker
 - [ ] User-facing README + screenshots
 - [ ] `samples/askmefirst.example.json` polished
@@ -101,7 +112,7 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 
 ## Phase 7 (optional) — Management UI (1-2 weeks)
 
-- [ ] `askmefirst config` opens a webview at localhost
+- [ ] `askmefirst config` opens a avaloniaui
 - [ ] Browse / edit / sort / pin browsers and profiles
 - [ ] Edit rule command and add custom
 - [ ] Test browsers (open https://example.com)

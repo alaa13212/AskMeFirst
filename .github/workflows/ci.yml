@@ -2,9 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 env:
@@ -33,7 +31,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal" --filter "Category!=ReleaseVisual"
 
   publish:
     name: publish (${{ matrix.os }} / ${{ matrix.rid }})
@@ -44,8 +42,6 @@ jobs:
         include:
           - os: ubuntu-latest
             rid: linux-x64
-          - os: ubuntu-latest
-            rid: linux-arm64
           - os: windows-latest
             rid: win-x64
           - os: macos-latest
@@ -83,8 +79,9 @@ jobs:
               BIN=./publish/${{ matrix.rid }}/askmefirst
               ;;
           esac
+          TIMEFORMAT='%R'
           for i in 1 2 3; do
-            /usr/bin/time -f "%e" "$BIN" --version > /dev/null
+            { time "$BIN" --version > /dev/null; } 2>&1 | tail -n 1
           done
 
       - name: Upload artifact

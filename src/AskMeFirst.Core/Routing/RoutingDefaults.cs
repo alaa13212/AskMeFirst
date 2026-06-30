@@ -20,6 +20,5 @@ public static class RoutingDefaults
     [
         new ExplicitOverrideResolver(),
         new RuleMatchingResolver(appConfig.Rules, evaluator),
-        new SettingsFallbackResolver(appConfig),
     ];
 }

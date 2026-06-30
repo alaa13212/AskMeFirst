@@ -1,11 +1,14 @@
 using System.Runtime.InteropServices;
+using AskMeFirst.Commands;
 using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Logging;
 using AskMeFirst.Core.Routing;
+using AskMeFirst.Picker.Services;
 using AskMeFirst.Platforms.Linux;
 using AskMeFirst.Platforms.MacOs;
 using AskMeFirst.Platforms.Windows;
@@ -34,12 +37,21 @@ internal static class Composition
         ProfileResolver profileResolver = new(ctx.Profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(ctx.Inventory, profileResolver, stripper, appConfig);
+        IConfigWriter configWriter = new JsonConfigWriter(configPath, logger);
+        IPickerLauncher pickerLauncher = new AvaloniaPickerLauncher(logger, configWriter, icons: ctx.Icons);
+        IRecentPicksLog recentPicks = new FileRecentPicksLog(configPath, logger);
         RuleRouter router = new(
             resolvers,
             executor,
+            ctx.Inventory,
             ctx.SourceApp,
+            pickerLauncher,
+            usePickerAsCatchAll: true,
+            appConfig.Profiles,
+            ctx.Profiles,
             ctx.Launcher,
             logger,
+            ctx.Notifier,
             TimeProvider.System);
 
         return new CommandContext(
@@ -54,7 +66,10 @@ internal static class Composition
             TimeProvider.System,
             ctx.PlatformName,
             registry,
-            router);
+            router,
+            pickerLauncher,
+            recentPicks,
+            ctx.Notifier);
     }
 
     public static IBrowserInventory BuildInventory()

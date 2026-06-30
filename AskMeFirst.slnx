@@ -2,11 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/AskMeFirst/AskMeFirst.csproj" />
     <Project Path="src/AskMeFirst.Core/AskMeFirst.Core.csproj" />
+    <Project Path="src/AskMeFirst.Picker/AskMeFirst.Picker.csproj" />
     <Project Path="src/AskMeFirst.Platforms.Windows/AskMeFirst.Platforms.Windows.csproj" />
     <Project Path="src/AskMeFirst.Platforms.MacOs/AskMeFirst.Platforms.MacOs.csproj" />
     <Project Path="src/AskMeFirst.Platforms.Linux/AskMeFirst.Platforms.Linux.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AskMeFirst.Core.Tests/AskMeFirst.Core.Tests.csproj" />
+    <Project Path="tests/AskMeFirst.Picker.Tests/AskMeFirst.Picker.Tests.csproj" />
   </Folder>
 </Solution>

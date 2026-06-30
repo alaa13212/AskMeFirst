@@ -1,4 +1,5 @@
 using AskMeFirst.Core;
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
@@ -24,12 +25,19 @@ public class RuleRouterTests
         ProfileResolver profileResolver = new(profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(inv, profileResolver, stripper, appConfig);
+        IPickerLauncher pickerLauncher = new RecordingPickerLauncher();
         return new RuleRouter(
             resolvers,
             executor,
+            inv,
             sourceApp,
+            pickerLauncher,
+            usePickerAsCatchAll: false,
+            appConfig.Profiles,
+            profiles,
             launcher,
             logger,
+            new NullNotifier(),
             new FixedTimeProvider(now ?? Monday10amUtc));
     }
 
@@ -39,7 +47,6 @@ public class RuleRouterTests
         {
             Settings = new Settings
             {
-                DefaultBrowserId = "system",
                 StripTracking = true,
             },
             Profiles = new ProfileSpec[]
@@ -280,7 +287,7 @@ public class RuleRouterTests
     {
         AppConfig config = new()
         {
-            Settings = new Settings { DefaultBrowserId = null, StripTracking = true },
+            Settings = new Settings { StripTracking = true },
             Rules = [],
         };
         FakeInventory inv = StandardInventory();
@@ -350,7 +357,7 @@ public class RuleRouterTests
     {
         AppConfig config = new()
         {
-            Settings = new Settings { DefaultBrowserId = "system", StripTracking = true },
+            Settings = new Settings { StripTracking = true },
             Rules = new Rule[]
             {
                 new()
@@ -379,7 +386,7 @@ public class RuleRouterTests
     {
         AppConfig config = new()
         {
-            Settings = new Settings { DefaultBrowserId = "system" },
+            Settings = new Settings { },
             Rules = new Rule[]
             {
                 new() { Priority = 100, When = new(), Then = new() { Browser = "does-not-exist" } },
@@ -398,24 +405,4 @@ public class RuleRouterTests
         Assert.Contains(logger.Errors, e => e.Contains("does-not-exist"));
     }
 
-    [Fact]
-    public void DefaultFallback_UsesConfiguredBrowser()
-    {
-        AppConfig config = new()
-        {
-            Settings = new Settings { DefaultBrowserId = "firefox-work", StripTracking = true },
-            Rules = [],
-        };
-        FakeInventory inv = StandardInventory();
-        FakeLauncher launcher = new();
-        FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
-        FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, config);
-
-        int code = router.Route(new Uri("https://example.com"), null, null);
-
-        Assert.Equal(0, code);
-        Assert.Equal("firefox-work", launcher.Launches[0].Browser.Id);
-    }
 }

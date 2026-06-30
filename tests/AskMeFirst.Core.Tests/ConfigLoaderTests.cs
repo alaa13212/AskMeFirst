@@ -12,7 +12,6 @@ public class ConfigLoaderTests
 
         Assert.NotNull(config);
         Assert.NotNull(config.Settings);
-        Assert.Equal("system", config.Settings.DefaultBrowserId);
         Assert.True(config.Settings.StripTracking);
     }
 

@@ -88,7 +88,6 @@ internal static class TestConfig
     {
         return new AppConfig
         {
-            Settings = new Settings { DefaultBrowserId = "system" },
             Rules = rules,
         };
     }
@@ -103,4 +102,35 @@ internal static class TestResolvers
 {
     public static IReadOnlyList<ITargetResolver> For(AppConfig appConfig, PredicateEvaluator evaluator) =>
         RoutingDefaults.Resolvers(appConfig, evaluator);
+}
+
+internal sealed class RecordingPickerLauncher : IPickerLauncher
+{
+    public List<PickerRequest> Requests { get; } = [];
+
+    public PickerResult Show(PickerRequest request)
+    {
+        Requests.Add(request);
+        return new Cancelled();
+    }
+}
+
+internal sealed class FakeNotifier : INotifier
+{
+    public List<(string Title, string Message)> Calls { get; } = [];
+
+    public void Show(string title, string message)
+    {
+        Calls.Add((title, message));
+    }
+}
+
+internal sealed class ThrowingLauncher : IUrlLauncher
+{
+    public Exception ToThrow { get; set; } = new InvalidOperationException("launch failed");
+
+    public void Launch(Browser browser, Uri url)
+    {
+        throw ToThrow;
+    }
 }

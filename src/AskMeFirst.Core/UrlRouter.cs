@@ -8,8 +8,7 @@ public sealed class UrlRouter(
     IBrowserInventory inventory,
     IUrlLauncher launcher,
     IBrowserProfileDetector profiles,
-    ILogger logger,
-    AppConfig appConfig)
+    ILogger logger)
 {
     public int Route(Uri url, string? browserId, string? profileName)
     {
@@ -38,24 +37,9 @@ public sealed class UrlRouter(
 
     private Browser? ResolveBrowser(string? browserId, IReadOnlyList<Browser> browsers)
     {
-        if (browserId is null or "system")
+        if (browserId is null)
         {
-            string? configured = appConfig.Settings.DefaultBrowserId;
-            if (!string.IsNullOrWhiteSpace(configured) && configured != "system")
-            {
-                Browser? match = inventory.FindById(configured);
-                if (match is not null)
-                {
-                    logger.LogInfo($"No --browser specified; using configured default '{configured}'.");
-                    return match;
-                }
-                logger.LogWarn(
-                    $"Configured default browser '{configured}' not found; falling back to first discovered.");
-            }
-            else
-            {
-                logger.LogInfo("No --browser specified; using first discovered browser.");
-            }
+            logger.LogInfo("No --browser specified; using first discovered browser.");
             return browsers[0];
         }
         return inventory.FindById(browserId);

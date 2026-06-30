@@ -59,33 +59,10 @@ public class ResolverTests
     }
 
     [Fact]
-    public void SettingsFallbackResolver_NoDefaultBrowser_ReturnsNull()
-    {
-        AppConfig config = new() { Settings = new Settings { DefaultBrowserId = null } };
-        SettingsFallbackResolver resolver = new(config);
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
-        Assert.Null(resolver.Resolve(ctx));
-    }
-
-    [Fact]
-    public void SettingsFallbackResolver_DefaultBrowserSet_ReturnsIntentWithFallbackSemantics()
-    {
-        AppConfig config = new() { Settings = new Settings { DefaultBrowserId = "firefox" } };
-        SettingsFallbackResolver resolver = new(config);
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
-        RoutingIntent? intent = resolver.Resolve(ctx);
-        Assert.NotNull(intent);
-        Assert.Equal("firefox", intent!.BrowserId);
-        Assert.Equal(RoutingExitCode.BrowserNotFound, intent.NotFoundExitCode);
-        Assert.Equal("Browser", intent.NotFoundMessagePrefix);
-    }
-
-    [Fact]
-    public void ResolverChain_ExplicitBeatsRuleBeatsFallback()
+    public void ResolverChain_ExplicitBeatsRule()
     {
         AppConfig config = new()
         {
-            Settings = new Settings { DefaultBrowserId = "fallback-browser" },
             Rules = new Rule[]
             {
                 new() { Priority = 100, When = new(), Then = new() { Browser = "rule-browser" } },
@@ -125,11 +102,10 @@ public class ResolverTests
     }
 
     [Fact]
-    public void ResolverChain_FallbackUsed_WhenNoRuleMatches()
+    public void ResolverChain_NoResolverMatches_ReturnsNull()
     {
         AppConfig config = new()
         {
-            Settings = new Settings { DefaultBrowserId = "fallback-browser" },
             Rules = [],
         };
         IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(config, Evaluator);
@@ -144,8 +120,6 @@ public class ResolverTests
                 break;
             }
         }
-        Assert.NotNull(intent);
-        Assert.Equal("fallback-browser", intent!.BrowserId);
-        Assert.Equal(RoutingExitCode.BrowserNotFound, intent.NotFoundExitCode);
+        Assert.Null(intent);
     }
 }

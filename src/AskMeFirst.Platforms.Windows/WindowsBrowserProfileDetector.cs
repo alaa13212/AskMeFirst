@@ -38,8 +38,9 @@ public sealed partial class WindowsBrowserProfileDetector : IBrowserProfileDetec
             {
                 return [];
             }
-            return FirefoxProfilesParser.Parse(
-                Path.Combine(appData, @"Mozilla\Firefox\profiles.ini"));
+            string profilesIni = Path.Combine(appData, @"Mozilla\Firefox\profiles.ini");
+            string groupsRoot = Path.Combine(appData, @"Mozilla\Firefox\Profile Groups");
+            return FirefoxProfilesParser.Parse(profilesIni, groupsRoot);
         }
 
         return [];
@@ -52,14 +53,17 @@ public sealed partial class WindowsBrowserProfileDetector : IBrowserProfileDetec
             return [];
         }
 
+        IReadOnlyDictionary<string, string> nameByDir = ChromiumProfileNames.Read(root);
+
         List<BrowserProfile> profiles = [];
         foreach (string dir in Directory.EnumerateDirectories(root))
         {
             string dirName = Path.GetFileName(dir);
             if (IsChromiumProfileDir(dirName))
             {
+                string name = nameByDir.TryGetValue(dirName, out string? display) ? display : dirName;
                 profiles.Add(new BrowserProfile(
-                    Name: dirName,
+                    Name: name,
                     DirectoryName: dirName,
                     IsDefault: dirName == "Default"));
             }
