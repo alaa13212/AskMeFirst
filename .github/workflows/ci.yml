@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [master]
+    branches: [master, phase-3]
   workflow_dispatch:
 
 env:
@@ -62,15 +62,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static libc6-arm64-cross
-          # The AOT post-link step (objcopy --only-keep-debug) calls objcopy
-          # unqualified; the host's stock /usr/bin/objcopy is x86-only and
-          # rejects the aarch64 ELF. Prepend the cross bin dir to PATH so
-          # objcopy resolves to the aarch64 build of binutils.
           echo "/usr/aarch64-linux-gnu/bin" >> "$GITHUB_PATH"
-          # Register binfmt so the kernel dispatches aarch64 ELF to qemu-user-static.
-          # Without this the smoke + cold-start tests fail with "Exec format error".
-          # qemu-user-static also needs /lib/ld-linux-aarch64.so.1 (provided by
-          # libc6-arm64-cross above).
           sudo update-binfmts --display qemu-aarch64 || true
 
       - name: Publish (Native AOT)
@@ -97,9 +89,6 @@ jobs:
               BIN=./publish/${{ matrix.rid }}/askmefirst
               ;;
           esac
-          # Use bash's `time` builtin + TIMEFORMAT for portable timing across
-          # Linux (no /usr/bin/time in some images), macOS (where /usr/bin/time
-          # is BSD-style and rejects -f), and Windows bash (msys, no /usr/bin/time).
           TIMEFORMAT='%R'
           for i in 1 2 3; do
             { time "$BIN" --version > /dev/null; } 2>&1 | tail -n 1
