@@ -3,6 +3,7 @@ using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
 using AskMeFirst.Picker.ViewModels;
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace AskMeFirst.Picker.Tests;
 
 public class BrowserOptionViewModelIconTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void PrimaryIcon_FallsBackToBrowserIcon_WhenNoProfilePic()
     {
         FakeIconProvider icons = new() { BrowserBytes = MakePng() };
@@ -22,7 +23,7 @@ public class BrowserOptionViewModelIconTests
         Assert.False(vm.HasOverlay);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PrimaryIcon_UsesProfilePic_WhenAvailable()
     {
         byte[] profilePic = MakePng(r: 0xFF, g: 0x00, b: 0x00);
@@ -42,7 +43,7 @@ public class BrowserOptionViewModelIconTests
         Assert.NotNull(vm.OverlayIcon);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PrimaryIcon_FallsBackToBrowser_WhenProfilePicMissing()
     {
         byte[] browserIcon = MakePng();
@@ -61,7 +62,7 @@ public class BrowserOptionViewModelIconTests
         Assert.Null(vm.OverlayIcon);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PrimaryIcon_Null_WhenNeitherAvailable()
     {
         FakeIconProvider icons = new() { BrowserBytes = null, ProfileBytes = null };
