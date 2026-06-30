@@ -193,7 +193,19 @@ When the user picks a browser in the picker with a non-default remember option, 
 | `Always Slack` | `ProcessIn: ["slack"]` |
 | `Slack + company.atlassian.net` | `ProcessIn: ["slack"], UrlMatchesAny: ["company.atlassian.net"]` |
 
-Generated rules get `priority: 50` (below user-written rules at 100+) and `origin: "remember"` for filtering in the management UI.
+Generated rules get `priority: 50` (below user-written rules at 100+) and `origin: "remember"` for filtering in the management UI. Schema:
+
+```jsonc
+{
+  "name": "Slack + *.atlassian.net → firefox-work",
+  "priority": 50,
+  "origin": "remember",
+  "when": { "ProcessIn": ["slack"], "UrlMatchesAny": ["*.atlassian.net"] },
+  "then": { "browser": "firefox-work" }
+}
+```
+
+`origin` defaults to `"user"` when omitted — old configs load fine.
 
 ## Selector tips
 
