@@ -61,16 +61,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install aarch64 cross-toolchain
+      - name: Install aarch64 cross-toolchain + qemu
         if: matrix.os == 'ubuntu-latest' && matrix.rid == 'linux-arm64'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static
           # The AOT post-link step (objcopy --only-keep-debug) calls objcopy
           # unqualified; the host's stock /usr/bin/objcopy is x86-only and
           # rejects the aarch64 ELF. Prepend the cross bin dir to PATH so
           # objcopy resolves to the aarch64 build of binutils.
           echo "/usr/aarch64-linux-gnu/bin" >> "$GITHUB_PATH"
+          # Register binfmt so the kernel dispatches aarch64 ELF to qemu-user-static.
+          # Without this the smoke + cold-start tests fail with "Exec format error".
+          sudo update-binfmts --display qemu-aarch64 || true
 
       - name: Publish (Native AOT)
         run: dotnet publish src/AskMeFirst/AskMeFirst.csproj -c Release -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o ./publish/${{ matrix.rid }}
