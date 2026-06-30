@@ -11,6 +11,17 @@ public class FirefoxProfilesRootTests
         string root = FirefoxProfilesRoot.Get();
         Assert.False(string.IsNullOrEmpty(root));
         Assert.True(Path.IsPathRooted(root), $"Firefox profiles root must be absolute, got: {root}");
-        Assert.EndsWith(Path.Combine("Mozilla", "Firefox", "Profiles"), root.Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    [Fact]
+    public void Get_ReturnsPlatformCorrectPath()
+    {
+        string root = FirefoxProfilesRoot.Get();
+        string expectedTail = OperatingSystem.IsWindows()
+            ? @"Mozilla\Firefox\Profiles"
+            : OperatingSystem.IsMacOS()
+                ? "Firefox/Profiles"
+                : ".mozilla/firefox/Profiles";
+        Assert.EndsWith(expectedTail, root.Replace('/', Path.DirectorySeparatorChar));
     }
 }
