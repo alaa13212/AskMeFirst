@@ -21,8 +21,8 @@ public static class MacOsBootstrap
         IConfigPathResolver configPath = new MacOsConfigPathResolver();
         IIconProvider icons = new MacIconProvider();
         INotifier notifier = new MacNotifier(logger);
-        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
-        ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
+        IDefaultBrowserRegistrar registrar = new MacOsDefaultBrowserRegistrar();
+        ISourceAppWindowLocator sourceLocator = new MacSourceAppWindowLocator();
         return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "macos");
     }
 }
