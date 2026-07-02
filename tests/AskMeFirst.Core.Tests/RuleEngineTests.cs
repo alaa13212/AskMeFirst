@@ -118,7 +118,6 @@ public class RuleEngineTests
                 {
                     Browser = "chrome-work",
                     ProfileId = "firefox-work",
-                    FocusExisting = false,
                     NewWindow = true,
                     Private = true,
                     StripTracking = false,
@@ -130,7 +129,6 @@ public class RuleEngineTests
         Assert.NotNull(decision);
         Assert.Equal("chrome-work", decision!.BrowserId);
         Assert.Equal("firefox-work", decision.ProfileId);
-        Assert.False(decision.FocusExisting);
         Assert.True(decision.NewWindow);
         Assert.True(decision.Private);
         Assert.False(decision.StripTracking);

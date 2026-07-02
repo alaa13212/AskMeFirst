@@ -85,7 +85,6 @@ Source-app mapping uses **OS-normalized process names** directly — no tag indi
       },
       "then": {
         "browser": "firefox-work",
-        "FocusExisting": true,
         "StripTracking": true,
         "Unshorten": false
       }
@@ -153,7 +152,6 @@ All actions are optional. Omitted = use sensible default.
 |---|---|---|
 | `browser: <id>` | which browser to use (must exist in `browsers:`) | required |
 | `profile: <name>` | which browser profile | browser's `DefaultProfile` |
-| `FocusExisting: bool` | route to already-running instance | `true` |
 | `NewWindow: bool` | open new browser window vs new tab | `false` (new tab) |
 | `private: bool` | open in private/incognito | `false` |
 | `StripTracking: bool` | override `settings.StripTracking` | inherited |

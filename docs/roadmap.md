@@ -72,15 +72,14 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 
 ## Phase 4 — OS integration (1 week)
 
-- [ ] `install` command — register as default browser
+- [x] `install` command — register as default browser
   - Windows: registry + StartMenuInternet + Default Apps prompt
   - macOS: .app bundle + Info.plist + System Settings prompt
   - Linux: .desktop file + xdg-mime default
-- [ ] `uninstall` command — reverse
-- [ ] Running-browser detection
-- [ ] `FocusExisting` and `NewWindow` actions
+- [x] `uninstall` command — reverse
+- [x] `NewWindow` action wired into browser-family launch strategies
 
-**Exit criteria**: install command makes AskMeFirst the system default; uninstall restores the previous default. Focus-existing works for Chrome + Firefox.
+**Exit criteria**: install registers AskMeFirst as a default-browser candidate on all 3 OSes; uninstall removes it; user gets the OS-standard "make this the default" prompt; `NewWindow` works for Chrome + Firefox; picker centers over source-app window on Win/Mac.
 
 ---
 
