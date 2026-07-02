@@ -12,6 +12,7 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         "/usr/share/applications",
         "/usr/local/share/applications",
         "/var/lib/flatpak/exports/share/applications",
+        "/var/lib/snapd/desktop/applications",
     ];
 
     private static readonly Dictionary<string, string> KnownIds =
@@ -119,12 +120,26 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         }
 
         string id = NormalizeId(displayName, path);
+
+        string? iconName = null;
+        Match iconMatch = IconLineRegex().Match(content);
+        if (iconMatch.Success)
+        {
+            iconName = iconMatch.Groups[1].Value.Trim();
+        }
+
         IBrowserLaunchStrategy launchStrategy = BrowserLaunchStrategies.For(id);
+        if (IsFlatpakExecLine(exec, out string? appId) && appId is not null)
+        {
+            launchStrategy = new FlatpakLaunchStrategy(appId, launchStrategy);
+        }
+
         return new Browser
         {
             Id = id,
             DisplayName = displayName,
             ExecutablePath = executable,
+            IconName = iconName,
             LaunchStrategy = launchStrategy,
         };
     }
@@ -159,6 +174,40 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             }
         }
         return null;
+    }
+
+    private static bool IsFlatpakExecLine(string exec, out string? appId)
+    {
+        appId = null;
+        string stripped = FieldCodeRegex().Replace(exec, "");
+        string[] parts = stripped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 3)
+        {
+            return false;
+        }
+
+        string binary = Path.GetFileName(parts[0]);
+        if (!string.Equals(binary, "flatpak", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(parts[1], "run", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        for (int i = 2; i < parts.Length; i++)
+        {
+            if (parts[i].StartsWith("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (parts[i] is "@@u" or "@@")
+            {
+                continue;
+            }
+            appId = parts[i];
+            return true;
+        }
+
+        return false;
     }
 
     private static string NormalizeId(string displayName, string path)
@@ -209,6 +258,9 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
 
     [GeneratedRegex(@"^Exec=(.+)$", RegexOptions.Multiline)]
     private static partial Regex ExecLineRegex();
+
+    [GeneratedRegex(@"^Icon=(.+)$", RegexOptions.Multiline)]
+    private static partial Regex IconLineRegex();
 
     [GeneratedRegex(@"%[a-zA-Z]")]
     private static partial Regex FieldCodeRegex();
