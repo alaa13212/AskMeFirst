@@ -12,6 +12,7 @@ public sealed class ExplicitOverrideResolver : ITargetResolver
             ctx.ExplicitBrowserId,
             ctx.ExplicitProfileId,
             StripTrackingOverride: null,
+            NewWindow: false,
             NotFoundExitCode: RoutingExitCode.BrowserNotFound,
             NotFoundMessagePrefix: "Browser");
     }

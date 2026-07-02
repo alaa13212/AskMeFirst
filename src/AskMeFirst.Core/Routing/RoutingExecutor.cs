@@ -27,6 +27,7 @@ public sealed class RoutingExecutor(
         }
 
         Browser resolved = profileResolver.Resolve(browser, intent.ProfileId);
+        resolved = resolved with { NewWindow = intent.NewWindow };
         bool strip = intent.StripTrackingOverride ?? appConfig.Settings.StripTracking;
         Uri finalUrl = strip ? stripper.Strip(url) : url;
         return new Success(resolved, finalUrl, url);

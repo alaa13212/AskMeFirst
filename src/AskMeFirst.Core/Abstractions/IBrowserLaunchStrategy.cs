@@ -4,5 +4,5 @@ namespace AskMeFirst.Core.Abstractions;
 
 public interface IBrowserLaunchStrategy
 {
-    string[] BuildArguments(Uri url, BrowserProfile? profile);
+    string[] BuildArguments(Uri url, BrowserProfile? profile, bool newWindow = false);
 }

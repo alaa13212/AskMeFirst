@@ -11,10 +11,11 @@ public class RoutingExecutorTests
         string browserId,
         string? profileId = null,
         bool? stripTrackingOverride = null,
+        bool newWindow = false,
         RoutingExitCode notFoundExitCode = RoutingExitCode.BrowserNotFound,
         string notFoundPrefix = "Browser")
     {
-        return new RoutingIntent(browserId, profileId, stripTrackingOverride, notFoundExitCode, notFoundPrefix);
+        return new RoutingIntent(browserId, profileId, stripTrackingOverride, newWindow, notFoundExitCode, notFoundPrefix);
     }
 
     private static AppConfig AppConfigWithStripTracking(bool stripTracking)

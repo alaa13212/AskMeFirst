@@ -27,7 +27,7 @@ public sealed class MacOsUrlLauncher : IUrlLauncher
         };
         psi.ArgumentList.Add("-a");
         psi.ArgumentList.Add(browser.ExecutablePath);
-        string[] strategyArgs = browser.LaunchStrategy.BuildArguments(url, browser.Profile);
+        string[] strategyArgs = browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow);
         if (strategyArgs.Length > 0)
         {
             psi.ArgumentList.Add("--args");
@@ -46,7 +46,7 @@ public sealed class MacOsUrlLauncher : IUrlLauncher
             FileName = browser.ExecutablePath,
             UseShellExecute = false,
         };
-        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile))
+        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow))
         {
             psi.ArgumentList.Add(arg);
         }

@@ -24,6 +24,7 @@ public sealed class RuleMatchingResolver : ITargetResolver
             decision.BrowserId,
             decision.ProfileId,
             decision.StripTracking,
+            decision.NewWindow,
             NotFoundExitCode: RoutingExitCode.RuleBrowserNotFound,
             NotFoundMessagePrefix: "Rule matched browser");
     }

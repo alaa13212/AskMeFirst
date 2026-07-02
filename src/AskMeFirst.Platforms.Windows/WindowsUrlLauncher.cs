@@ -13,7 +13,7 @@ public sealed class WindowsUrlLauncher : IUrlLauncher
             FileName = browser.ExecutablePath,
             UseShellExecute = true,
         };
-        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile))
+        foreach (string arg in browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow))
         {
             psi.ArgumentList.Add(arg);
         }

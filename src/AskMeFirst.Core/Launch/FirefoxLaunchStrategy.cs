@@ -8,14 +8,20 @@ public sealed class FirefoxLaunchStrategy : IBrowserLaunchStrategy
 {
     public static readonly FirefoxLaunchStrategy Instance = new();
 
-    public string[] BuildArguments(Uri url, BrowserProfile? profile)
+    public string[] BuildArguments(Uri url, BrowserProfile? profile, bool newWindow = false)
     {
-        if (profile is null)
+        List<string> args = [];
+        if (newWindow)
         {
-            return [url.ToString()];
+            args.Add("-new-window");
         }
-
-        return ["-profile", ResolveProfilePath(profile.DirectoryName), url.ToString()];
+        if (profile is not null)
+        {
+            args.Add("-profile");
+            args.Add(ResolveProfilePath(profile.DirectoryName));
+        }
+        args.Add(url.ToString());
+        return [.. args];
     }
 
     private static string ResolveProfilePath(string directoryName)
