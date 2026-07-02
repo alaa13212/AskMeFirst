@@ -1,4 +1,6 @@
-namespace AskMeFirst.Picker.Services;
+using AskMeFirst.Core.Abstractions;
+
+namespace AskMeFirst.Picker.Tests.Services;
 
 public sealed class FixedSourceAppWindowLocator : ISourceAppWindowLocator
 {

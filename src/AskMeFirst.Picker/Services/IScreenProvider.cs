@@ -1,6 +1,6 @@
-namespace AskMeFirst.Picker.Services;
+using AskMeFirst.Core.Abstractions;
 
-public sealed record ScreenBounds(int X, int Y, int Width, int Height, bool IsPrimary = true);
+namespace AskMeFirst.Picker.Services;
 
 public sealed record ScreenInfo(IReadOnlyList<ScreenBounds> All)
 {
