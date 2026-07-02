@@ -369,6 +369,15 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 | 72 | IIconProvider seam | Cross-OS surface; NullIconProvider on Linux/macOS pending real implementations |
 | 73 | SQLitePCLRaw.bundle_e_sqlite3 | Explicit reference overrides Microsoft.Data.Sqlite 10.x default SourceGear native |
 | 74 | SkiaSharp in WindowsIconProvider | PNG-encodes GDI bitmap bytes; Avalonia's internal Skia isn't exposed publicly |
+| 75 | Rule.Origin field | `"user"` (default) vs `"remember"`; for Phase 7 management UI |
+| 76 | macOS `.app` bundle | MSBuild `MacOsBundle.targets` wraps `dotnet publish` output into `AskMeFirst.app` |
+| 77 | Linux `.desktop` Exec= | Absolute path via `Environment.ProcessPath`; re-evaluate for Flatpak in Phase 9 |
+| 78 | ISourceAppWindowLocator location | Moved from Picker to `Core/Abstractions/`; Platforms.\* can implement |
+| 79 | FocusExisting field removed | Per "never keep dead code"; browser built-in dedup handles it |
+| 80 | IDefaultBrowserRegistrar | Async (`Task<RegistrationResult>`); `lsregister` slowness on Mac justifies async |
+| 81 | Register/Unregister idempotency | Register checks IsRegistered first; Unregister returns success if absent |
+| 82 | Post-install UX | Try deep-link (try/catch), print instructions as fallback |
+| 83 | Test strategy | D + unit-testable bits; ~6 unit tests; no CI integration smoke tests for OS impls |
 
 ## Phase 3 review feedback (added 2026-06-30)
 
@@ -387,3 +396,51 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 ## 75. `Rule.Origin` field added to the config schema
 
 **Rationale**: Distinguishes user-authored rules (`"user"`, the default) from picker-generated remember rules (`"remember"`). Forwards-compatible — existing configs without the field round-trip fine since `Origin` defaults to `"user"`. The Phase 7 management UI will filter / sort / bulk-delete by origin; Phase 3 picker writes `Origin = "remember"` on every persisted rule.
+
+---
+
+## Phase 4 decisions (added 2026-07-01)
+
+## 76. macOS `.app` bundle via MSBuild target
+
+**Rationale**: Native AOT produces a Mach-O binary, not a `.app` bundle. macOS won't accept the binary as a URL handler until wrapped with `Info.plist` declaring `CFBundleURLTypes`. Solution: `src/AskMeFirst/Properties/PublishProfiles/MacOsBundle.targets` exposes a `<Target Name="CreateMacBundle" AfterTargets="Publish">` that wraps `dotnet publish` output into `AskMeFirst.app/Contents/{MacOS,Resources,Info.plist}`. Same command produces the bundle across the CI matrix.
+
+**Rejected**: hand-rolled script (`scripts/build-mac-bundle.sh`, splits publish + bundle into two steps, less integrated); defer Mac to Phase 9 (skips an OS entirely, blocks Mac users); README-only instructions (defeats the `install` command's purpose).
+
+## 77. Linux `.desktop` `Exec=` = absolute path of running binary
+
+**Rationale**: `install` reads its own location via `Environment.ProcessPath` and writes it verbatim into `Exec=<absolute path> %u`. Matches freedesktop convention; works regardless of `$PATH` setup. If the user moves the binary, the `.desktop` file goes stale until they re-run `install` — acceptable for v1.
+
+**Re-evaluate**: when Flatpak/Snap packaging begins (Phase 9). Canonical-location-with-symlink becomes the right shape then.
+
+## 78. `ISourceAppWindowLocator` + `NullSourceAppWindowLocator` + `ScreenBounds` moved to `Core/Abstractions/`
+
+**Rationale**: Phase 4 adds real per-platform implementations in `AskMeFirst.Platforms.*` (Windows: Win32 `GetWindowRect`; macOS: `CGWindowListCopyWindowInfo`). Platforms.\* → Picker would be a reverse dep (Platforms.\* projects are meant to be leaves that implement Core abstractions). Moving the interface to Core matches the existing pattern (`IBrowserInventory`, `IUrlLauncher`, `INormalizer`, `IIconProvider`, `INotifier`, etc. all live in Core). `ScreenBounds` moved too because it's used by both `IScreenProvider` (Picker, Avalonia-coupled) and `ISourceAppWindowLocator` (now Core); Core can't depend on Picker. `IScreenProvider` + `ScreenInfo` + `IWindowPositionProvider` stay in Picker (Avalonia-coupled).
+
+**Test stub** `FixedSourceAppWindowLocator` moves to `tests/AskMeFirst.Picker.Tests/Services/` (was in `src/AskMeFirst.Picker/Services/`, never used in production).
+
+## 79. `FocusExisting: bool` field removed from `RuleThen` + `RoutingDecision`
+
+**Rationale**: Per "never keep dead code." The field was plumbing with no implementation — no `IRunningBrowserDetector`, no wiring into the launch path. Browser-built-in dedup handles the daily case: Chrome reuses the running instance when launched with a URL, Firefox's `-new-tab` does the same. Removing the field (8-file cascade: 3 src + 1 test + 1 sample + 3 docs) is one logical commit.
+
+**Rejected**: leave the field for "future Phase 4+ might want it" — YAGNI, no concrete plan.
+
+## 80. `IDefaultBrowserRegistrar` = async interface
+
+**Rationale**: `lsregister` on macOS is genuinely slow (1–3 s scanning the Launch Services DB). All three methods return `Task<T>` for uniformity: `Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)`, `Task<RegistrationResult> UnregisterAsync(...)`, `Task<bool> IsRegisteredAsync(...)`. Pattern precedent: picker's Unshortener returns `Task<string?>` with `CancellationToken` (decision #61).
+
+**Rejected**: sync (ignores the real perf concern); `IsDefault()` query method (YAGNI — defer until `askmefirst status` shows up; querying `UserChoice` on Windows is fragile).
+
+## 81. `RegisterAsync` + `UnregisterAsync` are idempotent
+
+**Rationale**: Install/uninstall commands should be safe to re-run. `RegisterAsync` checks `IsRegisteredAsync` first; if true, returns `RegistrationResult(Success: true, "Already registered.")` without writing. `UnregisterAsync` is best-effort: returns `RegistrationResult(Success: true, "Nothing to do.")` if not registered. Both methods never throw on "already/not" state — only on real OS errors.
+
+## 82. Post-install UX = try deep-link + print fallback
+
+**Rationale**: Deep-link gives one-click UX on both Win (`ms-settings:defaultapps`) and Mac (`x-apple.systempreferences:com.apple.preference.general?DefaultWebBrowser`). Print instructions are the reliable fallback across OS versions (especially macOS where Apple has been removing these URIs). Pattern: `TryOpenOsSettings()` wraps `Process.Start` in try/catch, logs to stderr, always prints instructions afterward. Linux auto-claims via `xdg-mime`, no UX step needed.
+
+## 83. Test strategy = D + unit-testable bits
+
+**Rationale**: No CI integration smoke tests for OS impls (`RegisterAsync`/`UnregisterAsync`/real `ISourceAppWindowLocator`) — manual verify via Phase 4 implementation checklist. ~6 unit tests for unit-testable logic, no new test project: `NewWindow=true` → `--new-window` (Chromium) and `-new-window <url>` (Firefox); `NewWindow` default = `false`; `install`/`uninstall` orchestration with mocked `IDefaultBrowserRegistrar`; `TryOpenOsSettings` deep-link fallback on `Process.Start` exception.
+
+**Rejected**: full CI integration per OS (high flakiness, maintenance burden); mock-heavy unit tests only (doesn't catch impl bugs, which is where the bugs will be); no tests at all (violates "non-trivial logic leaves one runnable check behind").
