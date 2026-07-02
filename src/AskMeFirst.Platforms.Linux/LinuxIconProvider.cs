@@ -12,6 +12,11 @@ public sealed class LinuxIconProvider : IIconProvider
         "/usr/share/icons/hicolor/48x48/apps",
         "/usr/share/icons/hicolor/64x64/apps",
         "/usr/share/icons/hicolor/128x128/apps",
+        "/usr/share/icons/hicolor/256x256/apps",
+        "/var/lib/flatpak/exports/share/icons/hicolor/48x48/apps",
+        "/var/lib/flatpak/exports/share/icons/hicolor/64x64/apps",
+        "/var/lib/flatpak/exports/share/icons/hicolor/128x128/apps",
+        "/var/lib/flatpak/exports/share/icons/hicolor/256x256/apps",
     ];
 
     private static readonly string[] CandidateNames =
@@ -21,11 +26,21 @@ public sealed class LinuxIconProvider : IIconProvider
         "{0}-desktop",
     ];
 
-    public byte[]? GetBrowserIconPng(string browserId, string executablePath)
+    private static readonly string[] FlatpakIconSizes = ["48x48", "64x64", "128x128"];
+
+    public byte[]? GetBrowserIconPng(string browserId, string executablePath, string? iconName = null)
     {
         if (string.IsNullOrEmpty(browserId))
         {
             return null;
+        }
+
+        if (!string.IsNullOrEmpty(iconName) && Path.IsPathRooted(iconName))
+        {
+            if (TryReadPng(iconName, out byte[] directBytes))
+            {
+                return directBytes;
+            }
         }
 
         foreach (string root in IconRoots)
@@ -33,6 +48,14 @@ public sealed class LinuxIconProvider : IIconProvider
             if (!Directory.Exists(root))
             {
                 continue;
+            }
+            if (!string.IsNullOrEmpty(iconName) && !Path.IsPathRooted(iconName))
+            {
+                string candidate = Path.Combine(root, iconName + ".png");
+                if (TryReadPng(candidate, out byte[] bytes))
+                {
+                    return bytes;
+                }
             }
             foreach (string name in CandidateNames)
             {
@@ -43,6 +66,47 @@ public sealed class LinuxIconProvider : IIconProvider
                 }
             }
         }
+
+        if (!string.IsNullOrEmpty(iconName) && !Path.IsPathRooted(iconName))
+        {
+            byte[]? result = TryFlatpakAppInfoIcon(iconName);
+            if (result is not null)
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    private static byte[]? TryFlatpakAppInfoIcon(string iconName)
+    {
+        string? home = Environment.GetEnvironmentVariable("HOME");
+        string[] appRoots = ["/var/lib/flatpak/app", $"{home}/.local/share/flatpak/app"];
+
+        foreach (string appRoot in appRoots)
+        {
+            if (string.IsNullOrEmpty(appRoot) || !Directory.Exists(appRoot))
+            {
+                continue;
+            }
+
+            string appDir = Path.Combine(appRoot, iconName, "x86_64", "stable", "active", "files", "share", "app-info", "icons", "flatpak");
+            if (!Directory.Exists(appDir))
+            {
+                continue;
+            }
+
+            foreach (string size in FlatpakIconSizes)
+            {
+                string candidate = Path.Combine(appDir, size, iconName + ".png");
+                if (TryReadPng(candidate, out byte[] bytes))
+                {
+                    return bytes;
+                }
+            }
+        }
+
         return null;
     }
 

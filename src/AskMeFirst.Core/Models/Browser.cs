@@ -11,7 +11,11 @@ public sealed record Browser
 
     public required string ExecutablePath { get; init; }
 
+    public string? IconName { get; init; }
+
     public IBrowserLaunchStrategy LaunchStrategy { get; init; } = DefaultLaunchStrategy.Instance;
 
     public BrowserProfile? Profile { get; init; }
+
+    public bool NewWindow { get; init; }
 }

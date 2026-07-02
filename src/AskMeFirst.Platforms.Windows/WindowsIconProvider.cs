@@ -12,7 +12,7 @@ public sealed class WindowsIconProvider : IIconProvider
     private const int IconSize = 32;
     private const string DefaultIconSubKey = @"SOFTWARE\WOW6432Node\Clients\StartMenuInternet";
 
-    public byte[]? GetBrowserIconPng(string browserId, string executablePath)
+    public byte[]? GetBrowserIconPng(string browserId, string executablePath, string? iconName = null)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrEmpty(executablePath))
         {

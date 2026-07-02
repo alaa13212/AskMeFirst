@@ -12,7 +12,7 @@ public sealed class MacIconProvider : IIconProvider
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications"),
     ];
 
-    public byte[]? GetBrowserIconPng(string browserId, string executablePath)
+    public byte[]? GetBrowserIconPng(string browserId, string executablePath, string? iconName = null)
     {
         if (string.IsNullOrEmpty(browserId))
         {
