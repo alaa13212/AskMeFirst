@@ -21,8 +21,8 @@ public static class WindowsBootstrap
         IConfigPathResolver configPath = new WindowsConfigPathResolver();
         IIconProvider icons = new WindowsIconProvider();
         INotifier notifier = new WindowsNotifier(logger);
-        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
-        ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
+        IDefaultBrowserRegistrar registrar = new WindowsDefaultBrowserRegistrar();
+        ISourceAppWindowLocator sourceLocator = new WindowsSourceAppWindowLocator();
         return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "windows");
     }
 }
