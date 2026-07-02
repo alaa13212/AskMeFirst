@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
@@ -6,6 +7,7 @@ using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.MacOs;
 
+[SupportedOSPlatform("osx")]
 public static class MacOsBootstrap
 {
     public static BootstrapContext Create()
@@ -19,6 +21,8 @@ public static class MacOsBootstrap
         IConfigPathResolver configPath = new MacOsConfigPathResolver();
         IIconProvider icons = new MacIconProvider();
         INotifier notifier = new MacNotifier(logger);
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, "macos");
+        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
+        ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "macos");
     }
 }

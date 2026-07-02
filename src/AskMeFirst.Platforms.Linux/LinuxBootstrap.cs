@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
@@ -6,6 +7,8 @@ using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.Linux;
 
+[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("freebsd")]
 public static class LinuxBootstrap
 {
     public static BootstrapContext Create()
@@ -19,6 +22,8 @@ public static class LinuxBootstrap
         IConfigPathResolver configPath = new LinuxConfigPathResolver();
         IIconProvider icons = new LinuxIconProvider();
         INotifier notifier = new LinuxNotifier(logger);
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, "linux");
+        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
+        ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "linux");
     }
 }

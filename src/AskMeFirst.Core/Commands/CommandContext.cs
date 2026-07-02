@@ -20,4 +20,5 @@ public sealed record CommandContext(
     RuleRouter Router,
     IPickerLauncher PickerLauncher,
     IRecentPicksLog RecentPicks,
-    INotifier Notifier);
+    INotifier Notifier,
+    IDefaultBrowserRegistrar DefaultBrowserRegistrar);

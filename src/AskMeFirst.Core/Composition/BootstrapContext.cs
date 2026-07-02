@@ -13,4 +13,6 @@ public sealed record BootstrapContext(
     IConfigPathResolver ConfigPath,
     IIconProvider Icons,
     INotifier Notifier,
+    IDefaultBrowserRegistrar DefaultBrowserRegistrar,
+    ISourceAppWindowLocator SourceAppWindowLocator,
     string PlatformName);

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Composition;
 using AskMeFirst.Core.Config;
@@ -6,6 +7,7 @@ using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.Windows;
 
+[SupportedOSPlatform("windows")]
 public static class WindowsBootstrap
 {
     public static BootstrapContext Create()
@@ -19,6 +21,8 @@ public static class WindowsBootstrap
         IConfigPathResolver configPath = new WindowsConfigPathResolver();
         IIconProvider icons = new WindowsIconProvider();
         INotifier notifier = new WindowsNotifier(logger);
-        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, "windows");
+        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
+        ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
+        return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "windows");
     }
 }

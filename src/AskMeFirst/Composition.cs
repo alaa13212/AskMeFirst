@@ -69,7 +69,8 @@ internal static class Composition
             router,
             pickerLauncher,
             recentPicks,
-            ctx.Notifier);
+            ctx.Notifier,
+            ctx.DefaultBrowserRegistrar);
     }
 
     public static IBrowserInventory BuildInventory()
