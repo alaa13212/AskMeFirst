@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AskMeFirst.Core.Paths;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.Windows;
@@ -17,6 +18,10 @@ public sealed class WindowsSourceAppDetector(IProcessNameNormalizer normalizer) 
             using Process process = Process.GetProcessById(ppid);
             string rawName = process.ProcessName;
             string exePath = process.MainModule?.FileName ?? "";
+            if (SelfExecutable.IsSelf(exePath))
+            {
+                return null;
+            }
             string canonical = normalizer.Normalize(rawName, bundleId: null, executablePath: exePath);
             return new SourceApp(canonical, BundleId: null, exePath);
         }

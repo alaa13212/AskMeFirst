@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 using Microsoft.Win32;
 
 namespace AskMeFirst.Platforms.Windows;
@@ -50,7 +51,7 @@ public sealed partial class WindowsBrowserInventory : IBrowserInventory
         foreach (string browserName in rootKey.GetSubKeyNames())
         {
             Browser? browser = ReadBrowser(browserName);
-            if (browser is not null)
+            if (browser is not null && !SelfExecutable.IsSelf(browser.ExecutablePath))
             {
                 browsers.Add(browser);
             }

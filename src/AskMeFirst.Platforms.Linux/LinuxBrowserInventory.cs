@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 
 namespace AskMeFirst.Platforms.Linux;
 
@@ -48,7 +49,7 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             foreach (string file in Directory.EnumerateFiles(dir, "*.desktop"))
             {
                 Browser? browser = ParseDesktopFile(file);
-                if (browser is not null)
+                if (browser is not null && !SelfExecutable.IsSelf(browser.ExecutablePath))
                 {
                     byId[browser.Id] = browser;
                 }

@@ -1,6 +1,7 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 
 namespace AskMeFirst.Platforms.MacOs;
 
@@ -24,7 +25,7 @@ public sealed class MacOsBrowserInventory : IBrowserInventory
         foreach ((string id, string displayName, string appName) in Known)
         {
             string appPath = $"/Applications/{appName}.app";
-            if (Directory.Exists(appPath))
+            if (Directory.Exists(appPath) && !SelfExecutable.IsSelf(appPath))
             {
                 discovered.Add(new Browser
                 {

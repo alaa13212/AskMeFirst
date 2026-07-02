@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using AskMeFirst.Core.Paths;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.MacOs;
@@ -16,6 +17,10 @@ public sealed class MacOsSourceAppDetector(IProcessNameNormalizer normalizer) : 
         string comm = RunPs(ppid, "comm=");
         string command = RunPs(ppid, "command=");
         if (string.IsNullOrEmpty(comm))
+        {
+            return null;
+        }
+        if (SelfExecutable.IsSelf(command))
         {
             return null;
         }
