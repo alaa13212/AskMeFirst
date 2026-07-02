@@ -22,7 +22,7 @@ public static class LinuxBootstrap
         IConfigPathResolver configPath = new LinuxConfigPathResolver();
         IIconProvider icons = new LinuxIconProvider();
         INotifier notifier = new LinuxNotifier(logger);
-        IDefaultBrowserRegistrar registrar = new NullDefaultBrowserRegistrar();
+        IDefaultBrowserRegistrar registrar = new LinuxDefaultBrowserRegistrar();
         ISourceAppWindowLocator sourceLocator = new NullSourceAppWindowLocator();
         return new BootstrapContext(inventory, launcher, profiles, sourceApp, normalizer, configPath, icons, notifier, registrar, sourceLocator, "linux");
     }
