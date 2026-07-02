@@ -13,6 +13,8 @@ public sealed class LinuxDefaultBrowserRegistrar : IDefaultBrowserRegistrar
     private const string MimeHttp = "x-scheme-handler/http";
     private const string MimeHttps = "x-scheme-handler/https";
 
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
     public async Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)
     {
         try
@@ -25,7 +27,7 @@ public sealed class LinuxDefaultBrowserRegistrar : IDefaultBrowserRegistrar
             string desktopPath = Path.Combine(desktopDir, DesktopFileName);
 
             string desktopContents = BuildDesktopFile(exePath);
-            await File.WriteAllTextAsync(desktopPath, desktopContents, Encoding.UTF8, ct);
+            await File.WriteAllTextAsync(desktopPath, desktopContents, Utf8NoBom, ct);
 
             await RunProcessAsync("xdg-mime", ["default", DesktopFileName, MimeHttp], ct);
             await RunProcessAsync("xdg-mime", ["default", DesktopFileName, MimeHttps], ct);
@@ -79,7 +81,7 @@ public sealed class LinuxDefaultBrowserRegistrar : IDefaultBrowserRegistrar
         return Path.Combine(home, ".local", "share", "applications");
     }
 
-    private static string BuildDesktopFile(string exePath)
+    internal static string BuildDesktopFile(string exePath)
     {
         StringBuilder sb = new();
         sb.AppendLine("[Desktop Entry]");

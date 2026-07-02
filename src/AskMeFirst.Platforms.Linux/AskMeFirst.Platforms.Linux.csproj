@@ -14,4 +14,8 @@
     <ProjectReference Include="..\AskMeFirst.Core\AskMeFirst.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="AskMeFirst.Core.Tests" />
+  </ItemGroup>
+
 </Project>
