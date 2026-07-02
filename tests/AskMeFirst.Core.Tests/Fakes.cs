@@ -1,4 +1,6 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
+using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
@@ -104,6 +106,68 @@ internal static class TestResolvers
         RoutingDefaults.Resolvers(appConfig, evaluator);
 }
 
+internal sealed class FakeConfigPathResolver : IConfigPathResolver
+{
+    public string DefaultConfigPath { get; set; } = Path.Combine(Path.GetTempPath(), "askmefirst-test-config.json");
+}
+
+internal sealed class FakeProcessNameNormalizer : IProcessNameNormalizer
+{
+    public string Normalize(string rawName, string? bundleId = null, string? executablePath = null)
+    {
+        return rawName.ToLowerInvariant();
+    }
+}
+
+internal static class TestCommandContext
+{
+    public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger)
+    {
+        FakeInventory inventory = new();
+        FakeLauncher launcher = new();
+        FakeProfileDetector profiles = new();
+        FakeSourceAppDetector sourceApp = new();
+        FakeNotifier notifier = new();
+        AppConfig appConfig = new() { Rules = [] };
+        CommandRegistry registry = new();
+        PredicateEvaluator evaluator = TestEvaluator.Default();
+        IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(appConfig, evaluator);
+        ProfileResolver profileResolver = new(profiles, appConfig.Profiles, logger);
+        TrackingStripper stripper = new(appConfig);
+        IRoutingExecutor executor = new RoutingExecutor(inventory, profileResolver, stripper, appConfig);
+        RuleRouter router = new(
+            resolvers,
+            executor,
+            inventory,
+            sourceApp,
+            new RecordingPickerLauncher(),
+            usePickerAsCatchAll: false,
+            appConfig.Profiles,
+            profiles,
+            launcher,
+            logger,
+            notifier,
+            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));
+        return new CommandContext(
+            logger,
+            inventory,
+            launcher,
+            profiles,
+            sourceApp,
+            new FakeProcessNameNormalizer(),
+            new FakeConfigPathResolver(),
+            appConfig,
+            TimeProvider.System,
+            "test",
+            registry,
+            router,
+            new RecordingPickerLauncher(),
+            new NoOpRecentPicksLog(),
+            notifier,
+            registrar);
+    }
+}
+
 internal sealed class RecordingPickerLauncher : IPickerLauncher
 {
     public List<PickerRequest> Requests { get; } = [];
@@ -132,5 +196,34 @@ internal sealed class ThrowingLauncher : IUrlLauncher
     public void Launch(Browser browser, Uri url)
     {
         throw ToThrow;
+    }
+}
+
+internal sealed class FakeRegistrar : IDefaultBrowserRegistrar
+{
+    public RegistrationResult RegisterResult { get; set; } = new(Success: true, Message: "Registered.");
+    public RegistrationResult UnregisterResult { get; set; } = new(Success: true, Message: "Unregistered.");
+    public bool OpenOsSettingsResult { get; set; } = true;
+
+    public int RegisterCalls { get; private set; }
+    public int UnregisterCalls { get; private set; }
+    public int OpenOsSettingsCalls { get; private set; }
+
+    public Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)
+    {
+        RegisterCalls++;
+        return Task.FromResult(RegisterResult);
+    }
+
+    public Task<RegistrationResult> UnregisterAsync(CancellationToken ct = default)
+    {
+        UnregisterCalls++;
+        return Task.FromResult(UnregisterResult);
+    }
+
+    public bool TryOpenOsSettings()
+    {
+        OpenOsSettingsCalls++;
+        return OpenOsSettingsResult;
     }
 }

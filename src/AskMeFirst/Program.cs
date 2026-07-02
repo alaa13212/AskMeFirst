@@ -51,7 +51,9 @@ internal static class Program
             .Register(new HelpCommand())
             .Register(new BenchCommand())
             .Register(new ListCommand())
-            .Register(new PickCommand());
+            .Register(new PickCommand())
+            .Register(new InstallCommand())
+            .Register(new UninstallCommand());
     }
 
     private static bool IsVerboseRequested(string[] args)
