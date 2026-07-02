@@ -17,7 +17,26 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Resources\Mac\Info.plist" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="AskMeFirst.Core.Tests" />
   </ItemGroup>
+
+  <Target Name="CreateMacAppBundle" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('osx-'))">
+    <PropertyGroup>
+      <AppBundleDir>$(PublishDir)AskMeFirst.app</AppBundleDir>
+      <MacOSDir>$(AppBundleDir)/Contents/MacOS</MacOSDir>
+      <ResourcesDir>$(AppBundleDir)/Contents/Resources</ResourcesDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(MacOSDir)" />
+    <MakeDir Directories="$(ResourcesDir)" />
+
+    <Move SourceFiles="$(PublishDir)$(AssemblyName)" DestinationFolder="$(MacOSDir)" />
+
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Resources/Mac/Info.plist" DestinationFolder="$(AppBundleDir)/Contents" />
+  </Target>
 
 </Project>
