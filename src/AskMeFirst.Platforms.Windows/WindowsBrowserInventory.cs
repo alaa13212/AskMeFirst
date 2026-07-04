@@ -19,6 +19,8 @@ public sealed partial class WindowsBrowserInventory : IBrowserInventory
             ["mozilla firefox"] = "firefox",
             ["microsoft edge"] = "edge",
             ["brave browser"] = "brave",
+            ["opera gx"] = "opera-gx",
+            ["operagx"] = "opera-gx",
         };
 
     private static readonly Dictionary<string, string> DisplayOverrides =
@@ -29,6 +31,8 @@ public sealed partial class WindowsBrowserInventory : IBrowserInventory
             ["Mozilla Firefox"] = "Mozilla Firefox",
             ["Microsoft Edge"] = "Microsoft Edge",
             ["Brave Browser"] = "Brave",
+            ["Opera GX"] = "Opera GX",
+            ["OperaGX"] = "Opera GX",
         };
 
     private static readonly Regex FirefoxHashSuffix = FirefoxHashSuffixRegex();
