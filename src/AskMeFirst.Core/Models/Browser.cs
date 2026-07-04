@@ -18,4 +18,6 @@ public sealed record Browser
     public BrowserProfile? Profile { get; init; }
 
     public bool NewWindow { get; init; }
+
+    public string? FlatpakAppId { get; init; }
 }

@@ -57,9 +57,9 @@ internal sealed class FakeProfileDetector : IBrowserProfileDetector
 {
     public Dictionary<string, List<BrowserProfile>> Profiles { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<BrowserProfile> Detect(string browserId)
+    public IReadOnlyList<BrowserProfile> Detect(Browser browser)
     {
-        return Profiles.TryGetValue(browserId, out List<BrowserProfile>? list)
+        return Profiles.TryGetValue(browser.Id, out List<BrowserProfile>? list)
             ? list
             : [];
     }

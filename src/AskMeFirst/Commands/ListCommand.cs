@@ -22,7 +22,7 @@ public sealed class ListCommand : ICommand
         foreach (Browser b in browsers)
         {
             Console.WriteLine($"  {b.Id,-12} {b.DisplayName,-24} {b.ExecutablePath}");
-            foreach (BrowserProfile profile in ctx.Profiles.Detect(b.Id))
+            foreach (BrowserProfile profile in ctx.Profiles.Detect(b))
             {
                 string marker = profile.IsDefault ? "*" : " ";
                 Console.WriteLine(

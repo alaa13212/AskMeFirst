@@ -12,7 +12,7 @@ public static class PickerOptions
         List<PickerBrowserOption> options = [];
         foreach (Browser browser in browsers)
         {
-            IReadOnlyList<BrowserProfile> detected = profiles.Detect(browser.Id);
+            IReadOnlyList<BrowserProfile> detected = profiles.Detect(browser);
             if (detected.Count == 0)
             {
                 options.Add(new PickerBrowserOption(browser, null));

@@ -47,7 +47,7 @@ public sealed class UrlRouter(
 
     private Browser ResolveProfile(Browser browser, string? profileName)
     {
-        IReadOnlyList<BrowserProfile> detected = profiles.Detect(browser.Id);
+        IReadOnlyList<BrowserProfile> detected = profiles.Detect(browser);
         if (detected.Count == 0)
         {
             if (profileName is null)

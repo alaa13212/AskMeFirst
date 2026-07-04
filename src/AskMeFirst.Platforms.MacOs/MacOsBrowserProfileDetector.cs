@@ -10,15 +10,22 @@ public sealed class MacOsBrowserProfileDetector : IBrowserProfileDetector
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["chrome"] = "Google/Chrome",
+            ["chromium"] = "Chromium",
             ["edge"] = "Microsoft Edge",
+            ["brave"] = "BraveSoftware/Brave-Browser",
+            ["opera"] = "com.operasoftware.Opera",
+            ["opera-gx"] = "com.operasoftware.OperaGX",
+            ["vivaldi"] = "Vivaldi",
         };
 
-    public IReadOnlyList<BrowserProfile> Detect(string browserId)
+    public IReadOnlyList<BrowserProfile> Detect(Browser browser)
     {
         if (!OperatingSystem.IsMacOS())
         {
             return [];
         }
+
+        string browserId = browser.Id;
 
         if (ProfileRoots.TryGetValue(browserId, out string? relativeRoot))
         {
