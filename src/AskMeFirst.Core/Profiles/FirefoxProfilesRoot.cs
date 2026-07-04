@@ -16,6 +16,12 @@ public static class FirefoxProfilesRoot
         }
         string linuxHome = Environment.GetEnvironmentVariable("HOME")
             ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(linuxHome, ".mozilla", "firefox", "Profiles");
+        string canonical = Path.Combine(linuxHome, ".mozilla", "firefox");
+        if (Directory.Exists(canonical))
+        {
+            return canonical;
+        }
+        string alt = Path.Combine(linuxHome, ".config", "mozilla", "firefox");
+        return Directory.Exists(alt) ? alt : canonical;
     }
 }

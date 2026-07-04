@@ -17,11 +17,20 @@ public class FirefoxProfilesRootTests
     public void Get_ReturnsPlatformCorrectPath()
     {
         string root = FirefoxProfilesRoot.Get();
-        string expectedTail = OperatingSystem.IsWindows()
-            ? @"Mozilla\Firefox\Profiles"
-            : OperatingSystem.IsMacOS()
-                ? "Firefox/Profiles"
-                : ".mozilla/firefox/Profiles";
-        Assert.EndsWith(expectedTail, root.Replace('/', Path.DirectorySeparatorChar));
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.EndsWith(@"Mozilla\Firefox\Profiles", root.Replace('/', Path.DirectorySeparatorChar));
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            Assert.EndsWith("Firefox/Profiles", root.Replace('/', Path.DirectorySeparatorChar));
+        }
+        else
+        {
+            Assert.True(
+                root.EndsWith(".mozilla/firefox", StringComparison.Ordinal)
+                || root.EndsWith(".config/mozilla/firefox", StringComparison.Ordinal),
+                $"Expected Linux root to end with .mozilla/firefox or .config/mozilla/firefox, got: {root}");
+        }
     }
 }
