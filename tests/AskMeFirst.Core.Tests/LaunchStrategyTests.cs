@@ -22,7 +22,38 @@ public class LaunchStrategyTests
     {
         BrowserProfile profile = new("Default", "Default", IsDefault: true);
         string[] args = ChromiumLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
-        Assert.Equal(["https://example.com/", "--profile-directory=Default"], args);
+        Assert.Equal(["--profile-directory=Default", "https://example.com/"], args);
+    }
+
+    [Fact]
+    public void Chromium_FlagsBeforeUrl()
+    {
+        BrowserProfile profile = new("Default", "Default", IsDefault: true);
+        string[] args = ChromiumLaunchStrategy.Instance.BuildArguments(SampleUrl, profile, newWindow: true);
+        Assert.Equal(["--new-window", "--profile-directory=Default", "https://example.com/"], args);
+    }
+
+    [Fact]
+    public void Flatpak_Chromium_WrapsArgsInRun()
+    {
+        BrowserProfile profile = new("Default", "Default", IsDefault: true);
+        FlatpakLaunchStrategy strategy = new(
+            "com.opera.opera-gx",
+            ChromiumLaunchStrategy.Instance);
+        string[] args = strategy.BuildArguments(SampleUrl, profile);
+        Assert.Equal(["run", "com.opera.opera-gx", "--profile-directory=Default", "https://example.com/"], args);
+    }
+
+    [Fact]
+    public void Flatpak_Firefox_WrapsArgsInRun()
+    {
+        string profilesRoot = FirefoxProfilesRoot.Get();
+        BrowserProfile profile = new("default", "abc.default", IsDefault: true);
+        FlatpakLaunchStrategy strategy = new(
+            "org.mozilla.firefox",
+            FirefoxLaunchStrategy.Instance);
+        string[] args = strategy.BuildArguments(SampleUrl, profile);
+        Assert.Equal(["run", "org.mozilla.firefox", "-profile", Path.Combine(profilesRoot, "abc.default"), "https://example.com/"], args);
     }
 
     [Fact]
@@ -103,6 +134,7 @@ public class LaunchStrategyTests
     [InlineData("edge", typeof(ChromiumLaunchStrategy))]
     [InlineData("brave", typeof(ChromiumLaunchStrategy))]
     [InlineData("opera", typeof(ChromiumLaunchStrategy))]
+    [InlineData("opera-gx", typeof(ChromiumLaunchStrategy))]
     [InlineData("vivaldi", typeof(ChromiumLaunchStrategy))]
     [InlineData("arc", typeof(ChromiumLaunchStrategy))]
     [InlineData("firefox", typeof(FirefoxLaunchStrategy))]

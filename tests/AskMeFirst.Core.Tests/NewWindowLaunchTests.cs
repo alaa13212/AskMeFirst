@@ -21,7 +21,7 @@ public class NewWindowLaunchTests
     {
         BrowserProfile profile = new("Work", "Profile 7", IsDefault: false);
         string[] args = ChromiumLaunchStrategy.Instance.BuildArguments(SampleUrl, profile, newWindow: true);
-        Assert.Equal(["--new-window", "https://example.com/", "--profile-directory=Profile 7"], args);
+        Assert.Equal(["--new-window", "--profile-directory=Profile 7", "https://example.com/"], args);
     }
 
     [Fact]

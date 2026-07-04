@@ -14,11 +14,11 @@ public sealed class ChromiumLaunchStrategy : IBrowserLaunchStrategy
         {
             args.Add("--new-window");
         }
-        args.Add(url.ToString());
         if (profile is not null)
         {
             args.Add($"--profile-directory={profile.DirectoryName}");
         }
+        args.Add(url.ToString());
         return [.. args];
     }
 }

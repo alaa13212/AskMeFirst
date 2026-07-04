@@ -7,7 +7,7 @@ public static class BrowserLaunchStrategies
     private static readonly HashSet<string> ChromiumIds =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "chrome", "chromium", "edge", "brave", "opera", "vivaldi", "arc",
+            "chrome", "chromium", "edge", "brave", "opera", "opera-gx", "vivaldi", "arc",
         };
 
     public static IBrowserLaunchStrategy For(string browserId)
