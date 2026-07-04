@@ -15,6 +15,7 @@ public sealed class MacOsBrowserInventory : IBrowserInventory
         ("edge", "Microsoft Edge", "Microsoft Edge"),
         ("brave", "Brave", "Brave Browser"),
         ("opera", "Opera", "Opera"),
+        ("opera-gx", "Opera GX", "Opera GX"),
         ("vivaldi", "Vivaldi", "Vivaldi"),
         ("arc", "Arc", "Arc"),
     ];
