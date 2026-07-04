@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Paths;
+using AskMeFirst.Core.Profiles;
 using Microsoft.Win32;
 using SkiaSharp;
 

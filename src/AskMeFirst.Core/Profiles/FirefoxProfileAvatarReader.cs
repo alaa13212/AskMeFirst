@@ -1,7 +1,7 @@
 using AskMeFirst.Core.Data;
 using Microsoft.Data.Sqlite;
 
-namespace AskMeFirst.Platforms.Windows;
+namespace AskMeFirst.Core.Profiles;
 
 public static class FirefoxProfileAvatarReader
 {
