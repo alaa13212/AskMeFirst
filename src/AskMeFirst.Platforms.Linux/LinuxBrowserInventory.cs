@@ -29,6 +29,8 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             ["msedge"] = "edge",
             ["brave-browser"] = "brave",
             ["opera"] = "opera",
+            ["opera-gx"] = "opera-gx",
+            ["com.opera.opera-gx"] = "opera-gx",
             ["vivaldi"] = "vivaldi",
             ["vivaldi-stable"] = "vivaldi",
         };
@@ -105,6 +107,11 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             return null;
         }
 
+        if (NoDisplayRegex().IsMatch(content))
+        {
+            return null;
+        }
+
         Match nameMatch = NameLineRegex().Match(content);
         Match execMatch = ExecLineRegex().Match(content);
         if (!nameMatch.Success || !execMatch.Success)
@@ -130,9 +137,11 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         }
 
         IBrowserLaunchStrategy launchStrategy = BrowserLaunchStrategies.For(id);
+        string? flatpakAppId = null;
         if (IsFlatpakExecLine(exec, out string? appId) && appId is not null)
         {
             launchStrategy = new FlatpakLaunchStrategy(appId, launchStrategy);
+            flatpakAppId = appId;
         }
 
         return new Browser
@@ -142,6 +151,7 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             ExecutablePath = executable,
             IconName = iconName,
             LaunchStrategy = launchStrategy,
+            FlatpakAppId = flatpakAppId,
         };
     }
 
@@ -220,6 +230,10 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         }
 
         string lowered = displayName.ToLowerInvariant();
+        if (lowered.Contains("opera gx") || lowered.Contains("opera-gx"))
+        {
+            return "opera-gx";
+        }
         if (lowered.Contains("chrome"))
         {
             return "chrome";
@@ -262,6 +276,9 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
 
     [GeneratedRegex(@"^Icon=(.+)$", RegexOptions.Multiline)]
     private static partial Regex IconLineRegex();
+
+    [GeneratedRegex(@"^NoDisplay=true$", RegexOptions.Multiline | RegexOptions.IgnoreCase)]
+    private static partial Regex NoDisplayRegex();
 
     [GeneratedRegex(@"%[a-zA-Z]")]
     private static partial Regex FieldCodeRegex();
