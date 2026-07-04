@@ -10,11 +10,10 @@ namespace AskMeFirst.Platforms.MacOs;
 [SupportedOSPlatform("osx")]
 public static class MacOsBootstrap
 {
-    public static BootstrapContext Create()
+    public static BootstrapContext Create(ILogger logger)
     {
-        ConsoleLogger logger = new(verbose: false);
         IBrowserInventory inventory = new MacOsBrowserInventory();
-        IUrlLauncher launcher = new MacOsUrlLauncher();
+        IUrlLauncher launcher = new MacOsUrlLauncher(logger);
         IBrowserProfileDetector profiles = new MacOsBrowserProfileDetector();
         IProcessNameNormalizer normalizer = new MacOsProcessNameNormalizer();
         ISourceAppDetector sourceApp = new MacOsSourceAppDetector(normalizer);

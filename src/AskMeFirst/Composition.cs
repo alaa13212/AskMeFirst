@@ -19,9 +19,9 @@ internal static class Composition
 {
     public static CommandContext Bootstrap(bool verbose, CommandRegistry registry)
     {
-        BootstrapContext ctx = SelectPlatform();
-
         ConsoleLogger logger = new(verbose);
+        BootstrapContext ctx = SelectPlatform(logger);
+
         string configPath = ctx.ConfigPath.DefaultConfigPath;
         AppConfig appConfig = ConfigLoader.LoadOrDefault(configPath);
         logger.LogInfo($"config: {configPath} ({appConfig.Rules.Count} rules, {(File.Exists(configPath) ? "user" : "embedded")})");
@@ -75,22 +75,22 @@ internal static class Composition
 
     public static IBrowserInventory BuildInventory()
     {
-        return SelectPlatform().Inventory;
+        return SelectPlatform(new ConsoleLogger(verbose: false)).Inventory;
     }
 
-    private static BootstrapContext SelectPlatform()
+    private static BootstrapContext SelectPlatform(ILogger logger)
     {
         if (OperatingSystem.IsWindows())
         {
-            return WindowsBootstrap.Create();
+            return WindowsBootstrap.Create(logger);
         }
         if (OperatingSystem.IsMacOS())
         {
-            return MacOsBootstrap.Create();
+            return MacOsBootstrap.Create(logger);
         }
         if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
-            return LinuxBootstrap.Create();
+            return LinuxBootstrap.Create(logger);
         }
         throw new PlatformNotSupportedException(
             $"askmefirst has no platform integration for {RuntimeInformation.OSDescription}.");

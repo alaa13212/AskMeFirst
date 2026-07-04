@@ -11,11 +11,10 @@ namespace AskMeFirst.Platforms.Linux;
 [SupportedOSPlatform("freebsd")]
 public static class LinuxBootstrap
 {
-    public static BootstrapContext Create()
+    public static BootstrapContext Create(ILogger logger)
     {
-        ConsoleLogger logger = new(verbose: false);
         IBrowserInventory inventory = new LinuxBrowserInventory();
-        IUrlLauncher launcher = new LinuxUrlLauncher();
+        IUrlLauncher launcher = new LinuxUrlLauncher(logger);
         IBrowserProfileDetector profiles = new LinuxBrowserProfileDetector();
         IProcessNameNormalizer normalizer = new LinuxProcessNameNormalizer();
         ISourceAppDetector sourceApp = new LinuxSourceAppDetector(normalizer);

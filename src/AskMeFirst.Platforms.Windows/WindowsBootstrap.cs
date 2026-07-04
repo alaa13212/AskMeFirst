@@ -10,11 +10,10 @@ namespace AskMeFirst.Platforms.Windows;
 [SupportedOSPlatform("windows")]
 public static class WindowsBootstrap
 {
-    public static BootstrapContext Create()
+    public static BootstrapContext Create(ILogger logger)
     {
-        ConsoleLogger logger = new(verbose: false);
         IBrowserInventory inventory = new WindowsBrowserInventory();
-        IUrlLauncher launcher = new WindowsUrlLauncher();
+        IUrlLauncher launcher = new WindowsUrlLauncher(logger);
         IBrowserProfileDetector profiles = new WindowsBrowserProfileDetector();
         IProcessNameNormalizer normalizer = new WindowsProcessNameNormalizer();
         ISourceAppDetector sourceApp = new WindowsSourceAppDetector(normalizer);
