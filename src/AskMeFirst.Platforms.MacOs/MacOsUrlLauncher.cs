@@ -20,7 +20,7 @@ public sealed class MacOsUrlLauncher(ILogger logger) : IUrlLauncher
 
     private void LaunchAppBundle(Browser browser, Uri url)
     {
-        string[] strategyArgs = browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow);
+        string[] strategyArgs = browser.LaunchStrategy.BuildArguments(url, browser.Profile);
         List<string> full = ["open", "-a", browser.ExecutablePath];
         if (strategyArgs.Length > 0)
         {
@@ -43,7 +43,7 @@ public sealed class MacOsUrlLauncher(ILogger logger) : IUrlLauncher
 
     private void LaunchExecutable(Browser browser, Uri url)
     {
-        string[] args = browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow);
+        string[] args = browser.LaunchStrategy.BuildArguments(url, browser.Profile);
         logger.LogInfo($"$ {browser.ExecutablePath} {string.Join(' ', args)}");
 
         ProcessStartInfo psi = new()

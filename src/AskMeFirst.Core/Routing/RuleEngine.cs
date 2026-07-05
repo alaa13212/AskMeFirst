@@ -38,7 +38,6 @@ public static class RuleEngine
         {
             BrowserId = then.Browser,
             ProfileId = then.ProfileId,
-            NewWindow = then.NewWindow,
             Private = then.Private,
             StripTracking = then.StripTracking,
             Unshorten = then.Unshorten,

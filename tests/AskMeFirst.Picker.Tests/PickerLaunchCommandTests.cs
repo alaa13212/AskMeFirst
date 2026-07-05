@@ -51,7 +51,7 @@ public class PickerLaunchCommandTests
         Assert.Equal("Work", launched.Browser.Profile!.DirectoryName);
 
         string[] args = launched.Browser.LaunchStrategy.BuildArguments(
-            launched.Url, launched.Browser.Profile, launched.Browser.NewWindow);
+            launched.Url, launched.Browser.Profile);
         string fullCommand = $"/usr/bin/firefox {string.Join(" ", args)}";
 
         Assert.Equal(3, args.Length);
@@ -104,7 +104,7 @@ public class PickerLaunchCommandTests
         Assert.Equal("Profile 1", launched.Browser.Profile!.DirectoryName);
 
         string[] args = launched.Browser.LaunchStrategy.BuildArguments(
-            launched.Url, launched.Browser.Profile, launched.Browser.NewWindow);
+            launched.Url, launched.Browser.Profile);
         string fullCommand = $"/usr/bin/flatpak {string.Join(" ", args)}";
 
         Assert.Equal(4, args.Length);
@@ -153,7 +153,7 @@ public class PickerLaunchCommandTests
         Launched launched = Assert.IsType<Launched>(vm.Result);
 
         string[] args = launched.Browser.LaunchStrategy.BuildArguments(
-            launched.Url, launched.Browser.Profile, launched.Browser.NewWindow);
+            launched.Url, launched.Browser.Profile);
 
         Assert.Equal(4, args.Length);
         Assert.Equal("run", args[0]);
@@ -229,7 +229,7 @@ public class PickerLaunchCommandTests
         };
         BrowserProfile profile = new("Work", "Profile 1", IsDefault: false);
 
-        string[] args = chrome.LaunchStrategy.BuildArguments(new Uri("https://google.com/"), profile, newWindow: false);
+        string[] args = chrome.LaunchStrategy.BuildArguments(new Uri("https://google.com/"), profile);
 
         int profileFlagIndex = Array.FindIndex(args, a => a.StartsWith("--profile-directory=", StringComparison.Ordinal));
         int urlIndex = Array.FindIndex(args, a => a == "https://google.com/");

@@ -14,8 +14,8 @@ public sealed class FlatpakLaunchStrategy : IBrowserLaunchStrategy
         _inner = inner;
     }
 
-    public string[] BuildArguments(Uri url, BrowserProfile? profile, bool newWindow = false)
+    public string[] BuildArguments(Uri url, BrowserProfile? profile)
     {
-        return ["run", _appId, .. _inner.BuildArguments(url, profile, newWindow)];
+        return ["run", _appId, .. _inner.BuildArguments(url, profile)];
     }
 }

@@ -7,7 +7,7 @@ public sealed class DefaultLaunchStrategy : IBrowserLaunchStrategy
 {
     public static readonly DefaultLaunchStrategy Instance = new();
 
-    public string[] BuildArguments(Uri url, BrowserProfile? profile, bool newWindow = false)
+    public string[] BuildArguments(Uri url, BrowserProfile? profile)
     {
         return [url.ToString()];
     }

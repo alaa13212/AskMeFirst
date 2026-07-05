@@ -6,8 +6,6 @@ public sealed record RuleThen
 
     public string? ProfileId { get; init; }
 
-    public bool NewWindow { get; init; }
-
     public bool Private { get; init; }
 
     public bool StripTracking { get; init; } = true;

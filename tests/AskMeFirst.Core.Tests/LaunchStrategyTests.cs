@@ -29,8 +29,8 @@ public class LaunchStrategyTests
     public void Chromium_FlagsBeforeUrl()
     {
         BrowserProfile profile = new("Default", "Default", IsDefault: true);
-        string[] args = ChromiumLaunchStrategy.Instance.BuildArguments(SampleUrl, profile, newWindow: true);
-        Assert.Equal(["--new-window", "--profile-directory=Default", "https://example.com/"], args);
+        string[] args = ChromiumLaunchStrategy.Instance.BuildArguments(SampleUrl, profile);
+        Assert.Equal(["--profile-directory=Default", "https://example.com/"], args);
     }
 
     [Fact]

@@ -8,7 +8,7 @@ public sealed class WindowsUrlLauncher(ILogger logger) : IUrlLauncher
 {
     public void Launch(Browser browser, Uri url)
     {
-        string[] args = browser.LaunchStrategy.BuildArguments(url, browser.Profile, browser.NewWindow);
+        string[] args = browser.LaunchStrategy.BuildArguments(url, browser.Profile);
         logger.LogInfo($"$ {browser.ExecutablePath} {string.Join(' ', args)}");
 
         ProcessStartInfo psi = new()
