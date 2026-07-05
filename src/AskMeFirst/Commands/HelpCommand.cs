@@ -9,9 +9,9 @@ public sealed class HelpCommand : ICommand
     public string Usage => "--help, -h, -?";
     public string Description => "Print usage and exit.";
 
-    public int Execute(string[] args, CommandContext ctx)
+    public Task<int> Execute(string[] args, CommandContext ctx)
     {
         Console.WriteLine(HelpFormatter.Render(ctx.Registry));
-        return 0;
+        return Task.FromResult(0);
     }
 }

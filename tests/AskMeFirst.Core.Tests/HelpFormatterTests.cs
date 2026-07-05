@@ -101,6 +101,6 @@ public class HelpFormatterTests
         IReadOnlyList<string> ICommand.Aliases => Aliases;
         string ICommand.Usage => Usage;
         string ICommand.Description => Description;
-        public int Execute(string[] args, CommandContext ctx) => 0;
+        public Task<int> Execute(string[] args, CommandContext ctx) => Task.FromResult(0);
     }
 }

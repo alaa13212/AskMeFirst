@@ -60,7 +60,6 @@
       "Then": {
         "Browser": "firefox-work",
         "ProfileId": "firefox-work-profile",
-        "FocusExisting": true,
         "StripTracking": true
       }
     },

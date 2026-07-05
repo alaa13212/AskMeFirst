@@ -1,6 +1,7 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 
 namespace AskMeFirst.Platforms.MacOs;
 
@@ -14,6 +15,7 @@ public sealed class MacOsBrowserInventory : IBrowserInventory
         ("edge", "Microsoft Edge", "Microsoft Edge"),
         ("brave", "Brave", "Brave Browser"),
         ("opera", "Opera", "Opera"),
+        ("opera-gx", "Opera GX", "Opera GX"),
         ("vivaldi", "Vivaldi", "Vivaldi"),
         ("arc", "Arc", "Arc"),
     ];
@@ -24,7 +26,7 @@ public sealed class MacOsBrowserInventory : IBrowserInventory
         foreach ((string id, string displayName, string appName) in Known)
         {
             string appPath = $"/Applications/{appName}.app";
-            if (Directory.Exists(appPath))
+            if (Directory.Exists(appPath) && !SelfExecutable.IsSelf(appPath))
             {
                 discovered.Add(new Browser
                 {

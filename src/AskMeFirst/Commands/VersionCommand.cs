@@ -9,9 +9,9 @@ public sealed class VersionCommand : ICommand
     public string Usage => "--version, -V";
     public string Description => "Print version and exit.";
 
-    public int Execute(string[] args, CommandContext ctx)
+    public Task<int> Execute(string[] args, CommandContext ctx)
     {
         Console.WriteLine($"{ProgramInfo.ExecutableName} {ProgramInfo.Version}");
-        return 0;
+        return Task.FromResult(0);
     }
 }

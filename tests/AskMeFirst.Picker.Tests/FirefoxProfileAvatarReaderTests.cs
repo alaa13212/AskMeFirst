@@ -1,5 +1,5 @@
 #if WINDOWS
-using AskMeFirst.Platforms.Windows;
+using AskMeFirst.Core.Profiles;
 using Microsoft.Data.Sqlite;
 using Xunit;
 

@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Routing;
 
@@ -11,7 +12,7 @@ public sealed class PickCommand : ICommand
 
     public string Description => "Open the picker for a URL, bypassing routing rules.";
 
-    public int Execute(string[] args, CommandContext ctx)
+    public Task<int> Execute(string[] args, CommandContext ctx)
     {
         if (args.Length < 2)
         {
@@ -25,8 +26,14 @@ public sealed class PickCommand : ICommand
             throw new CliArgsException($"Not a valid http(s) URL: {urlArg}");
         }
 
-        SourceApp? source = ctx.SourceApp.Detect();
-        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(ctx.Inventory.Discover(), ctx.Profiles);
+        ILogger logger = ctx.Resolve<ILogger>();
+        ISourceAppDetector sourceApp = ctx.Resolve<ISourceAppDetector>();
+        IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
+        IBrowserProfileDetector profiles = ctx.Resolve<IBrowserProfileDetector>();
+        IPickerLauncher pickerLauncher = ctx.Resolve<IPickerLauncher>();
+
+        SourceApp? source = sourceApp.Detect();
+        IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profiles);
 
         PickerRequest request = new(
             OriginalUrl: url,
@@ -34,31 +41,34 @@ public sealed class PickCommand : ICommand
             UnshortenTask: null,
             AvailableBrowsers: options);
 
-        ctx.Logger.LogInfo($"Opening picker for {url} (source: {source?.ProcessName ?? "unknown"})");
-        PickerResult result = ctx.PickerLauncher.Show(request);
+        logger.LogInfo($"Opening picker for {url} (source: {source?.ProcessName ?? "unknown"})");
+        PickerResult result = pickerLauncher.Show(request);
 
         return result switch
         {
-            Cancelled => 0,
+            Cancelled => Task.FromResult(0),
             Launched l => LaunchAndReturn(l, ctx),
-            _ => 99,
+            _ => Task.FromResult(99),
         };
     }
 
-    private static int LaunchAndReturn(Launched launched, CommandContext ctx)
+    private static Task<int> LaunchAndReturn(Launched launched, CommandContext ctx)
     {
+        ILogger logger = ctx.Resolve<ILogger>();
+        IUrlLauncher launcher = ctx.Resolve<IUrlLauncher>();
+        INotifier notifier = ctx.Resolve<INotifier>();
         try
         {
-            ctx.Launcher.Launch(launched.Browser, launched.Url);
-            return 0;
+            launcher.Launch(launched.Browser, launched.Url);
+            return Task.FromResult(0);
         }
         catch (Exception ex)
         {
-            ctx.Logger.LogError($"Browser launch failed: {ex.Message}");
-            ctx.Notifier.Show(
+            logger.LogError($"Browser launch failed: {ex.Message}");
+            notifier.Show(
                 title: "Couldn't open browser",
                 message: $"Couldn't open {launched.Browser.DisplayName} for {launched.Url}. The URL is in your recent picks; try again.");
-            return (int)RoutingExitCode.BrowserNotFound;
+            return Task.FromResult((int)RoutingExitCode.BrowserNotFound);
         }
     }
 }

@@ -1,8 +1,11 @@
 using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Audit;
+using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Core.Tests;
 
@@ -55,9 +58,9 @@ internal sealed class FakeProfileDetector : IBrowserProfileDetector
 {
     public Dictionary<string, List<BrowserProfile>> Profiles { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<BrowserProfile> Detect(string browserId)
+    public IReadOnlyList<BrowserProfile> Detect(Browser browser)
     {
-        return Profiles.TryGetValue(browserId, out List<BrowserProfile>? list)
+        return Profiles.TryGetValue(browser.Id, out List<BrowserProfile>? list)
             ? list
             : [];
     }
@@ -104,6 +107,40 @@ internal static class TestResolvers
         RoutingDefaults.Resolvers(appConfig, evaluator);
 }
 
+internal sealed class FakeConfigPathResolver : IConfigPathResolver
+{
+    public string DefaultConfigPath { get; set; } = Path.Combine(Path.GetTempPath(), "askmefirst-test-config.json");
+}
+
+internal sealed class FakeProcessNameNormalizer : IProcessNameNormalizer
+{
+    public string Normalize(string rawName, string? bundleId = null, string? executablePath = null)
+    {
+        return rawName.ToLowerInvariant();
+    }
+}
+
+internal static class TestCommandContext
+{
+    public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger)
+    {
+        return Build(registrar, logger, new FakeOsSettingsOpener());
+    }
+
+    public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger, IOsSettingsOpener settingsOpener)
+    {
+        ServiceCollection services = new();
+        services.AddSingleton<ILogger>(logger);
+        services.AddSingleton<IDefaultBrowserRegistrar>(registrar);
+        services.AddSingleton<IOsSettingsOpener>(settingsOpener);
+        ServiceProvider provider = services.BuildServiceProvider();
+        return new CommandContext(
+            new CommandRegistry(),
+            provider,
+            Verbose: false);
+    }
+}
+
 internal sealed class RecordingPickerLauncher : IPickerLauncher
 {
     public List<PickerRequest> Requests { get; } = [];
@@ -132,5 +169,38 @@ internal sealed class ThrowingLauncher : IUrlLauncher
     public void Launch(Browser browser, Uri url)
     {
         throw ToThrow;
+    }
+}
+
+internal sealed class FakeRegistrar : IDefaultBrowserRegistrar
+{
+    public RegistrationResult RegisterResult { get; set; } = new(Success: true, Message: "Registered.");
+    public RegistrationResult UnregisterResult { get; set; } = new(Success: true, Message: "Unregistered.");
+
+    public int RegisterCalls { get; private set; }
+    public int UnregisterCalls { get; private set; }
+
+    public Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)
+    {
+        RegisterCalls++;
+        return Task.FromResult(RegisterResult);
+    }
+
+    public Task<RegistrationResult> UnregisterAsync(CancellationToken ct = default)
+    {
+        UnregisterCalls++;
+        return Task.FromResult(UnregisterResult);
+    }
+}
+
+internal sealed class FakeOsSettingsOpener : IOsSettingsOpener
+{
+    public bool TryOpenResult { get; set; } = true;
+    public int TryOpenCalls { get; private set; }
+
+    public bool TryOpen()
+    {
+        TryOpenCalls++;
+        return TryOpenResult;
     }
 }

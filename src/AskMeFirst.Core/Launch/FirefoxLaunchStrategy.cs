@@ -10,12 +10,14 @@ public sealed class FirefoxLaunchStrategy : IBrowserLaunchStrategy
 
     public string[] BuildArguments(Uri url, BrowserProfile? profile)
     {
-        if (profile is null)
+        List<string> args = [];
+        if (profile is not null)
         {
-            return [url.ToString()];
+            args.Add("-profile");
+            args.Add(ResolveProfilePath(profile.DirectoryName));
         }
-
-        return ["-profile", ResolveProfilePath(profile.DirectoryName), url.ToString()];
+        args.Add(url.ToString());
+        return [.. args];
     }
 
     private static string ResolveProfilePath(string directoryName)

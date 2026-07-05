@@ -9,11 +9,12 @@ public sealed class ChromiumLaunchStrategy : IBrowserLaunchStrategy
 
     public string[] BuildArguments(Uri url, BrowserProfile? profile)
     {
-        if (profile is null)
+        List<string> args = [];
+        if (profile is not null)
         {
-            return [url.ToString()];
+            args.Add($"--profile-directory={profile.DirectoryName}");
         }
-
-        return [url.ToString(), $"--profile-directory={profile.DirectoryName}"];
+        args.Add(url.ToString());
+        return [.. args];
     }
 }

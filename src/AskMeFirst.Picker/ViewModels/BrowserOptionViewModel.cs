@@ -28,7 +28,7 @@ public sealed class BrowserOptionViewModel : IDisposable
             : "";
 
         byte[]? profilePic = profile is null ? null : icons.GetProfileIconPng(browser.Id, profile);
-        byte[]? browserPic = icons.GetBrowserIconPng(browser.Id, browser.ExecutablePath);
+        byte[]? browserPic = icons.GetBrowserIconPng(browser.Id, browser.ExecutablePath, browser.IconName);
 
         _primaryBytes = profilePic ?? browserPic;
         _overlayBytes = profilePic is not null ? browserPic : null;

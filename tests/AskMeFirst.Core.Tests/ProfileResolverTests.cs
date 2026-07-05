@@ -155,7 +155,7 @@ public class ProfileResolverTests
     }
 
     [Fact]
-    public void ProfileId_NotDeclared_LogsErrorAndFallsBack()
+    public void ProfileId_NotDeclared_LogsWarningAndFallsBack()
     {
         FakeProfileDetector detector = new()
         {
@@ -169,7 +169,54 @@ public class ProfileResolverTests
 
         Browser result = resolver.Resolve(Browser(), profileId: "undeclared");
         Assert.Equal("Work", result.Profile!.Name);
-        Assert.Contains(logger.Errors, e => e.Contains("undeclared"));
+        Assert.Contains(logger.Warns, w => w.Contains("undeclared"));
+    }
+
+    [Fact]
+    public void ProfileId_MatchesDetectedDirectory_UsesDetected()
+    {
+        FakeProfileDetector detector = new()
+        {
+            Profiles =
+            {
+                ["firefox"] =
+                [
+                    new BrowserProfile("default", "gfs9hajj.default", IsDefault: true),
+                    new BrowserProfile("Work", "Work", IsDefault: false),
+                ],
+            },
+        };
+        FakeLogger logger = new();
+        ProfileResolver resolver = new(detector, [], logger);
+
+        Browser result = resolver.Resolve(Browser(), profileId: "gfs9hajj.default");
+        Assert.Equal("default", result.Profile!.Name);
+        Assert.Equal("gfs9hajj.default", result.Profile!.DirectoryName);
+        Assert.Empty(logger.Errors);
+        Assert.Empty(logger.Warns);
+    }
+
+    [Fact]
+    public void ProfileId_MatchesDetectedName_UsesDetected()
+    {
+        FakeProfileDetector detector = new()
+        {
+            Profiles =
+            {
+                ["firefox"] =
+                [
+                    new BrowserProfile("default", "gfs9hajj.default", IsDefault: true),
+                    new BrowserProfile("Work", "Work", IsDefault: false),
+                ],
+            },
+        };
+        FakeLogger logger = new();
+        ProfileResolver resolver = new(detector, [], logger);
+
+        Browser result = resolver.Resolve(Browser(), profileId: "Work");
+        Assert.Equal("Work", result.Profile!.Name);
+        Assert.Empty(logger.Errors);
+        Assert.Empty(logger.Warns);
     }
 
     [Fact]

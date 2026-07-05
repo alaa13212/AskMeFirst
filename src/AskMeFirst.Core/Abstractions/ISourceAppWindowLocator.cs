@@ -1,4 +1,4 @@
-namespace AskMeFirst.Picker.Services;
+namespace AskMeFirst.Core.Abstractions;
 
 public interface ISourceAppWindowLocator
 {

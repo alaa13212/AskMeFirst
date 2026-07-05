@@ -1,3 +1,4 @@
+using AskMeFirst.Core;
 using AskMeFirst.Core.Commands;
 
 namespace AskMeFirst.Commands;
@@ -8,11 +9,13 @@ public sealed class RouteCommand : ICommand
     public string Usage => "<url> [--browser <id>] [--profile <profileId>] [--verbose]";
     public string Description => "Route a URL to the chosen browser.";
 
-    public int Execute(string[] args, CommandContext ctx)
+    public Task<int> Execute(string[] args, CommandContext ctx)
     {
         RouteArgs parsed = ParseArgs(args);
-        Console.Error.WriteLine($"[info] platform: {ctx.PlatformName}");
-        return ctx.Router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId);
+        RuleRouter router = ctx.Resolve<RuleRouter>();
+        string platformName = ctx.Resolve<PlatformInfo>().Name;
+        Console.Error.WriteLine($"[info] platform: {platformName}");
+        return Task.FromResult(router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId));
     }
 
     public static RouteArgs ParseArgs(string[] args)

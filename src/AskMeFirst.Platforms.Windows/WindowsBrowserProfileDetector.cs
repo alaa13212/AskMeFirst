@@ -12,14 +12,19 @@ public sealed partial class WindowsBrowserProfileDetector : IBrowserProfileDetec
         {
             ["chrome"] = @"Google\Chrome\User Data",
             ["edge"] = @"Microsoft\Edge\User Data",
+            ["opera"] = @"Opera Software\Opera Stable",
+            ["opera-gx"] = @"Opera Software\Opera GX Stable",
+            ["brave"] = @"BraveSoftware\Brave-Browser\User Data",
         };
 
-    public IReadOnlyList<BrowserProfile> Detect(string browserId)
+    public IReadOnlyList<BrowserProfile> Detect(Browser browser)
     {
         if (!OperatingSystem.IsWindows())
         {
             return [];
         }
+
+        string browserId = browser.Id;
 
         if (ProfileRoots.TryGetValue(browserId, out string? relativeRoot))
         {

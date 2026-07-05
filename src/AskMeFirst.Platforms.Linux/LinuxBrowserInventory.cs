@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
+using AskMeFirst.Core.Paths;
 
 namespace AskMeFirst.Platforms.Linux;
 
@@ -12,6 +13,7 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         "/usr/share/applications",
         "/usr/local/share/applications",
         "/var/lib/flatpak/exports/share/applications",
+        "/var/lib/snapd/desktop/applications",
     ];
 
     private static readonly Dictionary<string, string> KnownIds =
@@ -27,6 +29,8 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             ["msedge"] = "edge",
             ["brave-browser"] = "brave",
             ["opera"] = "opera",
+            ["opera-gx"] = "opera-gx",
+            ["com.opera.opera-gx"] = "opera-gx",
             ["vivaldi"] = "vivaldi",
             ["vivaldi-stable"] = "vivaldi",
         };
@@ -47,7 +51,7 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             foreach (string file in Directory.EnumerateFiles(dir, "*.desktop"))
             {
                 Browser? browser = ParseDesktopFile(file);
-                if (browser is not null)
+                if (browser is not null && !SelfExecutable.IsSelf(browser.ExecutablePath))
                 {
                     byId[browser.Id] = browser;
                 }
@@ -103,6 +107,11 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
             return null;
         }
 
+        if (NoDisplayRegex().IsMatch(content))
+        {
+            return null;
+        }
+
         Match nameMatch = NameLineRegex().Match(content);
         Match execMatch = ExecLineRegex().Match(content);
         if (!nameMatch.Success || !execMatch.Success)
@@ -119,13 +128,30 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         }
 
         string id = NormalizeId(displayName, path);
+
+        string? iconName = null;
+        Match iconMatch = IconLineRegex().Match(content);
+        if (iconMatch.Success)
+        {
+            iconName = iconMatch.Groups[1].Value.Trim();
+        }
+
         IBrowserLaunchStrategy launchStrategy = BrowserLaunchStrategies.For(id);
+        string? flatpakAppId = null;
+        if (IsFlatpakExecLine(exec, out string? appId) && appId is not null)
+        {
+            launchStrategy = new FlatpakLaunchStrategy(appId, launchStrategy);
+            flatpakAppId = appId;
+        }
+
         return new Browser
         {
             Id = id,
             DisplayName = displayName,
             ExecutablePath = executable,
+            IconName = iconName,
             LaunchStrategy = launchStrategy,
+            FlatpakAppId = flatpakAppId,
         };
     }
 
@@ -161,6 +187,40 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         return null;
     }
 
+    private static bool IsFlatpakExecLine(string exec, out string? appId)
+    {
+        appId = null;
+        string stripped = FieldCodeRegex().Replace(exec, "");
+        string[] parts = stripped.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 3)
+        {
+            return false;
+        }
+
+        string binary = Path.GetFileName(parts[0]);
+        if (!string.Equals(binary, "flatpak", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(parts[1], "run", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        for (int i = 2; i < parts.Length; i++)
+        {
+            if (parts[i].StartsWith("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (parts[i] is "@@u" or "@@")
+            {
+                continue;
+            }
+            appId = parts[i];
+            return true;
+        }
+
+        return false;
+    }
+
     private static string NormalizeId(string displayName, string path)
     {
         string desktopId = Path.GetFileNameWithoutExtension(path);
@@ -170,6 +230,10 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
         }
 
         string lowered = displayName.ToLowerInvariant();
+        if (lowered.Contains("opera gx") || lowered.Contains("opera-gx"))
+        {
+            return "opera-gx";
+        }
         if (lowered.Contains("chrome"))
         {
             return "chrome";
@@ -209,6 +273,12 @@ public sealed partial class LinuxBrowserInventory : IBrowserInventory
 
     [GeneratedRegex(@"^Exec=(.+)$", RegexOptions.Multiline)]
     private static partial Regex ExecLineRegex();
+
+    [GeneratedRegex(@"^Icon=(.+)$", RegexOptions.Multiline)]
+    private static partial Regex IconLineRegex();
+
+    [GeneratedRegex(@"^NoDisplay=true$", RegexOptions.Multiline | RegexOptions.IgnoreCase)]
+    private static partial Regex NoDisplayRegex();
 
     [GeneratedRegex(@"%[a-zA-Z]")]
     private static partial Regex FieldCodeRegex();

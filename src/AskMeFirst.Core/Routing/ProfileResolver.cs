@@ -22,43 +22,63 @@ public sealed class ProfileResolver
 
     public Browser Resolve(Browser browser, string? profileId)
     {
+        IReadOnlyList<BrowserProfile> detected = detector.Detect(browser);
+
         if (profileId is null)
         {
-            return DefaultProfile(browser);
+            return DefaultProfile(browser, detected);
         }
 
         ProfileSpec? spec = FindSpec(profileId);
-        if (spec is null)
+        if (spec is not null)
         {
-            logger.LogError(
-                $"Profile '{profileId}' is not declared in the profiles section of config.");
-            return DefaultProfile(browser);
+            if (!string.Equals(spec.BrowserId, browser.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogError(
+                    $"Profile '{profileId}' is declared for browser '{spec.BrowserId}' " +
+                    $"but rule selected browser '{browser.Id}'.");
+                return DefaultProfile(browser, detected);
+            }
+
+            BrowserProfile? declaredMatch = detected.FirstOrDefault(p =>
+                (spec.Directory is not null
+                    && string.Equals(p.DirectoryName, spec.Directory, StringComparison.OrdinalIgnoreCase))
+                || (spec.Name is not null
+                    && string.Equals(p.Name, spec.Name, StringComparison.OrdinalIgnoreCase)));
+
+            if (declaredMatch is null)
+            {
+                logger.LogWarn(
+                    $"Profile '{profileId}' declared but not detected on disk for {browser.DisplayName}. " +
+                    $"Falling back to default.");
+                return DefaultProfile(browser, detected);
+            }
+
+            return browser with { Profile = declaredMatch };
         }
 
-        if (!string.Equals(spec.BrowserId, browser.Id, StringComparison.OrdinalIgnoreCase))
+        BrowserProfile? detectedMatch = detected.FirstOrDefault(p =>
+            string.Equals(p.DirectoryName, profileId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(p.Name, profileId, StringComparison.OrdinalIgnoreCase));
+
+        if (detectedMatch is not null)
         {
-            logger.LogError(
-                $"Profile '{profileId}' is declared for browser '{spec.BrowserId}' " +
-                $"but rule selected browser '{browser.Id}'.");
-            return DefaultProfile(browser);
+            return browser with { Profile = detectedMatch };
         }
 
-        IReadOnlyList<BrowserProfile> detected = detector.Detect(browser.Id);
-        BrowserProfile? match = detected.FirstOrDefault(p =>
-            (spec.Directory is not null
-                && string.Equals(p.DirectoryName, spec.Directory, StringComparison.OrdinalIgnoreCase))
-            || (spec.Name is not null
-                && string.Equals(p.Name, spec.Name, StringComparison.OrdinalIgnoreCase)));
-
-        if (match is null)
+        if (detected.Count > 0)
         {
             logger.LogWarn(
-                $"Profile '{profileId}' declared but not detected on disk for {browser.DisplayName}. " +
+                $"Profile '{profileId}' not found for {browser.DisplayName}. " +
+                $"Available: {string.Join(", ", detected.Select(p => p.Name))}. " +
                 $"Falling back to default.");
-            return DefaultProfile(browser);
         }
-
-        return browser with { Profile = match };
+        else
+        {
+            logger.LogWarn(
+                $"Profile '{profileId}' requested but no profiles are detected for {browser.DisplayName}.");
+        }
+        return DefaultProfile(browser, detected);
     }
 
     private ProfileSpec? FindSpec(string id)
@@ -73,9 +93,8 @@ public sealed class ProfileResolver
         return null;
     }
 
-    private Browser DefaultProfile(Browser browser)
+    private static Browser DefaultProfile(Browser browser, IReadOnlyList<BrowserProfile> detected)
     {
-        IReadOnlyList<BrowserProfile> detected = detector.Detect(browser.Id);
         if (detected.Count == 0)
         {
             return browser;

@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Paths;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Platforms.Linux;
@@ -29,20 +30,26 @@ public sealed class LinuxSourceAppDetector(IProcessNameNormalizer normalizer) : 
         {
             return null;
         }
-        string exePath = $"/proc/{ppid}/exe";
-        string resolvedExe = "";
-        try
+        string resolvedExe = ResolveExe(ppid);
+        if (SelfExecutable.IsSelf(resolvedExe))
         {
-            if (File.Exists(exePath))
-            {
-                resolvedExe = Path.GetFullPath(exePath);
-            }
-        }
-        catch
-        {
-            resolvedExe = "";
+            return null;
         }
         string canonical = normalizer.Normalize(rawName, bundleId: null, executablePath: resolvedExe);
         return new SourceApp(canonical, BundleId: null, resolvedExe);
+    }
+
+    private static string ResolveExe(int ppid)
+    {
+        string exeSymlink = $"/proc/{ppid}/exe";
+        try
+        {
+            FileSystemInfo? target = File.ResolveLinkTarget(exeSymlink, returnFinalTarget: true);
+            return target?.FullName ?? "";
+        }
+        catch
+        {
+            return "";
+        }
     }
 }

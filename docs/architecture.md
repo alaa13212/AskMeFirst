@@ -36,7 +36,7 @@ The binary is the same in all modes — mode is selected by CLI flags.
 - Compiles all URL patterns once at load time. Re-evaluates only when config mtime changes.
 - Evaluates rules in **priority order** (highest first), first match wins.
 - Inputs: `{ source_process (normalized), url, parsed_url, running_browsers, installed_browsers }`.
-- Outputs: `{ BrowserId, Profile?, FocusExisting?, NewWindow?, Private?, StripTracking? }`.
+- Outputs: `{ BrowserId, Profile?, Private?, StripTracking? }`.
 - If no rule matches → show picker (implicit catchall).
 - See [rule-engine.md](./rule-engine.md) for the full format.
 
@@ -94,7 +94,7 @@ The binary is the same in all modes — mode is selected by CLI flags.
 5. Identify source process via parent PID → normalize             (~5 ms)
 6. Pre-process URL (strip tracking params, if enabled)            (~1 ms)
 7. Evaluate rules (precompiled patterns)                          (~2 ms)
-   - Result: { Browser: firefox, Profile: work, FocusExisting: true }
+   - Result: { Browser: firefox, Profile: work }
 8. Find running firefox (process scan)                            (~10 ms)
 9. Launch URL in firefox work profile                             (~200–500 ms browser startup)
 10. Exit

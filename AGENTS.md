@@ -14,7 +14,7 @@ Tagline / philosophy: *"Ask me first, then remember forever."* The picker is the
 - **Distribution**: Native AOT, single self-contained binary per RID (~1.4 MB)
 - **Config format**: JSON with comment-tolerant parser (`System.Text.Json` + `JsonCommentHandling.Skip`)
 - **GUI** (Phase 3+): Avalonia, single-screen centered modal
-- **DI**: hand-rolled `Composition.cs` per platform — **no DI framework**
+- **DI**: `Microsoft.Extensions.DependencyInjection` (`ServiceCollection`) — see decision log entry #84 for rationale
 - **No daemon** in v1 — stateless CLI per link click
 - **No telemetry** — local-only tool
 - **License**: MIT

@@ -104,7 +104,7 @@ public class BrowserOptionViewModelIconTests
         public byte[]? BrowserBytes { get; set; }
         public byte[]? ProfileBytes { get; set; }
 
-        public byte[]? GetBrowserIconPng(string browserId, string executablePath) => BrowserBytes;
+        public byte[]? GetBrowserIconPng(string browserId, string executablePath, string? iconName = null) => BrowserBytes;
         public byte[]? GetProfileIconPng(string browserId, BrowserProfile profile) => ProfileBytes;
     }
 }

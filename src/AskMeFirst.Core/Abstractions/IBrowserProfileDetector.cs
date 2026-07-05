@@ -4,5 +4,5 @@ namespace AskMeFirst.Core.Abstractions;
 
 public interface IBrowserProfileDetector
 {
-    IReadOnlyList<BrowserProfile> Detect(string browserId);
+    IReadOnlyList<BrowserProfile> Detect(Browser browser);
 }
