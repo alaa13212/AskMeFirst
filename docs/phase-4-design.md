@@ -7,6 +7,8 @@
 
 ## Scope (with cuts applied)
 
+> Note: `NewWindow` was added in commit `b962952` then reverted in commit `661be93` (engineer ruling, decision #85). Sections below describe the original plan; the implementation that shipped is documented in [docs/HANDOFF.md](./HANDOFF.md).
+
 Full roadmap with two cuts:
 
 - ✅ **`install` / `uninstall` commands** + `IDefaultBrowserRegistrar` (3 platform impls)
@@ -35,13 +37,12 @@ public interface IDefaultBrowserRegistrar
 {
     Task<RegistrationResult> RegisterAsync(CancellationToken ct = default);
     Task<RegistrationResult> UnregisterAsync(CancellationToken ct = default);
-    Task<bool> IsRegisteredAsync(CancellationToken ct = default);
 }
 
 public sealed record RegistrationResult(bool Success, string Message);
 ```
 
-Idempotent: `RegisterAsync` checks `IsRegisteredAsync` first; returns `RegistrationResult(Success: true, "Already registered.")` if so. `UnregisterAsync` is best-effort: returns `RegistrationResult(Success: true, "Nothing to do.")` if not registered.
+Idempotency is enforced at the OS layer — re-writing same registry keys is a no-op on Windows; `lsregister -f` and `xdg-mime default` are idempotent on Mac/Linux. `IDefaultBrowserRegistrar` does not expose a query method. `UnregisterAsync` is best-effort and always reports `"Unregistered."`.
 
 ### `Core/Abstractions/NullDefaultBrowserRegistrar.cs`
 
@@ -81,11 +82,9 @@ Does NOT write `UserChoice`. `Unregister` deletes the `AskMeFirst` subtree.
 2. If `.app` not in `/Applications`, copy it there.
 3. Run `/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -f <app>`.
 
-**`MacSourceAppWindowLocator`** uses `CGWindowListCopyWindowInfo` filtered by source-app PID (P/Invoke via `CoreGraphics`).
+**`MacSourceAppWindowLocator`** uses `osascript` + `tell application "System Events" to ...` (requires Accessibility permission on first use). `CGWindowListCopyWindowInfo` was considered but the osascript path was simpler and Accessibility-acceptable.
 
-**.app bundle production** (`src/AskMeFirst/Properties/PublishProfiles/MacOsBundle.targets`):
-- `<Target Name="CreateMacBundle" AfterTargets="Publish">` wraps `dotnet publish` output into `AskMeFirst.app/Contents/{MacOS,Resources,Info.plist}`.
-- `Info.plist` declares `CFBundleURLTypes` for `http`/`https` + `LSHandlerRank=Owner`.
+**.app bundle production** — inlined as `<Target Name="CreateMacAppBundle" AfterTargets="Publish">` in `src/AskMeFirst/AskMeFirst.csproj` (the standalone `MacOsBundle.targets` path was abandoned during implementation for simplicity). The target wraps `dotnet publish` output into `AskMeFirst.app/Contents/{MacOS,Resources,Info.plist}`. `Info.plist` declares `CFBundleURLTypes` for `http`/`https` + `LSHandlerRank=Owner`.
 
 ### Linux (`AskMeFirst.Platforms.Linux`)
 
@@ -109,7 +108,7 @@ askmefirst install
 
 Flow:
 1. `RegisterAsync` from `IDefaultBrowserRegistrar`.
-2. If `Success`: `TryOpenOsSettings()` (try/catch around `Process.Start` for deep-link).
+2. If `Success`: `InstallCommand` calls `IOsSettingsOpener.TryOpen()` (try/catch around the call; logs warn on exception, info-hint on `false`).
 3. Print result message.
 4. Exit 0 on success, 1 on failure.
 
@@ -149,8 +148,7 @@ src/AskMeFirst.Platforms.MacOs/MacSourceAppWindowLocator.cs         ← NEW
 
 src/AskMeFirst.Platforms.Linux/LinuxDefaultBrowserRegistrar.cs      ← NEW
 
-src/AskMeFirst/Properties/PublishProfiles/MacOsBundle.targets       ← NEW
-src/AskMeFirst.Platforms.MacOs/Info.plist                           ← NEW (embedded resource)
+src/AskMeFirst/Resources/Mac/Info.plist                             ← NEW (embedded resource)
 ```
 
 ### Modified files
@@ -162,8 +160,10 @@ src/AskMeFirst/Program.cs                                           ← register
 src/AskMeFirst.Core/Config/RuleThen.cs                              ← REMOVE FocusExisting
 src/AskMeFirst.Core/Routing/RoutingDecision.cs                      ← REMOVE FocusExisting
 src/AskMeFirst.Core/Routing/RuleEngine.cs                           ← REMOVE FocusExisting mapper
-src/AskMeFirst.Core/Launch/ChromiumLaunchStrategy.cs                ← +NewWindow → --new-window
-src/AskMeFirst.Core/Launch/FirefoxLaunchStrategy.cs                 ← +NewWindow → -new-window <url>
+src/AskMeFirst.Core/Launch/ChromiumLaunchStrategy.cs                ← +NewWindow → --new-window (later removed — see HANDOFF Phase 4 commit 10)
+src/AskMeFirst.Core/Launch/FirefoxLaunchStrategy.cs                 ← +NewWindow → -new-window <url> (later removed)
+src/AskMeFirst/Composition.cs                                       ← +InstallCommand/UninstallCommand + IDefaultBrowserRegistrar + wired via Microsoft.Extensions.DependencyInjection
+src/AskMeFirst/AskMeFirst.csproj                                    ← +<PackageReference> Microsoft.Extensions.DependencyInjection; inlined CreateMacAppBundle target
 src/AskMeFirst.Platforms.Windows/WindowsBootstrap.cs                 ← +registrar + source-app locator
 src/AskMeFirst.Platforms.MacOs/MacOsBootstrap.cs                    ← +registrar + source-app locator
 src/AskMeFirst.Platforms.Linux/LinuxBootstrap.cs                    ← +registrar
@@ -178,7 +178,6 @@ src/AskMeFirst.Picker/Services/FixedSourceAppWindowLocator.cs       ← DELETED 
 
 ```
 tests/AskMeFirst.Core.Tests/RuleEngineTests.cs                     ← remove FocusExisting test refs
-tests/AskMeFirst.Core.Tests/NewWindowLaunchTests.cs                ← NEW (~3 tests)
 tests/AskMeFirst.Core.Tests/InstallCommandTests.cs                 ← NEW (~2 tests, mocked registrar)
 tests/AskMeFirst.Core.Tests/UninstallCommandTests.cs               ← NEW (~1 test)
 tests/AskMeFirst.Picker.Tests/Services/FixedSourceAppWindowLocator.cs ← MOVED from src
@@ -204,7 +203,7 @@ samples/askmefirst.example.json                                     ← remove F
 6. Implement `WindowsDefaultBrowserRegistrar` + `WindowsSourceAppWindowLocator`.
 7. Implement `MacOsDefaultBrowserRegistrar` + `MacSourceAppWindowLocator`.
 8. Implement `LinuxDefaultBrowserRegistrar`.
-9. Add `MacOsBundle.targets` MSBuild target + `Info.plist` resource.
+9. Inline `<Target Name="CreateMacAppBundle" AfterTargets="Publish">` into `src/AskMeFirst/AskMeFirst.csproj` + add `Info.plist` resource.
 10. Dead-code sweep (grep for unused public surface).
 11. Update docs + decisions log + `HANDOFF.md`.
 

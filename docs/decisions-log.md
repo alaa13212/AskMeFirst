@@ -378,6 +378,8 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 | 81 | Register/Unregister idempotency | Register checks IsRegistered first; Unregister returns success if absent |
 | 82 | Post-install UX | Try deep-link (try/catch), print instructions as fallback |
 | 83 | Test strategy | D + unit-testable bits; ~6 unit tests; no CI integration smoke tests for OS impls |
+| 84 | DI container | `Microsoft.Extensions.DependencyInjection` adopted; supersedes #12 (hand-rolled root) |
+| 85 | NewWindow launch option | Removed (engineer ruling; browser-built-in dedup supersedes manual flag) |
 
 ## Phase 3 review feedback (added 2026-06-30)
 
@@ -444,3 +446,15 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 **Rationale**: No CI integration smoke tests for OS impls (`RegisterAsync`/`UnregisterAsync`/real `ISourceAppWindowLocator`) — manual verify via Phase 4 implementation checklist. ~6 unit tests for unit-testable logic, no new test project: `NewWindow=true` → `--new-window` (Chromium) and `-new-window <url>` (Firefox); `NewWindow` default = `false`; `install`/`uninstall` orchestration with mocked `IDefaultBrowserRegistrar`; `TryOpenOsSettings` deep-link fallback on `Process.Start` exception.
 
 **Rejected**: full CI integration per OS (high flakiness, maintenance burden); mock-heavy unit tests only (doesn't catch impl bugs, which is where the bugs will be); no tests at all (violates "non-trivial logic leaves one runnable check behind").
+
+## 84. Microsoft.Extensions.DependencyInjection container adopted
+
+**Rationale**: Supersedes decision #12 (hand-rolled composition root). The composition graph grew past the ~10-service "reconsider" trigger — Phase 4 adds per-platform `IDefaultBrowserRegistrar` and `ISourceAppWindowLocator` impls + a stable `ICommand` registry, and per-platform `Bootstrap` classes were heading toward nested-constructor sprawl. `Microsoft.Extensions.DependencyInjection` (`ServiceCollection` / `IServiceProvider`) covers the need at the surface we use; pulls no transitive logging/hosting dep; AOT-clean (no reflection on hot path, `IServiceCollection` is composed at startup). Cold-start impact measured negligible on the CLI hot path (the ~46 ms CLI budget is preserved). Reference: `<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />` in `src/AskMeFirst/AskMeFirst.csproj`.
+
+**Rejected**: keep the hand-rolled root (composition classes sprawling, unmaintainable); pull a heavier container (Autofac/Lamar — unnecessary at this surface); wire DI only on UI surfaces — the "hot-path CLI ≠ UI surface" principle from decision #59 still holds, but DI doesn't violate it since the CLI resolves a `CommandContext` and dispatches without taking on UI dependencies.
+
+## 85. `NewWindow` launch option removed
+
+**Rationale**: `NewWindow: bool` was added to `Browser` / `RoutingIntent` during Phase 4 (commit `b962952`) then reverted in commit `661be93` `refactor(core): drop NewWindow launch option`. Engineer ruling: browser-built-in dedup supersedes a manual flag — Chrome reuses the running instance when launched with a URL; Firefox's `-new-tab` does the same. The daily-driver UX is already covered by the browser. Decision #79 (FocusExisting removal) primed the cleanup via the same "never keep dead code" principle. Net: `NewWindow` plumbing removed from `Browser`, `RoutingIntent`, both launch strategies, and the dedicated test file (`tests/AskMeFirst.Core.Tests/NewWindowLaunchTests.cs` is gone from the repo).
+
+**Rejected**: keep `NewWindow` for "future Phase 4+ might want it" (YAGNI per #79); gate it behind a config flag (adds maintenance surface, no concrete ask).

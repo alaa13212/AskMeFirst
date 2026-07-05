@@ -77,9 +77,9 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
   - macOS: .app bundle + Info.plist + System Settings prompt
   - Linux: .desktop file + xdg-mime default
 - [x] `uninstall` command — reverse
-- [x] `NewWindow` action wired into browser-family launch strategies
+- [x] ~~`NewWindow` action wired into browser-family launch strategies~~ (later removed — see decision #85)
 
-**Exit criteria**: install registers AskMeFirst as a default-browser candidate on all 3 OSes; uninstall removes it; user gets the OS-standard "make this the default" prompt; `NewWindow` works for Chrome + Firefox; picker centers over source-app window on Win/Mac.
+**Exit criteria**: install registers AskMeFirst as a default-browser candidate on all 3 OSes; uninstall removes it; user gets the OS-standard "make this the default" prompt; picker centers over source-app window on Win/Mac.
 
 ---
 

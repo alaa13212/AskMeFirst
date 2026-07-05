@@ -1,6 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
-using AskMeFirst.Commands;
 using AskMeFirst.Core;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Audit;
@@ -11,19 +9,9 @@ using AskMeFirst.Core.Routing;
 using AskMeFirst.Picker.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-#if WINDOWS
-using AskMeFirst.Platforms.Windows;
-#endif
-#if OSX
-using AskMeFirst.Platforms.MacOs;
-#endif
-#if LINUX
-using AskMeFirst.Platforms.Linux;
-#endif
-
 namespace AskMeFirst;
 
-internal static class Composition
+internal static partial class Composition
 {
     public static CommandContext Bootstrap(bool verbose, CommandRegistry registry)
     {
@@ -35,19 +23,8 @@ internal static class Composition
         services.AddSingleton(new PlatformInfo(platformName));
         RegisterPlatform(services);
 
-        ServiceProvider tempProvider = services.BuildServiceProvider();
-        IConfigPathResolver configPathResolver = tempProvider.GetRequiredService<IConfigPathResolver>();
-        string configPath = configPathResolver.DefaultConfigPath;
-        AppConfig appConfig = ConfigLoader.LoadOrDefault(configPath);
-        logger.LogInfo($"config: {configPath} ({appConfig.Rules.Count} rules, {(File.Exists(configPath) ? "user" : "embedded")})");
-        if (!ConfigValidator.Validate(appConfig, logger))
-        {
-            logger.LogWarn("Falling back to embedded default config due to validation errors.");
-            appConfig = ConfigLoader.LoadDefault();
-        }
-        tempProvider.Dispose();
+        services.AddSingleton<AppConfig>(sp => LoadAndValidateConfig(sp, logger));
 
-        services.AddSingleton(appConfig);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<PredicateEvaluator>(_ => new PredicateEvaluator(RoutingDefaults.Matchers()));
         services.AddSingleton<IReadOnlyList<ITargetResolver>>(sp =>
@@ -92,8 +69,21 @@ internal static class Composition
         }
 
         ServiceProvider provider = services.BuildServiceProvider();
-        IReadOnlyList<ICommand> commands = provider.GetServices<ICommand>().ToList();
-        return new CommandContext(registry, provider, commands, verbose);
+        return new CommandContext(registry, provider, verbose);
+    }
+
+    private static AppConfig LoadAndValidateConfig(IServiceProvider sp, ConsoleLogger logger)
+    {
+        IConfigPathResolver configPathResolver = sp.GetRequiredService<IConfigPathResolver>();
+        string configPath = configPathResolver.DefaultConfigPath;
+        AppConfig appConfig = ConfigLoader.LoadOrDefault(configPath);
+        logger.LogInfo($"config: {configPath} ({appConfig.Rules.Count} rules, {(File.Exists(configPath) ? "user" : "embedded")})");
+        if (!ConfigValidator.Validate(appConfig, logger))
+        {
+            logger.LogWarn("Falling back to embedded default config due to validation errors.");
+            appConfig = ConfigLoader.LoadDefault();
+        }
+        return appConfig;
     }
 
     private static string GetPlatformName()
@@ -140,56 +130,4 @@ internal static class Composition
         throw new PlatformNotSupportedException(
             $"askmefirst has no platform integration for {RuntimeInformation.OSDescription}.");
     }
-
-#if WINDOWS
-    [SupportedOSPlatform("windows")]
-    private static void AddWindows(IServiceCollection services)
-    {
-        services.AddSingleton<IBrowserInventory, WindowsBrowserInventory>();
-        services.AddSingleton<IUrlLauncher, WindowsUrlLauncher>();
-        services.AddSingleton<IBrowserProfileDetector, WindowsBrowserProfileDetector>();
-        services.AddSingleton<IProcessNameNormalizer, WindowsProcessNameNormalizer>();
-        services.AddSingleton<ISourceAppDetector, WindowsSourceAppDetector>();
-        services.AddSingleton<IConfigPathResolver, WindowsConfigPathResolver>();
-        services.AddSingleton<IIconProvider, WindowsIconProvider>();
-        services.AddSingleton<INotifier, WindowsNotifier>();
-        services.AddSingleton<IDefaultBrowserRegistrar, WindowsDefaultBrowserRegistrar>();
-        services.AddSingleton<ISourceAppWindowLocator, WindowsSourceAppWindowLocator>();
-    }
-#endif
-
-#if OSX
-    [SupportedOSPlatform("osx")]
-    private static void AddMacOs(IServiceCollection services)
-    {
-        services.AddSingleton<IBrowserInventory, MacOsBrowserInventory>();
-        services.AddSingleton<IUrlLauncher, MacOsUrlLauncher>();
-        services.AddSingleton<IBrowserProfileDetector, MacOsBrowserProfileDetector>();
-        services.AddSingleton<IProcessNameNormalizer, MacOsProcessNameNormalizer>();
-        services.AddSingleton<ISourceAppDetector, MacOsSourceAppDetector>();
-        services.AddSingleton<IConfigPathResolver, MacOsConfigPathResolver>();
-        services.AddSingleton<IIconProvider, MacIconProvider>();
-        services.AddSingleton<INotifier, MacNotifier>();
-        services.AddSingleton<IDefaultBrowserRegistrar, MacOsDefaultBrowserRegistrar>();
-        services.AddSingleton<ISourceAppWindowLocator, MacSourceAppWindowLocator>();
-    }
-#endif
-
-#if LINUX
-    [SupportedOSPlatform("linux")]
-    [SupportedOSPlatform("freebsd")]
-    private static void AddLinux(IServiceCollection services)
-    {
-        services.AddSingleton<IBrowserInventory, LinuxBrowserInventory>();
-        services.AddSingleton<IUrlLauncher, LinuxUrlLauncher>();
-        services.AddSingleton<IBrowserProfileDetector, LinuxBrowserProfileDetector>();
-        services.AddSingleton<IProcessNameNormalizer, LinuxProcessNameNormalizer>();
-        services.AddSingleton<ISourceAppDetector, LinuxSourceAppDetector>();
-        services.AddSingleton<IConfigPathResolver, LinuxConfigPathResolver>();
-        services.AddSingleton<IIconProvider, LinuxIconProvider>();
-        services.AddSingleton<INotifier, LinuxNotifier>();
-        services.AddSingleton<IDefaultBrowserRegistrar, LinuxDefaultBrowserRegistrar>();
-        services.AddSingleton<ISourceAppWindowLocator, NullSourceAppWindowLocator>();
-    }
-#endif
 }

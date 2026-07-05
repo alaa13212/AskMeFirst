@@ -1,7 +1,6 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Routing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -27,12 +26,11 @@ public sealed class PickCommand : ICommand
             throw new CliArgsException($"Not a valid http(s) URL: {urlArg}");
         }
 
-        IServiceProvider services = ctx.Services;
-        ILogger logger = services.GetRequiredService<ILogger>();
-        ISourceAppDetector sourceApp = services.GetRequiredService<ISourceAppDetector>();
-        IBrowserInventory inventory = services.GetRequiredService<IBrowserInventory>();
-        IBrowserProfileDetector profiles = services.GetRequiredService<IBrowserProfileDetector>();
-        IPickerLauncher pickerLauncher = services.GetRequiredService<IPickerLauncher>();
+        ILogger logger = ctx.Resolve<ILogger>();
+        ISourceAppDetector sourceApp = ctx.Resolve<ISourceAppDetector>();
+        IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
+        IBrowserProfileDetector profiles = ctx.Resolve<IBrowserProfileDetector>();
+        IPickerLauncher pickerLauncher = ctx.Resolve<IPickerLauncher>();
 
         SourceApp? source = sourceApp.Detect();
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profiles);
@@ -56,10 +54,9 @@ public sealed class PickCommand : ICommand
 
     private static Task<int> LaunchAndReturn(Launched launched, CommandContext ctx)
     {
-        IServiceProvider services = ctx.Services;
-        ILogger logger = services.GetRequiredService<ILogger>();
-        IUrlLauncher launcher = services.GetRequiredService<IUrlLauncher>();
-        INotifier notifier = services.GetRequiredService<INotifier>();
+        ILogger logger = ctx.Resolve<ILogger>();
+        IUrlLauncher launcher = ctx.Resolve<IUrlLauncher>();
+        INotifier notifier = ctx.Resolve<INotifier>();
         try
         {
             launcher.Launch(launched.Browser, launched.Url);

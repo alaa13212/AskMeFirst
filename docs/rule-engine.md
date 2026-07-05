@@ -152,7 +152,6 @@ All actions are optional. Omitted = use sensible default.
 |---|---|---|
 | `browser: <id>` | which browser to use (must exist in `browsers:`) | required |
 | `profile: <name>` | which browser profile | browser's `DefaultProfile` |
-| `NewWindow: bool` | open new browser window vs new tab | `false` (new tab) |
 | `private: bool` | open in private/incognito | `false` |
 | `StripTracking: bool` | override `settings.StripTracking` | inherited |
 | `Unshorten: bool` | override `settings.Unshorten` | inherited |

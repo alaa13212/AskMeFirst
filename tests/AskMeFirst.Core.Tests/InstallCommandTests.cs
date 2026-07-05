@@ -12,16 +12,19 @@ public class InstallCommandTests
         FakeRegistrar registrar = new()
         {
             RegisterResult = new(Success: true, Message: "Registered as default browser candidate."),
-            OpenOsSettingsResult = true,
+        };
+        FakeOsSettingsOpener settingsOpener = new()
+        {
+            TryOpenResult = true,
         };
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger, settingsOpener));
 
         Assert.Equal(0, code);
         Assert.Equal(1, registrar.RegisterCalls);
-        Assert.Equal(1, registrar.OpenOsSettingsCalls);
+        Assert.Equal(1, settingsOpener.TryOpenCalls);
         Assert.DoesNotContain(logger.Infos, m => m.Contains("Open the OS default-browser settings"));
     }
 
@@ -31,15 +34,18 @@ public class InstallCommandTests
         FakeRegistrar registrar = new()
         {
             RegisterResult = new(Success: true, Message: "Registered."),
-            OpenOsSettingsResult = false,
+        };
+        FakeOsSettingsOpener settingsOpener = new()
+        {
+            TryOpenResult = false,
         };
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger, settingsOpener));
 
         Assert.Equal(0, code);
-        Assert.Equal(1, registrar.OpenOsSettingsCalls);
+        Assert.Equal(1, settingsOpener.TryOpenCalls);
         Assert.Contains(logger.Infos, m => m.Contains("Open the OS default-browser settings"));
     }
 
@@ -49,40 +55,35 @@ public class InstallCommandTests
         FakeRegistrar registrar = new()
         {
             RegisterResult = new(Success: false, Message: "Write failed."),
-            OpenOsSettingsResult = true,
         };
+        FakeOsSettingsOpener settingsOpener = new();
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger, settingsOpener));
 
         Assert.Equal(1, code);
         Assert.Equal(1, registrar.RegisterCalls);
-        Assert.Equal(0, registrar.OpenOsSettingsCalls);
+        Assert.Equal(0, settingsOpener.TryOpenCalls);
     }
 
     [Fact]
     public async Task TryOpenSettingsThrows_LogsWarn_DoesNotPropagate()
     {
-        ThrowingOpenRegistrar registrar = new();
+        ThrowingOpenOsSettingsOpener settingsOpener = new();
+        FakeRegistrar registrar = new();
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger, settingsOpener));
 
         Assert.Equal(0, code);
         Assert.Contains(logger.Warns, m => m.Contains("Could not open OS settings"));
         Assert.Contains(logger.Infos, m => m.Contains("Open the OS default-browser settings"));
     }
 
-    private sealed class ThrowingOpenRegistrar : IDefaultBrowserRegistrar
+    private sealed class ThrowingOpenOsSettingsOpener : IOsSettingsOpener
     {
-        public Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)
-            => Task.FromResult(new RegistrationResult(Success: true, Message: "Registered."));
-
-        public Task<RegistrationResult> UnregisterAsync(CancellationToken ct = default)
-            => Task.FromResult(new RegistrationResult(Success: true, Message: "Unregistered."));
-
-        public bool TryOpenOsSettings() => throw new InvalidOperationException("URI scheme not registered");
+        public bool TryOpen() => throw new InvalidOperationException("URI scheme not registered");
     }
 }

@@ -269,7 +269,7 @@ public PixelPoint ComputeWindowPosition(Size windowSize, IScreenProvider screens
 
 **Per-platform `ISourceAppWindowLocator`**:
 - Windows: `GetWindowRect` on parent PID (easy — already have PID).
-- macOS: `CGWindowListCopyWindowInfo` with parent PID (easy).
+- macOS: `osascript` + System Events (requires Accessibility permission on first use).
 - Linux: returns `false`. Falls back to active-monitor center.
 
 ### Modal-ness

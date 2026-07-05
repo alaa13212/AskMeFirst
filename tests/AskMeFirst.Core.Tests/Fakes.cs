@@ -124,14 +124,19 @@ internal static class TestCommandContext
 {
     public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger)
     {
+        return Build(registrar, logger, new FakeOsSettingsOpener());
+    }
+
+    public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger, IOsSettingsOpener settingsOpener)
+    {
         ServiceCollection services = new();
         services.AddSingleton<ILogger>(logger);
         services.AddSingleton<IDefaultBrowserRegistrar>(registrar);
+        services.AddSingleton<IOsSettingsOpener>(settingsOpener);
         ServiceProvider provider = services.BuildServiceProvider();
         return new CommandContext(
             new CommandRegistry(),
             provider,
-            [],
             Verbose: false);
     }
 }
@@ -171,11 +176,9 @@ internal sealed class FakeRegistrar : IDefaultBrowserRegistrar
 {
     public RegistrationResult RegisterResult { get; set; } = new(Success: true, Message: "Registered.");
     public RegistrationResult UnregisterResult { get; set; } = new(Success: true, Message: "Unregistered.");
-    public bool OpenOsSettingsResult { get; set; } = true;
 
     public int RegisterCalls { get; private set; }
     public int UnregisterCalls { get; private set; }
-    public int OpenOsSettingsCalls { get; private set; }
 
     public Task<RegistrationResult> RegisterAsync(CancellationToken ct = default)
     {
@@ -188,10 +191,16 @@ internal sealed class FakeRegistrar : IDefaultBrowserRegistrar
         UnregisterCalls++;
         return Task.FromResult(UnregisterResult);
     }
+}
 
-    public bool TryOpenOsSettings()
+internal sealed class FakeOsSettingsOpener : IOsSettingsOpener
+{
+    public bool TryOpenResult { get; set; } = true;
+    public int TryOpenCalls { get; private set; }
+
+    public bool TryOpen()
     {
-        OpenOsSettingsCalls++;
-        return OpenOsSettingsResult;
+        TryOpenCalls++;
+        return TryOpenResult;
     }
 }

@@ -36,7 +36,7 @@ The binary is the same in all modes — mode is selected by CLI flags.
 - Compiles all URL patterns once at load time. Re-evaluates only when config mtime changes.
 - Evaluates rules in **priority order** (highest first), first match wins.
 - Inputs: `{ source_process (normalized), url, parsed_url, running_browsers, installed_browsers }`.
-- Outputs: `{ BrowserId, Profile?, NewWindow?, Private?, StripTracking? }`.
+- Outputs: `{ BrowserId, Profile?, Private?, StripTracking? }`.
 - If no rule matches → show picker (implicit catchall).
 - See [rule-engine.md](./rule-engine.md) for the full format.
 

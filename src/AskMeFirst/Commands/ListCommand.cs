@@ -1,7 +1,6 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -13,8 +12,8 @@ public sealed class ListCommand : ICommand
 
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
-        IBrowserInventory inventory = ctx.Services.GetRequiredService<IBrowserInventory>();
-        IBrowserProfileDetector profiles = ctx.Services.GetRequiredService<IBrowserProfileDetector>();
+        IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
+        IBrowserProfileDetector profiles = ctx.Resolve<IBrowserProfileDetector>();
         IReadOnlyList<Browser> browsers = inventory.Discover();
         if (browsers.Count == 0)
         {

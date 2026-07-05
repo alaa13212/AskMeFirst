@@ -9,24 +9,23 @@ Phase 4 complete end-to-end on the user's actual machine. All 11 implementation 
 ## What's verified
 
 - ✅ `dotnet build` clean (0 warnings, 0 errors, all 3 platforms)
-- ✅ `dotnet test` — **289/289 passing** in ~1.6 s
-  - 222 Core (+18 from Phase 4: 7 NewWindow, 4 Install, 2 Uninstall, +others from FocusExisting removal)
-  - 67 Picker (unchanged; existing source-app locator tests still cover moved interface)
+- ✅ `dotnet test --no-build` — **292/296 passing** in ~1.6 s
+  - **238/238 Core** passing (+16 from Phase 4: 4 Install, 2 Uninstall, +others from FocusExisting removal)
+  - **54/58 Picker** passing — 4 pre-existing `PickerWindowRenderTests` failures (Windows-hardcoded paths `C:\Users\Ali\.mavis\cache\...` surfacing on Linux; not Phase 4 regressions)
 - ✅ Manual: Windows registry writes verified on this machine (StartMenuInternet\AskMeFirst subtree present)
 - ✅ Picker opens over source-app window (Slack, Visual Studio, etc.) — confirms `WindowsSourceAppWindowLocator` works
-- ✅ `NewWindow` rule fires `chromium --new-window <url>` and `firefox -new-window <url>` correctly (manually verified)
 
 ## Phase 4 commits (in order)
 
 1. Move `ISourceAppWindowLocator` + `NullSourceAppWindowLocator` + `ScreenBounds` from Picker → Core (interface-location cleanup; Platforms.\* can now implement)
 2. Remove `FocusExisting` field (8-file cascade: 3 src + 1 test + 1 sample + 3 docs)
-3. Wire `NewWindow` into `ChromiumLaunchStrategy` (`--new-window`) + `FirefoxLaunchStrategy` (`-new-window <url>`) — plumbed through `RoutingIntent` → `Browser.NewWindow` → launch strategy
+3. Wire `NewWindow` into `ChromiumLaunchStrategy` (`--new-window`) + `FirefoxLaunchStrategy` (`-new-window <url>`) — plumbed through `RoutingIntent` → `Browser.NewWindow` → launch strategy. Later undone in `661be93` `refactor(core): drop NewWindow launch option` (engineer ruling; superseded by browser-built-in dedup).
 4. Add `IDefaultBrowserRegistrar` + `RegistrationResult` + `NullDefaultBrowserRegistrar` interfaces
 5. Add `InstallCommand` + `UninstallCommand` + 6 unit tests (mocked registrar)
 6. `WindowsDefaultBrowserRegistrar` (writes HKCU\Software\Clients\StartMenuInternet\AskMeFirst subtree) + `WindowsSourceAppWindowLocator` (Win32 `EnumWindows` + `GetWindowThreadProcessId` + `IsWindowVisible` + `GetWindowRect`, picks largest visible window)
 7. `MacOsDefaultBrowserRegistrar` (locates `.app` from `Environment.ProcessPath`, copies to `/Applications` via `ditto`, runs `lsregister -f`) + `MacSourceAppWindowLocator` (osascript → System Events → frontmost process → window position+size; **requires Accessibility permission on first use**)
 8. `LinuxDefaultBrowserRegistrar` (writes `.desktop` to `~/.local/share/applications/`, runs `xdg-mime default` for both schemes + `update-desktop-database`)
-9. `MacOsBundle.targets` MSBuild target (`AfterTargets="Publish"`, fires only when `RuntimeIdentifier` starts with `osx-`, wraps binary into `AskMeFirst.app/Contents/{MacOS,Resources,Info.plist}`) + `Resources/Mac/Info.plist`
+9. `CreateMacAppBundle` MSBuild target (inlined into `src/AskMeFirst/AskMeFirst.csproj`, `AfterTargets="Publish"`, fires only when `RuntimeIdentifier` starts with `osx-`, wraps binary into `AskMeFirst.app/Contents/{MacOS,Resources,Info.plist}`) + `Resources/Mac/Info.plist`
 10. **Dead-code sweep**: removed `IsRegisteredAsync` from interface + 3 impls + `NullDefaultBrowserRegistrar` + `FakeRegistrar` + test helper (was in design but no caller; impls naturally idempotent at OS layer; satisfies "never keep dead code")
 11. This handoff
 
@@ -61,7 +60,6 @@ src/AskMeFirst.Platforms.Linux/
 tests/AskMeFirst.Core.Tests/
 ├── InstallCommandTests.cs             ← NEW (4 tests)
 ├── UninstallCommandTests.cs           ← NEW (2 tests)
-├── NewWindowLaunchTests.cs            ← NEW (7 tests)
 └── Services/FixedSourceAppWindowLocator.cs ← MOVED from src
 
 docs/phase-4-design.md                 ← NEW (planning artifact)
@@ -75,13 +73,7 @@ docs/phase-4-design.md                 ← NEW (planning artifact)
 - `src/AskMeFirst.Core/Composition/BootstrapContext.cs` — +2 fields
 - `src/AskMeFirst.Core/Commands/CommandContext.cs` — +1 field
 - 3 platform Bootstrap classes — wire real per-platform impls (replacing `NullDefaultBrowserRegistrar` / `NullSourceAppWindowLocator`)
-- `src/AskMeFirst.Core/Launch/ChromiumLaunchStrategy.cs` + `FirefoxLaunchStrategy.cs` — `NewWindow` flag → CLI args
-- `src/AskMeFirst.Core/Models/Browser.cs` — +`NewWindow` field
-- `src/AskMeFirst.Core/Routing/RoutingIntent.cs` — +`NewWindow` field
-- `src/AskMeFirst.Core/Routing/RuleMatchingResolver.cs` — copies `decision.NewWindow` to intent
-- `src/AskMeFirst.Core/Routing/RoutingExecutor.cs` — sets `Browser.NewWindow` via `with`
-- `src/AskMeFirst.Core/Routing/ExplicitOverrideResolver.cs` — passes `false` for explicit (CLI override)
-- All 3 `IUrlLauncher` impls — pass `browser.NewWindow` to `BuildArguments`
+- `NewWindow` launch plumbing (`Browser` / `RoutingIntent` / Strategies / UrlLaunchers) — added in `b962952`, reverted in `661be93` (engineer ruling, see decision #85)
 - `samples/askmefirst.example.json` — removed `FocusExisting`
 - `docs/{rule-engine,architecture,roadmap}.md` — `FocusExisting` references removed
 - `docs/decisions-log.md` — decisions #75–83 documented (Phase 4 section)
@@ -147,14 +139,14 @@ When editing any file, prune comments that violate these.
 
 When picking up Phase 5, verify Phase 4 manually on each OS first:
 
-- [x] Windows: registry subtree written; Default Apps prompt shows AskMeFirst in the list; `NewWindow` rule fires `chrome --new-window <url>`
+- [x] Windows: registry subtree written; Default Apps prompt shows AskMeFirst in the list
 - [ ] macOS: `askmefirst install` copies `.app` to `/Applications`, lsregister succeeds; System Settings shows AskMeFirst; Accessibility permission required for picker centering
 - [ ] Linux: `.desktop` written; `xdg-mime query default x-scheme-handler/http` returns `askmefirst.desktop`; first link click routes correctly
 
 ## Things to know about the user
 
 - C# background — comfortable with .NET internals (e.g., caught the lambda `_` discard conflict)
-- Cares about "understanding all the code" — no magic, no heavy frameworks, no DI containers
+- Cares about "understanding all the code" — no magic, no heavy frameworks. Note: DI container is approved per decision #84 (was previously banned in AGENTS.md; engineer ruling superseded that).
 - Working style: detailed Q&A interview per design decision, one question at a time
 - Code-style rules (comment / var / braces / one-class-per-file / no-interface-flags / no-dead-code) apply project-wide
 - "Go ahead" = proceed with implementation including logical commits; explicit "commit" required to push

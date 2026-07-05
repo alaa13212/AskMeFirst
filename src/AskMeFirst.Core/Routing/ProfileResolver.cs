@@ -22,9 +22,11 @@ public sealed class ProfileResolver
 
     public Browser Resolve(Browser browser, string? profileId)
     {
+        IReadOnlyList<BrowserProfile> detected = detector.Detect(browser);
+
         if (profileId is null)
         {
-            return DefaultProfile(browser);
+            return DefaultProfile(browser, detected);
         }
 
         ProfileSpec? spec = FindSpec(profileId);
@@ -35,10 +37,9 @@ public sealed class ProfileResolver
                 logger.LogError(
                     $"Profile '{profileId}' is declared for browser '{spec.BrowserId}' " +
                     $"but rule selected browser '{browser.Id}'.");
-                return DefaultProfile(browser);
+                return DefaultProfile(browser, detected);
             }
 
-            IReadOnlyList<BrowserProfile> detected = detector.Detect(browser);
             BrowserProfile? declaredMatch = detected.FirstOrDefault(p =>
                 (spec.Directory is not null
                     && string.Equals(p.DirectoryName, spec.Directory, StringComparison.OrdinalIgnoreCase))
@@ -50,14 +51,13 @@ public sealed class ProfileResolver
                 logger.LogWarn(
                     $"Profile '{profileId}' declared but not detected on disk for {browser.DisplayName}. " +
                     $"Falling back to default.");
-                return DefaultProfile(browser);
+                return DefaultProfile(browser, detected);
             }
 
             return browser with { Profile = declaredMatch };
         }
 
-        IReadOnlyList<BrowserProfile> allDetected = detector.Detect(browser);
-        BrowserProfile? detectedMatch = allDetected.FirstOrDefault(p =>
+        BrowserProfile? detectedMatch = detected.FirstOrDefault(p =>
             string.Equals(p.DirectoryName, profileId, StringComparison.OrdinalIgnoreCase)
             || string.Equals(p.Name, profileId, StringComparison.OrdinalIgnoreCase));
 
@@ -66,11 +66,11 @@ public sealed class ProfileResolver
             return browser with { Profile = detectedMatch };
         }
 
-        if (allDetected.Count > 0)
+        if (detected.Count > 0)
         {
             logger.LogWarn(
                 $"Profile '{profileId}' not found for {browser.DisplayName}. " +
-                $"Available: {string.Join(", ", allDetected.Select(p => p.Name))}. " +
+                $"Available: {string.Join(", ", detected.Select(p => p.Name))}. " +
                 $"Falling back to default.");
         }
         else
@@ -78,7 +78,7 @@ public sealed class ProfileResolver
             logger.LogWarn(
                 $"Profile '{profileId}' requested but no profiles are detected for {browser.DisplayName}.");
         }
-        return DefaultProfile(browser);
+        return DefaultProfile(browser, detected);
     }
 
     private ProfileSpec? FindSpec(string id)
@@ -93,9 +93,8 @@ public sealed class ProfileResolver
         return null;
     }
 
-    private Browser DefaultProfile(Browser browser)
+    private static Browser DefaultProfile(Browser browser, IReadOnlyList<BrowserProfile> detected)
     {
-        IReadOnlyList<BrowserProfile> detected = detector.Detect(browser);
         if (detected.Count == 0)
         {
             return browser;

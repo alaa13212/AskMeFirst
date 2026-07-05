@@ -69,11 +69,6 @@ public sealed class LinuxDefaultBrowserRegistrar : IDefaultBrowserRegistrar
         }
     }
 
-    public bool TryOpenOsSettings()
-    {
-        return false;
-    }
-
     private static string GetApplicationsDirectory()
     {
         string home = Environment.GetEnvironmentVariable("HOME")

@@ -57,24 +57,6 @@ public sealed class MacOsDefaultBrowserRegistrar : IDefaultBrowserRegistrar
         }
     }
 
-    public bool TryOpenOsSettings()
-    {
-        try
-        {
-            using Process? p = Process.Start(new ProcessStartInfo
-            {
-                FileName = "open",
-                ArgumentList = { "x-apple.systempreferences:com.apple.preference.general?DefaultWebBrowser" },
-                UseShellExecute = false,
-            });
-            return p is not null;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static string? LocateAppBundle()
     {
         string? path = Environment.ProcessPath;

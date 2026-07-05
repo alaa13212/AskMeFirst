@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 using Microsoft.Win32;
@@ -74,23 +73,6 @@ public sealed class WindowsDefaultBrowserRegistrar : IDefaultBrowserRegistrar
             return Task.FromResult(new RegistrationResult(
                 Success: false,
                 Message: $"Unregister failed: {ex.Message}"));
-        }
-    }
-
-    public bool TryOpenOsSettings()
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "ms-settings:defaultapps",
-                UseShellExecute = true,
-            });
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 }

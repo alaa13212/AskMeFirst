@@ -1,6 +1,5 @@
 using AskMeFirst.Core;
 using AskMeFirst.Core.Commands;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -13,8 +12,8 @@ public sealed class RouteCommand : ICommand
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
         RouteArgs parsed = ParseArgs(args);
-        RuleRouter router = ctx.Services.GetRequiredService<RuleRouter>();
-        string platformName = ctx.Services.GetRequiredService<PlatformInfo>().Name;
+        RuleRouter router = ctx.Resolve<RuleRouter>();
+        string platformName = ctx.Resolve<PlatformInfo>().Name;
         Console.Error.WriteLine($"[info] platform: {platformName}");
         return Task.FromResult(router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId));
     }

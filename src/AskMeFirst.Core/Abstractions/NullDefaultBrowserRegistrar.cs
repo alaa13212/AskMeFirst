@@ -15,9 +15,4 @@ public sealed class NullDefaultBrowserRegistrar : IDefaultBrowserRegistrar
             Success: false,
             Message: "No default-browser registrar is registered for this platform."));
     }
-
-    public bool TryOpenOsSettings()
-    {
-        return false;
-    }
 }

@@ -1,6 +1,5 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -12,9 +11,9 @@ public sealed class InstallCommand : ICommand
 
     public async Task<int> Execute(string[] args, CommandContext ctx)
     {
-        IServiceProvider services = ctx.Services;
-        ILogger logger = services.GetRequiredService<ILogger>();
-        IDefaultBrowserRegistrar registrar = services.GetRequiredService<IDefaultBrowserRegistrar>();
+        ILogger logger = ctx.Resolve<ILogger>();
+        IDefaultBrowserRegistrar registrar = ctx.Resolve<IDefaultBrowserRegistrar>();
+        IOsSettingsOpener settingsOpener = ctx.Resolve<IOsSettingsOpener>();
 
         RegistrationResult result = await registrar.RegisterAsync();
 
@@ -28,7 +27,7 @@ public sealed class InstallCommand : ICommand
         bool opened = false;
         try
         {
-            opened = registrar.TryOpenOsSettings();
+            opened = settingsOpener.TryOpen();
         }
         catch (Exception ex)
         {

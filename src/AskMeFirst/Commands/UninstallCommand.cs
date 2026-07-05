@@ -1,6 +1,5 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -12,7 +11,7 @@ public sealed class UninstallCommand : ICommand
 
     public async Task<int> Execute(string[] args, CommandContext ctx)
     {
-        IDefaultBrowserRegistrar registrar = ctx.Services.GetRequiredService<IDefaultBrowserRegistrar>();
+        IDefaultBrowserRegistrar registrar = ctx.Resolve<IDefaultBrowserRegistrar>();
 
         RegistrationResult result = await registrar.UnregisterAsync();
 
