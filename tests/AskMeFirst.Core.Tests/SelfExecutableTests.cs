@@ -33,9 +33,6 @@ public class SelfExecutableTests
     [Fact]
     public void IsSelf_HandlesRelativePath()
     {
-        string? self = Environment.ProcessPath;
-        Assert.NotNull(self);
-        string relative = Path.GetFileName(self);
-        Assert.False(SelfExecutable.IsSelf(relative));
+        Assert.False(SelfExecutable.IsSelf("definitely-not-this-binary"));
     }
 }

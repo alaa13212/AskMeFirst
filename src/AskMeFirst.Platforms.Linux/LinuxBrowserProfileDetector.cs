@@ -26,7 +26,8 @@ public sealed class LinuxBrowserProfileDetector : IBrowserProfileDetector
         }
 
         string browserId = browser.Id;
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string home = Environment.GetEnvironmentVariable("HOME")
+                      ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         if (ProfileRoots.TryGetValue(browserId, out string? relativeRoot))
         {
