@@ -1,5 +1,6 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Commands;
 
@@ -9,12 +10,11 @@ public sealed class UninstallCommand : ICommand
     public string Usage => "uninstall";
     public string Description => "Remove AskMeFirst default-browser registration.";
 
-    public int Execute(string[] args, CommandContext ctx)
+    public async Task<int> Execute(string[] args, CommandContext ctx)
     {
-        RegistrationResult result = ctx.DefaultBrowserRegistrar
-            .UnregisterAsync()
-            .GetAwaiter()
-            .GetResult();
+        IDefaultBrowserRegistrar registrar = ctx.Services.GetRequiredService<IDefaultBrowserRegistrar>();
+
+        RegistrationResult result = await registrar.UnregisterAsync();
 
         Console.WriteLine(result.Message);
         return result.Success ? 0 : 1;

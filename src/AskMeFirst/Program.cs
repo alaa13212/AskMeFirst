@@ -5,7 +5,7 @@ namespace AskMeFirst;
 
 internal static class Program
 {
-    private static int Main()
+    private static async Task<int> Main()
     {
         string[] cli = Environment.GetCommandLineArgs();
         string[] userArgs = cli.Length > 1 ? cli[1..] : [];
@@ -22,7 +22,7 @@ internal static class Program
             CommandContext ctx = Composition.Bootstrap(IsVerboseRequested(userArgs), registry);
 
             ICommand command = registry.Resolve(userArgs[0]);
-            return command.Execute(userArgs, ctx);
+            return await command.Execute(userArgs, ctx);
         }
         catch (CliArgsException ex)
         {

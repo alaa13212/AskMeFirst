@@ -7,7 +7,7 @@ namespace AskMeFirst.Core.Tests;
 public class InstallCommandTests
 {
     [Fact]
-    public void RegisterSuccess_TryOpenSettingsSucceeds_ReturnsZero()
+    public async Task RegisterSuccess_TryOpenSettingsSucceeds_ReturnsZero()
     {
         FakeRegistrar registrar = new()
         {
@@ -17,7 +17,7 @@ public class InstallCommandTests
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(0, code);
         Assert.Equal(1, registrar.RegisterCalls);
@@ -26,7 +26,7 @@ public class InstallCommandTests
     }
 
     [Fact]
-    public void RegisterSuccess_TryOpenSettingsFails_LogsHintAndReturnsZero()
+    public async Task RegisterSuccess_TryOpenSettingsFails_LogsHintAndReturnsZero()
     {
         FakeRegistrar registrar = new()
         {
@@ -36,7 +36,7 @@ public class InstallCommandTests
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(0, code);
         Assert.Equal(1, registrar.OpenOsSettingsCalls);
@@ -44,7 +44,7 @@ public class InstallCommandTests
     }
 
     [Fact]
-    public void RegisterFailure_ReturnsOne_SkipsOpenSettings()
+    public async Task RegisterFailure_ReturnsOne_SkipsOpenSettings()
     {
         FakeRegistrar registrar = new()
         {
@@ -54,7 +54,7 @@ public class InstallCommandTests
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(1, code);
         Assert.Equal(1, registrar.RegisterCalls);
@@ -62,13 +62,13 @@ public class InstallCommandTests
     }
 
     [Fact]
-    public void TryOpenSettingsThrows_LogsWarn_DoesNotPropagate()
+    public async Task TryOpenSettingsThrows_LogsWarn_DoesNotPropagate()
     {
         ThrowingOpenRegistrar registrar = new();
         FakeLogger logger = new();
         InstallCommand cmd = new();
 
-        int code = cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["install"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(0, code);
         Assert.Contains(logger.Warns, m => m.Contains("Could not open OS settings"));

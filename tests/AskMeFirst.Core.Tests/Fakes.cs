@@ -5,6 +5,7 @@ using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Launch;
 using AskMeFirst.Core.Models;
 using AskMeFirst.Core.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AskMeFirst.Core.Tests;
 
@@ -123,48 +124,15 @@ internal static class TestCommandContext
 {
     public static CommandContext Build(IDefaultBrowserRegistrar registrar, FakeLogger logger)
     {
-        FakeInventory inventory = new();
-        FakeLauncher launcher = new();
-        FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
-        FakeNotifier notifier = new();
-        AppConfig appConfig = new() { Rules = [] };
-        CommandRegistry registry = new();
-        PredicateEvaluator evaluator = TestEvaluator.Default();
-        IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(appConfig, evaluator);
-        ProfileResolver profileResolver = new(profiles, appConfig.Profiles, logger);
-        TrackingStripper stripper = new(appConfig);
-        IRoutingExecutor executor = new RoutingExecutor(inventory, profileResolver, stripper, appConfig);
-        RuleRouter router = new(
-            resolvers,
-            executor,
-            inventory,
-            sourceApp,
-            new RecordingPickerLauncher(),
-            usePickerAsCatchAll: false,
-            appConfig.Profiles,
-            profiles,
-            launcher,
-            logger,
-            notifier,
-            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));
+        ServiceCollection services = new();
+        services.AddSingleton<ILogger>(logger);
+        services.AddSingleton<IDefaultBrowserRegistrar>(registrar);
+        ServiceProvider provider = services.BuildServiceProvider();
         return new CommandContext(
-            logger,
-            inventory,
-            launcher,
-            profiles,
-            sourceApp,
-            new FakeProcessNameNormalizer(),
-            new FakeConfigPathResolver(),
-            appConfig,
-            TimeProvider.System,
-            "test",
-            registry,
-            router,
-            new RecordingPickerLauncher(),
-            new NoOpRecentPicksLog(),
-            notifier,
-            registrar);
+            new CommandRegistry(),
+            provider,
+            [],
+            Verbose: false);
     }
 }
 

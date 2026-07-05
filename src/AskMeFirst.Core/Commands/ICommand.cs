@@ -10,5 +10,5 @@ public interface ICommand
 
     string Description => "";
 
-    int Execute(string[] args, CommandContext ctx);
+    Task<int> Execute(string[] args, CommandContext ctx);
 }

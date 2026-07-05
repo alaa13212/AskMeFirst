@@ -7,7 +7,7 @@ namespace AskMeFirst.Core.Tests;
 public class UninstallCommandTests
 {
     [Fact]
-    public void UnregisterSuccess_ReturnsZero()
+    public async Task UnregisterSuccess_ReturnsZero()
     {
         FakeRegistrar registrar = new()
         {
@@ -16,14 +16,14 @@ public class UninstallCommandTests
         FakeLogger logger = new();
         UninstallCommand cmd = new();
 
-        int code = cmd.Execute(["uninstall"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["uninstall"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(0, code);
         Assert.Equal(1, registrar.UnregisterCalls);
     }
 
     [Fact]
-    public void UnregisterFailure_ReturnsOne()
+    public async Task UnregisterFailure_ReturnsOne()
     {
         FakeRegistrar registrar = new()
         {
@@ -32,7 +32,7 @@ public class UninstallCommandTests
         FakeLogger logger = new();
         UninstallCommand cmd = new();
 
-        int code = cmd.Execute(["uninstall"], TestCommandContext.Build(registrar, logger));
+        int code = await cmd.Execute(["uninstall"], TestCommandContext.Build(registrar, logger));
 
         Assert.Equal(1, code);
         Assert.Equal(1, registrar.UnregisterCalls);
