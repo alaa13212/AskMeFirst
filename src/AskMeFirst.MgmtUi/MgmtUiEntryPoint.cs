@@ -29,12 +29,23 @@ public static class MgmtUiEntryPoint
     {
         NoOpLogger logger = new();
         string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
+        EnsureSeedConfig(resolvedPath);
         JsonConfigPersister persister = new(resolvedPath, logger);
         return new MgmtUiEntryPointComposition(
             persister,
             new FileRecentPicksReader(resolvedPath),
             new RulePreviewService(),
             new FileConfigFileWatcher(resolvedPath));
+    }
+
+    private static void EnsureSeedConfig(string configPath)
+    {
+        if (File.Exists(configPath))
+        {
+            return;
+        }
+        AppConfig seed = ConfigLoader.LoadDefault();
+        ConfigLoader.WriteAtomic(seed, configPath);
     }
 
     private static string DefaultConfigPath()
