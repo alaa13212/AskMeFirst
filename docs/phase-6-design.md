@@ -44,7 +44,7 @@ Deferred:
 | 6 | `install` ↔ cache | No coupling | `install`/`uninstall` leave cache untouched; user runs `refresh`. |
 | 7 | Bench shape | Per-phase breakdown | Budgets are per-phase; gate with non-phased signal is half the value. |
 | 8 | Bench iteration count | 1000, self-enforcing | Tighter stats; ~10 sec CI cost. Bench checks itself, exits non-zero. |
-| 9 | Init conflict behavior | Idempotent | No `--force`. Existing config: print path + "run `askmefirst refresh` to reset". |
+| 9 | Init conflict behavior | Idempotent | No `--force`. Existing config: print path + "run `askmefirst refresh` to reset the discovery cache, or edit the config directly". |
 | 10 | Sample pedagogy | Minimal schema tour | One worked rule + comments per section. README links to `docs/rule-engine.md` for vocabulary. |
 | 11 | README shape | Friend-first, two-section | Single README; install/init/quickstart at top, dev reference at bottom. |
 
@@ -69,13 +69,11 @@ public interface IDiscoveryCache
 {
     IReadOnlyList<Browser>? TryRead();
     void Write(IReadOnlyList<Browser> browsers);
-    void Invalidate();
     DateTimeOffset? LastGenerated { get; }
 }
 
 public sealed class FileDiscoveryCache(
-    IConfigPathResolver pathResolver,        // same dir as config.json
-    TimeProvider timeProvider,
+    string cacheFilePath,
     ILogger logger) : IDiscoveryCache
 {
     // Implementation: read/write <configDir>/discovery-cache.json
@@ -94,11 +92,9 @@ public sealed class RefreshCommand : ICommand
 
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
-        IDiscoveryCache cache = ctx.Resolve<IDiscoveryCache>();
-        IReadOnlyList<Browser> browsers = innerInventory.Discover();
-        cache.Write(browsers);
-        // Group by ExecutablePath → emit summary: N browsers, M profiles total
-        Console.WriteLine($"Cache refreshed: {N} browsers, {M} profiles.");
+        IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
+        IReadOnlyList<Browser> browsers = inventory.Refresh();
+        Console.WriteLine($"Cache refreshed: {browsers.Count} browser(s).");
         return Task.FromResult(0);
     }
 }
@@ -117,13 +113,15 @@ public sealed class InitCommand : ICommand
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
         IConfigPathResolver paths = ctx.Resolve<IConfigPathResolver>();
-        string configPath = paths.ConfigPath;
+        string configPath = paths.DefaultConfigPath;
         if (File.Exists(configPath))
         {
-            Console.WriteLine($"Config already exists at {configPath}. Edit directly or delete it before re-running init.");
+            Console.WriteLine($"Config already exists at {configPath}.");
+            Console.WriteLine($"Run '{ProgramInfo.ExecutableName} refresh' to reset the discovery cache, or edit the config directly.");
             return Task.FromResult(0);
         }
-        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        string? dir = Path.GetDirectoryName(configPath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         string sample = LoadEmbeddedSample();   // assembly resource
         File.WriteAllText(configPath, sample);
         Console.WriteLine($"Wrote {configPath}");
@@ -132,37 +130,43 @@ public sealed class InitCommand : ICommand
 }
 ```
 
-Sample is embedded as a `Resources/askmefirst.example.jsonc` resource (project `BuildAction: EmbeddedResource`). `InitCommand` writes it as-is to the OS path.
+Sample is embedded as a `Resources/askmefirst.example.json` resource (project `<EmbeddedResource>`). `InitCommand` writes it as-is to the OS path.
 
 ### Bench — per-phase timings
 
-`RuleRouter.Route` returns a `RoutingTimings` record alongside its existing routing decision. New ctor argument: `Func<Stopwatch>? clock = null` (defaults to `Stopwatch.StartNew`). Production callers ignore the timing; bench reads it.
+`RuleRouter.Route` returns a `RouteResult(int ExitCode, RoutingTimings Timings)` record. Production callers (e.g. `RouteCommand`) read `.ExitCode`; bench reads the timings. No `RouteTimed()` shim.
 
 ```csharp
 public sealed record RoutingTimings(
-    TimeSpan ConfigLoad,
     TimeSpan RuleEval,
     TimeSpan InventoryLoad,
     TimeSpan Total);
 
+public sealed record RouteResult(int ExitCode, RoutingTimings Timings);
+
 public sealed class RuleRouter
 {
-    public (int ExitCode, RoutingTimings Timings) Route(Uri url, ...);
+    public RouteResult Route(Uri url, string? explicitBrowserId, string? explicitProfileId);
 }
 ```
 
-The bench command runs `Route(syntheticUrl)` 1000 times with a pre-populated cache (1 cold-ish + 999 warm), aggregates per-phase timings, prints median/p95/min/max per phase, checks against budgets from `docs/performance.md`:
+The bench command:
+
+1. Times `BenchHarness.Build(logger)` once as `cold_config_load` (one-time setup; config load is a startup cost, not per-route).
+2. Runs `Route(syntheticUrl)` 1000 times with the harness warmed up, aggregating per-phase timings as `cold_rule_eval`, `cold_inventory`, `warm_total`.
+3. Prints `cold_config_load` as a single `sample`, the other three as `p50 / p95 / max`.
+4. Checks against budgets from `docs/performance.md`:
 
 | Phase | Budget (ms) | Hard limit (ms) |
 |---|---|---|
-| Config load (cached) | 10 | 25 |
-| Rule evaluation | 10 | 25 |
-| Browser inventory (cached) | 15 | 50 |
-| Total warm | 50 | 100 |
+| cold_config_load | 10 | 25 |
+| cold_rule_eval | 10 | 25 |
+| cold_inventory | 15 | 50 |
+| warm_total | 50 | 100 |
 
 If any phase's hard limit breached → exit 1 with `BENCH FAIL: <phase> = <ms>ms > <hard_limit>ms` line.
 
-Test: `Bench_PrintsBreakdown_ExitsZero` smoke test. Bench output is brittle to parse in tests; smoke test only verifies exit code + that the four phase names appear in stdout.
+Test: `Bench_PrintsPerPhaseTimingsAndExitsZero` smoke test verifies exit code + that the four phase names appear in stdout.
 
 ## Files added
 
@@ -171,33 +175,40 @@ src/AskMeFirst.Core/Inventory/
 ├── IDiscoveryCache.cs                       ← new
 ├── FileDiscoveryCache.cs                    ← new
 ├── CachingBrowserInventory.cs               ← new decorator
+├── CachedBrowserDto.cs                      ← one record per file
+└── CachedInventory.cs                       ← envelope
+
+src/AskMeFirst.Core/Routing/
+├── RoutingTimings.cs                        ← (RuleEval, InventoryLoad, Total)
+└── RouteResult.cs                           ← one record per file
 
 src/AskMeFirst/Commands/
 ├── InitCommand.cs                           ← new
-├── RefreshCommand.cs                        ← new
+└── RefreshCommand.cs                        ← new
 
 src/AskMeFirst/Resources/
-└── askmefirst.example.jsonc                 ← polished sample (embedded)
+└── askmefirst.example.json                  ← polished sample (embedded)
 
 tests/AskMeFirst.Core.Tests/Inventory/
-├── FileDiscoveryCacheTests.cs               ← roundtrip + corrupt-cache-recovery
-├── CachingBrowserInventoryTests.cs          ← cache hit returns cached; miss scans+writes
-└── InitCommandTests.cs                      ← idempotency
+├── FileDiscoveryCacheTests.cs
+└── CachingBrowserInventoryTests.cs
 
 tests/AskMeFirst.Core.Tests/
-└── BenchCommandTests.cs                     ← smoke: exits 0, prints phase names
+├── InitCommandTests.cs
+└── SampleConfigTests.cs                     ← drift guard: samples/ == Resources/
 ```
 
 ## Files modified
 
-- `src/AskMeFirst.Core/RuleRouter.cs` — return `(ExitCode, RoutingTimings)` tuple; add `Stopwatch`-based timings
+- `src/AskMeFirst.Core/RuleRouter.cs` — `Route()` returns `RouteResult` directly; `Stopwatch`-based timings inline
+- `src/AskMeFirst.Core/Abstractions/IBrowserInventory.cs` — added `Refresh()` default method
 - `src/AskMeFirst/Program.cs` — register `InitCommand` + `RefreshCommand` in `CommandRegistry`
 - `src/AskMeFirst/Composition.cs` (+ Win/Mac/Linux partials) — register `IDiscoveryCache → FileDiscoveryCache`, `IBrowserInventory → CachingBrowserInventory(real, cache)`
-- `src/AskMeFirst/AskMeFirst.csproj` — embed `askmefirst.example.jsonc` as resource
-- `samples/askmefirst.example.json` — replace contents with the polished schema-tour version, kept as sibling file
-- `src/AskMeFirst/Commands/BenchCommand.cs` — replace placeholder with real benchmark reading `RoutingTimings`, comparing budgets
-- `.github/workflows/ci.yml` — replace the `time`-of-`--version` step with `--bench` and `if failure()` annotation
-- `tests/AskMeFirst.Core.Tests/CliTests.cs` — replace `Bench_PrintsPlaceholderAndExitsZero` with new smoke test
+- `src/AskMeFirst/AskMeFirst.csproj` — embed `askmefirst.example.json` as resource
+- `samples/askmefirst.example.json` — polished schema-tour version (kept as sibling file; `SampleConfigTests` enforces byte equality with the embedded copy)
+- `src/AskMeFirst/Commands/BenchCommand.cs` — replaced placeholder with real benchmark reading `RoutingTimings`, comparing budgets; reports `cold_config_load / cold_rule_eval / cold_inventory / warm_total`
+- `.github/workflows/ci.yml` — replaced the `time`-of-`--version` step with `--bench` and `::error::` annotation on non-zero exit
+- `tests/AskMeFirst.Core.Tests/CliTests.cs` — `Bench_PrintsPerPhaseTimingsAndExitsZero` smoke checks phase labels
 - `README.md` — full rewrite to friend-first two-section shape
 - `docs/HANDOFF.md` — refresh after Phase 6 ships
 - `docs/roadmap.md` — tick Phase 6 exit-criteria lines
@@ -206,27 +217,25 @@ tests/AskMeFirst.Core.Tests/
 
 `discovery-cache.json` schema:
 
-```jsonc
+```json
 {
   "version": 1,
   "generatedAt": "2026-07-10T15:30:00+00:00",
   "browsers": [
     {
       "id": "chromium-x7q1",
-      "family": "chromium",
       "displayName": "Chromium",
       "executablePath": "/usr/bin/chromium-browser",
-      "version": "120.0.6099.129",
-      "profiles": [
-        { "directory": "Default", "displayName": "Default" },
-        { "directory": "Profile 1", "displayName": "Work" }
-      ]
+      "iconName": "chromium",
+      "flatpakAppId": null
     }
   ]
 }
 ```
 
-JSON, no comments (program-managed; user inspects but doesn't edit). Strict UTF-8, no whitespace. `version` field enables future schema migration.
+JSON, no comments (program-managed; user inspects but doesn't edit). Strict UTF-8, no whitespace. `version` field enables future schema migration. No `platform` field — cache files are local to one machine (per Q12 note).
+
+Per-browser `profiles` is **deferred to Phase 6.1** (Chromium/Firefox profile enumeration belongs with the management UI work). `RefreshCommand` reports `N browsers` only.
 
 ## Style rules
 
@@ -241,13 +250,20 @@ JSON, no comments (program-managed; user inspects but doesn't edit). Strict UTF-
 
 ## Test strategy
 
-- **`FileDiscoveryCacheTests`**: roundtrip (write, read returns same content), corrupt-file recovery (truncated JSON → return null + log warning), missing-file (return null without throwing), IO error (return null, no exception). 4 tests.
-- **`CachingBrowserInventoryTests`**: cache hit path (inner inventory never called); cache miss path (inner called, result written). 2 tests.
-- **`InitCommandTests`**: writes file when absent, prints "already exists" when present, creates parent directory. 3 tests.
-- **`BenchCommandTests`**: smoke test — exit 0, all four phase names in stdout. 1 test.
-- (No phase-specific tests for `RefreshCommand`; it delegates to `IDiscoveryCache.Write`, which is tested.)
+- **`FileDiscoveryCacheTests`**: roundtrip, corrupt-JSON recovery, missing-file, empty-list roundtrip, `LastGenerated` populated. 5 tests.
+- **`CachingBrowserInventoryTests`**: cache hit, cache miss + write, cached across calls, `FindById` after cache warm. 4 tests.
+- **`InitCommandTests`**: writes file when absent, creates missing parent directory, doesn't overwrite existing file. 3 tests.
+- **`BenchCommandTests`** (`CliTests`): smoke test — exit 0, all four phase names in stdout (`cold_config_load`, `cold_rule_eval`, `cold_inventory`, `warm_total`).
+- **`SampleConfigTests`**: byte-equal assert that `samples/askmefirst.example.json` matches the embedded `Resources/askmefirst.example.json` (drift guard).
 
-Total Phase 6 tests: ~10 new. Cumulative: ~306 (currently ~292 passing per handoff).
+Total Phase 6 tests: ~14 new (Cache + Init + Bench + Sample). Cumulative: ~256 (from ~238 before Phase 6).
+
+## Notes applied post-grill (Q12 user notes)
+
+The user clarified two constraints that override earlier over-spec'd bits:
+
+- **No backward compatibility is required** — the app is not yet released. Where the sketch added a `RouteTimed()` shim to keep `Route()` returning `int`, the implementation changes `Route()` to return `RouteResult(int ExitCode, RoutingTimings Timings)` directly. All call sites update. Likewise `IDiscoveryCache.Invalidate()` (no caller) is dropped from the interface entirely.
+- **Config is not shareable or platform-portable** — the cache file is local to one machine. The `Platform` field and the cross-platform rejection in `FileDiscoveryCache.TryRead` are dropped; the cache holds what the engine happens to write.
 
 ## Verification (Phase 6 done = true)
 
