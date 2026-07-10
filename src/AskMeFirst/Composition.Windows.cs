@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 #if WINDOWS
+using AskMeFirst.Core.Inventory;
 using AskMeFirst.Platforms.Windows;
 #endif
 using AskMeFirst.Core.Config;
@@ -14,7 +15,10 @@ internal static partial class Composition
     [SupportedOSPlatform("windows")]
     private static void AddWindows(IServiceCollection services)
     {
-        services.AddSingleton<IBrowserInventory, WindowsBrowserInventory>();
+        services.AddSingleton<WindowsBrowserInventory>();
+        services.AddSingleton<IBrowserInventory>(sp => new CachingBrowserInventory(
+            sp.GetRequiredService<WindowsBrowserInventory>(),
+            sp.GetRequiredService<IDiscoveryCache>()));
         services.AddSingleton<IUrlLauncher, WindowsUrlLauncher>();
         services.AddSingleton<IBrowserProfileDetector, WindowsBrowserProfileDetector>();
         services.AddSingleton<IConfigPathResolver, WindowsConfigPathResolver>();

@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 #if OSX
+using AskMeFirst.Core.Inventory;
 using AskMeFirst.Platforms.MacOs;
 #endif
 using AskMeFirst.Core.Config;
@@ -14,7 +15,10 @@ internal static partial class Composition
     [SupportedOSPlatform("osx")]
     private static void AddMacOs(IServiceCollection services)
     {
-        services.AddSingleton<IBrowserInventory, MacOsBrowserInventory>();
+        services.AddSingleton<MacOsBrowserInventory>();
+        services.AddSingleton<IBrowserInventory>(sp => new CachingBrowserInventory(
+            sp.GetRequiredService<MacOsBrowserInventory>(),
+            sp.GetRequiredService<IDiscoveryCache>()));
         services.AddSingleton<IUrlLauncher, MacOsUrlLauncher>();
         services.AddSingleton<IBrowserProfileDetector, MacOsBrowserProfileDetector>();
         services.AddSingleton<IConfigPathResolver, MacOsConfigPathResolver>();

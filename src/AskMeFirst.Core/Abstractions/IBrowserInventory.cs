@@ -7,4 +7,6 @@ public interface IBrowserInventory
     IReadOnlyList<Browser> Discover();
 
     Browser? FindById(string id);
+
+    IReadOnlyList<Browser> Refresh() => Discover();
 }
