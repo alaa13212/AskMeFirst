@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
@@ -22,12 +23,19 @@ public sealed class RuleRouter(
 {
     public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
     {
+        return RouteTimed(url, explicitBrowserId, explicitProfileId).ExitCode;
+    }
+
+    public RouteResult RouteTimed(Uri url, string? explicitBrowserId, string? explicitProfileId)
+    {
+        Stopwatch totalSw = Stopwatch.StartNew();
         RoutingContext ctx = RoutingContext.Create(
             url,
             timeProvider.GetUtcNow(),
             explicitBrowserId: explicitBrowserId,
             explicitProfileId: explicitProfileId);
 
+        Stopwatch ruleSw = Stopwatch.StartNew();
         RoutingIntent? intent = null;
         foreach (ITargetResolver resolver in resolvers)
         {
@@ -37,22 +45,33 @@ public sealed class RuleRouter(
                 break;
             }
         }
+        ruleSw.Stop();
 
+        int exitCode;
         if (intent is null)
         {
             if (usePickerAsCatchAll)
             {
                 PickerRequest request = BuildPickerRequest(url);
-                return HandlePicker(request, url);
+                exitCode = HandlePicker(request, url);
             }
-            logger.LogError(
-                "No rule matched. " +
-                "Add a rule.");
-            return (int)RoutingExitCode.NoRouteFound;
+            else
+            {
+                logger.LogError(
+                    "No rule matched. " +
+                    "Add a rule.");
+                exitCode = (int)RoutingExitCode.NoRouteFound;
+            }
+            totalSw.Stop();
+            return new RouteResult(exitCode, new RoutingTimings(ruleSw.Elapsed, TimeSpan.Zero, totalSw.Elapsed));
         }
 
+        Stopwatch execSw = Stopwatch.StartNew();
         RoutingOutcome outcome = executor.Execute(intent, url);
-        return HandleOutcome(outcome, url);
+        execSw.Stop();
+        exitCode = HandleOutcome(outcome, url);
+        totalSw.Stop();
+        return new RouteResult(exitCode, new RoutingTimings(ruleSw.Elapsed, execSw.Elapsed, totalSw.Elapsed));
     }
 
     private int HandleOutcome(RoutingOutcome outcome, Uri url) =>

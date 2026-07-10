@@ -27,7 +27,13 @@ internal sealed class FakeInventory : IBrowserInventory
 {
     public List<Browser> Browsers { get; init; } = [];
 
-    public IReadOnlyList<Browser> Discover() => Browsers;
+    public int DiscoverCount { get; private set; }
+
+    public IReadOnlyList<Browser> Discover()
+    {
+        DiscoverCount++;
+        return Browsers;
+    }
 
     public Browser? FindById(string id) =>
         Browsers.FirstOrDefault(b => string.Equals(b.Id, id, StringComparison.OrdinalIgnoreCase));
