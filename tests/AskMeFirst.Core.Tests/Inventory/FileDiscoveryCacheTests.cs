@@ -57,7 +57,7 @@ public class FileDiscoveryCacheTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Equal("chrome", result[0].Id);
         Assert.Equal("Google Chrome", result[0].DisplayName);
-        Assert.Equal("/usr/bin/google-chrome", result[0].ExecutablePath);
+        Assert.Equal(Path.GetFullPath("/usr/bin/google-chrome"), result[0].ExecutablePath);
         Assert.NotNull(result[0].LaunchStrategy);
         Assert.Equal("firefox", result[1].Id);
     }
