@@ -30,7 +30,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedConfig(MakeRule("first", priority: 10), MakeRule("second", priority: 20));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
 
         window.DrillTo(AreaId.Rules);
 
@@ -45,7 +45,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     public void DrillTo_NonFormArea_ShowsPlaceholder_NoRows()
     {
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
 
         window.DrillTo(AreaId.Browsers);
 
@@ -58,7 +58,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedConfig(MakeRule("original", priority: 10));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
         window.DrillTo(AreaId.Rules);
         RuleDetailViewModel before = (RuleDetailViewModel) window.ActiveDetail!;
         Assert.Equal("original", before.Rows[0].Label);
@@ -76,7 +76,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedConfig(MakeRule("first", priority: 10));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
         window.DrillTo(AreaId.Rules);
 
         Assert.False(window.HasDrafts);

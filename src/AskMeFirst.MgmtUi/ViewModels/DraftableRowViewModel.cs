@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AskMeFirst.MgmtUi.ViewModels;
 
-public abstract partial class DraftableRowViewModel : ObservableObject
+public abstract partial class DraftableRowViewModel : RowViewModelBase
 {
     private readonly IConfigPersister _persister;
 
@@ -13,8 +13,6 @@ public abstract partial class DraftableRowViewModel : ObservableObject
     {
         _persister = persister;
     }
-
-    public abstract string Label { get; }
 
     public abstract bool HasDraft { get; }
 

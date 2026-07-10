@@ -5,7 +5,9 @@ using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Services;
 using Avalonia;
 
-public sealed record MgmtUiEntryPointComposition(IConfigPersister ConfigPersister);
+public sealed record MgmtUiEntryPointComposition(
+    IConfigPersister ConfigPersister,
+    IRecentPicksReader RecentPicksReader);
 
 public static class MgmtUiEntryPoint
 {
@@ -24,7 +26,10 @@ public static class MgmtUiEntryPoint
     {
         NoOpLogger logger = new();
         string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
-        return new MgmtUiEntryPointComposition(new JsonConfigPersister(resolvedPath, logger));
+        JsonConfigPersister persister = new(resolvedPath, logger);
+        return new MgmtUiEntryPointComposition(
+            persister,
+            new FileRecentPicksReader(resolvedPath));
     }
 
     private static string DefaultConfigPath()

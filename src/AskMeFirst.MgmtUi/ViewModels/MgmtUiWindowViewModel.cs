@@ -9,10 +9,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 public sealed partial class MgmtUiWindowViewModel : ObservableObject
 {
     private readonly IConfigPersister _persister;
+    private readonly IRecentPicksReader _recentPicksReader;
 
-    public MgmtUiWindowViewModel(IConfigPersister persister)
+    public MgmtUiWindowViewModel(IConfigPersister persister, IRecentPicksReader recentPicksReader)
     {
         _persister = persister;
+        _recentPicksReader = recentPicksReader;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Phase 7 · dashboard online — click a card or tree leaf to drill.";
@@ -81,11 +83,15 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     {
         return areaId switch
         {
+            AreaId.Browsers => new BrowserDetailViewModel(this, _persister),
+            AreaId.Profiles => new ProfileDetailViewModel(this, _persister),
             AreaId.Rules => new RuleDetailViewModel(this, _persister),
-            _ => new NoFormsDetailViewModel(
-                areaId,
-                this,
-                $"Detail view for {areaId} — form controls land in the next commit."),
+            AreaId.Usage => new UsageDetailViewModel(this, _recentPicksReader),
+            AreaId.Suggestions => new SuggestionsDetailViewModel(this, _recentPicksReader),
+            AreaId.Unshortener => new StringListDetailViewModel(areaId, this, StringListKind.UnshortenDomain, "Unshortener", _persister),
+            AreaId.Tracking => new StringListDetailViewModel(areaId, this, StringListKind.TrackingParam, "Tracking params", _persister),
+            AreaId.Cache => new CacheDetailViewModel(this, _persister),
+            _ => new NoFormsDetailViewModel(areaId, this, $"Detail view for {areaId}."),
         };
     }
 

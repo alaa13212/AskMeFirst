@@ -6,6 +6,8 @@ public interface IConfigPersister
 {
     event EventHandler? Changed;
 
+    string ConfigPath { get; }
+
     AppConfig Current { get; }
 
     void Reload();

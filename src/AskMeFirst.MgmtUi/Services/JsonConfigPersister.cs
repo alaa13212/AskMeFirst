@@ -19,6 +19,8 @@ public sealed class JsonConfigPersister : IConfigPersister
 
     public event EventHandler? Changed;
 
+    public string ConfigPath => _configPath;
+
     public AppConfig Current
     {
         get

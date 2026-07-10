@@ -23,7 +23,7 @@ public abstract partial class AreaDetailViewModel : ObservableObject
     [ObservableProperty]
     private string _title;
 
-    public ObservableCollection<DraftableRowViewModel> Rows { get; } = new();
+    public ObservableCollection<RowViewModelBase> Rows { get; } = new();
 
     public bool HasRows => Rows.Count > 0;
 
@@ -33,9 +33,9 @@ public abstract partial class AreaDetailViewModel : ObservableObject
     {
         get
         {
-            foreach (DraftableRowViewModel row in Rows)
+            foreach (RowViewModelBase row in Rows)
             {
-                if (row.HasDraft)
+                if (row is DraftableRowViewModel draftable && draftable.HasDraft)
                 {
                     return true;
                 }

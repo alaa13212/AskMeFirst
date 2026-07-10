@@ -140,6 +140,8 @@ internal sealed class ConfigPersisterStub : IConfigPersister
 
     public int ReloadCount { get; private set; }
 
+    public string ConfigPath => "";
+
     public event EventHandler? Changed;
 
     public void Reload()
