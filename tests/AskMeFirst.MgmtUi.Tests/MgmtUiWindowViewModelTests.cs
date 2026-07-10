@@ -351,6 +351,83 @@ public class MgmtUiWindowViewModelTests : IDisposable
         Assert.Equal("kept", firstRow.Name);
     }
 
+    [Fact]
+    public void EvaluateClose_NoDrafts_ProceedsWithoutPrompt()
+    {
+        SeedConfig(MakeRule("only"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+
+        Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Proceed, window.EvaluateCloseRequest());
+    }
+
+    [Fact]
+    public void EvaluateClose_WithDrafts_CancelsByDefault()
+    {
+        SeedConfig(MakeRule("only"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+        RuleRowViewModel row = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
+        row.Name = "edited";
+
+        Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Cancel, window.EvaluateCloseRequest());
+    }
+
+    [Fact]
+    public void ApplyCloseDecision_SaveAndClose_PersistsAll()
+    {
+        SeedConfig(MakeRule("a"), MakeRule("b"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+        RuleRowViewModel a = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
+        RuleRowViewModel b = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[1];
+        a.Name = "A-";
+        b.Priority = 99;
+
+        Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Proceed,
+            window.ApplyCloseDecision(MgmtUiWindowViewModel.CloseDecision.SaveAndClose));
+
+        Assert.False(window.HasDrafts);
+        Assert.Equal("A-", persister.Current.Rules[0].Name);
+        Assert.Equal(99, persister.Current.Rules[1].Priority);
+    }
+
+    [Fact]
+    public void ApplyCloseDecision_DiscardAndClose_DropsDraftsWithoutSaving()
+    {
+        SeedConfig(MakeRule("a"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+        RuleRowViewModel a = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
+        a.Name = "A-new";
+
+        Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Proceed,
+            window.ApplyCloseDecision(MgmtUiWindowViewModel.CloseDecision.DiscardAndClose));
+
+        Assert.False(window.HasDrafts);
+        Assert.Equal("a", persister.Current.Rules[0].Name);
+    }
+
+    [Fact]
+    public void ApplyCloseDecision_Cancel_LeavesDraftsAndStays()
+    {
+        SeedConfig(MakeRule("a"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+        RuleRowViewModel a = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
+        a.Name = "still";
+
+        Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Cancel,
+            window.ApplyCloseDecision(MgmtUiWindowViewModel.CloseDecision.Cancel));
+
+        Assert.True(window.HasDrafts);
+    }
+
     private void SeedConfig(params Rule[] rules)
     {
         AppConfig seed = new() { Rules = [.. rules] };

@@ -266,6 +266,79 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         }
     }
 
+    public enum CloseDecision
+    {
+        Proceed,
+        Cancel,
+        SaveAndClose,
+        DiscardAndClose,
+    }
+
+    public CloseDecision EvaluateCloseRequest()
+    {
+        if (!HasDrafts)
+        {
+            return CloseDecision.Proceed;
+        }
+        return CloseDecision.Cancel;
+    }
+
+    public CloseDecision ApplyCloseDecision(CloseDecision decision)
+    {
+        if (decision == CloseDecision.SaveAndClose)
+        {
+            if (!SaveAllDrafts())
+            {
+                return CloseDecision.Cancel;
+            }
+            return CloseDecision.Proceed;
+        }
+        if (decision == CloseDecision.DiscardAndClose)
+        {
+            DiscardAllDrafts();
+            return CloseDecision.Proceed;
+        }
+        if (decision == CloseDecision.Proceed)
+        {
+            return CloseDecision.Proceed;
+        }
+        return CloseDecision.Cancel;
+    }
+
+    private bool SaveAllDrafts()
+    {
+        if (ActiveDetail is AreaDetailViewModel area)
+        {
+            DraftableRowViewModel[] snapshot = [.. RowsWithDrafts(area.Rows)];
+            foreach (DraftableRowViewModel draftable in snapshot)
+            {
+                draftable.SaveCommand.Execute(null);
+            }
+            return snapshot.Length > 0;
+        }
+        if (ActiveDetail is EntityDetailViewModel entity)
+        {
+            DraftableRowViewModel[] snapshot = [.. RowsWithDrafts(entity.Rows)];
+            foreach (DraftableRowViewModel draftable in snapshot)
+            {
+                draftable.SaveCommand.Execute(null);
+            }
+            return snapshot.Length > 0;
+        }
+        return false;
+    }
+
+    private static IEnumerable<DraftableRowViewModel> RowsWithDrafts(IEnumerable<RowViewModelBase> rows)
+    {
+        foreach (RowViewModelBase row in rows)
+        {
+            if (row is DraftableRowViewModel draftable && draftable.HasDraft)
+            {
+                yield return draftable;
+            }
+        }
+    }
+
     private void RebuildTree()
     {
         Tree.Clear();
