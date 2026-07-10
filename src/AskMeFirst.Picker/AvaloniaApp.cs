@@ -11,9 +11,11 @@ public sealed class AvaloniaApp : Application
 {
     public override void OnFrameworkInitializationCompleted()
     {
-        Styles.Add(new FluentTheme());
+#pragma warning disable IL2026
         ResourceDictionary tokens = (ResourceDictionary) AvaloniaXamlLoader.Load(
             new Uri("avares://AskMeFirst.Picker/Resources/DesignTokens.axaml"));
+#pragma warning restore IL2026
+        Styles.Add(new FluentTheme());
         Resources.MergedDictionaries.Add(tokens);
         base.OnFrameworkInitializationCompleted();
     }
