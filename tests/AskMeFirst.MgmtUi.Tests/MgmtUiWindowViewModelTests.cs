@@ -272,6 +272,85 @@ public class MgmtUiWindowViewModelTests : IDisposable
         Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
     }
 
+    [Fact]
+    public void FileWatcher_NoDrafts_AutoReloads()
+    {
+        SeedConfig(MakeRule("original"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        window.DrillTo(AreaId.Rules);
+
+        SeedConfig(MakeRule("original"), MakeRule("added", priority: 99));
+        persister.Reload();
+        RuleDetailViewModel afterReload = (RuleDetailViewModel) window.ActiveDetail!;
+        Assert.Equal(2, afterReload.Rows.Count);
+
+        _ = window;
+        Assert.True(watcher.Started);
+    }
+
+    [Fact]
+    public void FileWatcher_WithDrafts_RaisesConflict()
+    {
+        SeedConfig(MakeRule("original"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        window.DrillTo(AreaId.Rules);
+        ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
+
+        Assert.True(window.HasDrafts);
+        watcher.RaiseChanged();
+
+        Assert.NotNull(window.PendingConflict);
+    }
+
+    [Fact]
+    public void ResolveConflict_DiscardDrafts_AndReload()
+    {
+        SeedConfig(MakeRule("original"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        window.DrillTo(AreaId.Rules);
+        ((DraftableRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).DiscardCommand.Execute(null);
+        ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
+        watcher.RaiseChanged();
+        window.PendingConflict!.DiscardCommand.Execute(null);
+
+        SeedConfig(MakeRule("original"), MakeRule("from-disk", priority: 99));
+        window.ResolveConflictAndReload();
+
+        Assert.Null(window.PendingConflict);
+        RuleDetailViewModel after = (RuleDetailViewModel) window.ActiveDetail!;
+        RuleRowViewModel firstRow = (RuleRowViewModel) after.Rows[0];
+        Assert.False(firstRow.HasDraft);
+        Assert.Equal(2, after.Rows.Count);
+    }
+
+    [Fact]
+    public void ResolveConflict_KeepDrafts_LeavesDraftsUntouched()
+    {
+        SeedConfig(MakeRule("original"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        window.DrillTo(AreaId.Rules);
+        RuleRowViewModel row = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
+        row.Name = "kept";
+        watcher.RaiseChanged();
+        window.PendingConflict!.KeepCommand.Execute(null);
+
+        window.ResolveConflictAndReload();
+
+        Assert.Null(window.PendingConflict);
+        RuleDetailViewModel after = (RuleDetailViewModel) window.ActiveDetail!;
+        RuleRowViewModel firstRow = (RuleRowViewModel) after.Rows[0];
+        Assert.True(firstRow.HasDraft);
+        Assert.Equal("kept", firstRow.Name);
+    }
+
     private void SeedConfig(params Rule[] rules)
     {
         AppConfig seed = new() { Rules = [.. rules] };
@@ -304,7 +383,11 @@ public class MgmtUiWindowViewModelTests : IDisposable
 
     private static MgmtUiWindowViewModel Build(JsonConfigPersister persister)
     {
-        return new MgmtUiWindowViewModel(persister, new EmptyRecentPicksReader(), new RulePreviewService());
+        return new MgmtUiWindowViewModel(
+            persister,
+            new EmptyRecentPicksReader(),
+            new RulePreviewService(),
+            new StubConfigFileWatcher());
     }
 
     private static BrowserSpec BrowserSpecFor(string id, string displayName)

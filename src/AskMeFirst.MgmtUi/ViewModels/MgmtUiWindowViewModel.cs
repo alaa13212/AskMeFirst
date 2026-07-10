@@ -13,15 +13,18 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     private readonly IConfigPersister _persister;
     private readonly IRecentPicksReader _recentPicksReader;
     private readonly IRulePreviewService _rulePreview;
+    private readonly IConfigFileWatcher _watcher;
 
     public MgmtUiWindowViewModel(
         IConfigPersister persister,
         IRecentPicksReader recentPicksReader,
-        IRulePreviewService rulePreview)
+        IRulePreviewService rulePreview,
+        IConfigFileWatcher watcher)
     {
         _persister = persister;
         _recentPicksReader = recentPicksReader;
         _rulePreview = rulePreview;
+        _watcher = watcher;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Alt+letter to open an area · Esc to back out · Alt+←/→ to step through areas.";
@@ -39,6 +42,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         ActiveDetail = null;
 
         _persister.Changed += (_, _) => OnConfigChanged();
+        _watcher.Changed += (_, _) => OnWatcherChanged();
+        _watcher.Start();
     }
 
     [ObservableProperty]
@@ -52,6 +57,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private object? _activeDetail;
+
+    [ObservableProperty]
+    private ConflictPromptViewModel? _pendingConflict;
 
     public ObservableCollection<AreaCardViewModel> Areas { get; }
 
@@ -207,6 +215,55 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         RebuildTree();
         UrlTester.RefreshFromCurrent();
         OnPropertyChanged(nameof(HasDrafts));
+    }
+
+    private void OnWatcherChanged()
+    {
+        if (HasDrafts)
+        {
+            if (PendingConflict is null)
+            {
+                PendingConflict = new ConflictPromptViewModel(_persister.ConfigPath);
+            }
+            return;
+        }
+        _persister.Reload();
+    }
+
+    public void ResolveConflictAndReload()
+    {
+        ConflictPromptViewModel? prompt = PendingConflict;
+        if (prompt is null)
+        {
+            return;
+        }
+        PendingConflict = null;
+        if (prompt.DiscardDrafts)
+        {
+            DiscardAllDrafts();
+            _persister.Reload();
+        }
+    }
+
+    private void DiscardAllDrafts()
+    {
+        if (ActiveDetail is AreaDetailViewModel area)
+        {
+            foreach (RowViewModelBase row in area.Rows)
+            {
+                if (row is DraftableRowViewModel draftable)
+                {
+                    draftable.DiscardCommand.Execute(null);
+                }
+            }
+        }
+        else if (ActiveDetail is EntityDetailViewModel entity)
+        {
+            foreach (DraftableRowViewModel row in entity.Rows)
+            {
+                row.DiscardCommand.Execute(null);
+            }
+        }
     }
 
     private void RebuildTree()

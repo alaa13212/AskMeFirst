@@ -8,7 +8,8 @@ using Avalonia;
 public sealed record MgmtUiEntryPointComposition(
     IConfigPersister ConfigPersister,
     IRecentPicksReader RecentPicksReader,
-    IRulePreviewService RulePreview);
+    IRulePreviewService RulePreview,
+    IConfigFileWatcher FileWatcher);
 
 public static class MgmtUiEntryPoint
 {
@@ -20,6 +21,7 @@ public static class MgmtUiEntryPoint
             .LogToTrace()
             .UseSkia();
         builder.StartWithClassicDesktopLifetime(Array.Empty<string>());
+        composition.FileWatcher.Dispose();
         return 0;
     }
 
@@ -31,7 +33,8 @@ public static class MgmtUiEntryPoint
         return new MgmtUiEntryPointComposition(
             persister,
             new FileRecentPicksReader(resolvedPath),
-            new RulePreviewService());
+            new RulePreviewService(),
+            new FileConfigFileWatcher(resolvedPath));
     }
 
     private static string DefaultConfigPath()
