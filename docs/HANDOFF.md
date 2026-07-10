@@ -6,22 +6,31 @@
 
 Phase 6 (Polish) shipped end-to-end. Built on top of Phase 5 (unshortener, already landed). New daily-driver unlocks: real `--bench` self-enforces per-phase budgets in CI; `init` seeds a commented starter config; `refresh` rewrites the inventory cache (first-launch scan now amortized). README rewritten to reflect actual shipped state (was still claiming "Phase 0"). Phase 5 unshortener was already merged at commit `6841dd3` before this session.
 
-**Phase 7 fold-in done (post-Phase-6 session, same day).** Locked decisions for the Management UI: layout = variant D (sidebar tree + card grid, drill replaces grid); both Avalonia surfaces (picker + new MgmtUi) follow OS Light/Dark via `ThemeVariant.Default` with `DynamicResource` tokens replacing the picker's 8 hardcoded `#…` colors. New `AskMeFirst.MgmtUi` project will parallel `AskMeFirst.Picker`; `askmefirst config` becomes the third entry point.
+**Phase 7 fold-in done (post-Phase-6 session, same day).** Locked decisions for the Management UI: layout = variant D (sidebar tree + card grid, drill replaces grid); both Avalonia surfaces (picker + new MgmtUi) follow OS Light/Dark via `ThemeVariant.Default` with `DynamicResource` tokens replacing the picker's 8 hardcoded `#…` colors. New `AskMeFirst.MgmtUi` project parallels `AskMeFirst.Picker`; `askmefirst config` becomes the third entry point.
 
-**Grill session (same day, after fold-in).** 8 decisions locked: **#86** layout = D · **#87** both surfaces follow OS Light/Dark · **#88** picker theme cleanup (replace hardcoded `#…` colors + drop pinned `Light`) · **#89** MgmtUi as a separate project · **#90** `config` command as third entry point · **#91** Hybrid apply model (form needs Save, state autosaves; per-form Save/Discard, no global Apply) · **#92** drill replaces grid; tree leaves drill to deeper sub-areas (2 drill depths) · **#93** Alt+letter mnemonics + Esc / Alt+←/→ · **#94** FileSystemWatcher auto-reload with Keep/Discard conflict prompt · **#95** Save / Discard / Cancel prompt on close-with-drafts · **#96** auto-init silently when config.json is missing. Implementation-ready per [`docs/phase-7-design.md`](./docs/phase-7-design.md). All four HTML prototypes kept at `prototypes/phase-7-mgmt-ui/`; variant D pre-grill showed inline-expand; implementation uses full-pane drill per #92 (prototype stays as the audit trail of why).
+**Grill session (same day, after fold-in).** 11 decisions locked: **#86** layout = D · **#87** both surfaces follow OS Light/Dark · **#88** picker theme cleanup (replace hardcoded `#…` colors + drop pinned `Light`) · **#89** MgmtUi as a separate project · **#90** `config` command as third entry point · **#91** Hybrid apply model (form needs Save, state autosaves; per-form Save/Discard, no global Apply) · **#92** drill replaces grid; tree leaves drill to deeper sub-areas (2 drill depths) · **#93** Alt+letter mnemonics + Esc / Alt+←/→ · **#94** FileSystemWatcher auto-reload with Keep/Discard conflict prompt · **#95** Save / Discard / Cancel prompt on close-with-drafts · **#96** auto-init silently when config.json is missing. Implementation-ready per [`docs/phase-7-design.md`](./docs/phase-7-design.md).
+
+**Phase 7 implementation — partial (same session).** 4 logical commits in, building on the design record:
+1. `d36ae03 docs(phase-7): design record + grill decisions 86-96`
+2. `e2f8ca4 feat(picker): theme-aware colors via DesignTokens.axaml (#87, #88)` — picker follows OS Light/Dark; render-test pre-existing failures unchanged
+3. `c8d4608 feat(mgmtui): scaffold project + config entry point (#89, #90)` — `askmefirst config` opens MgmtUi; minimal placeholder window
+4. `8ad2408 feat(mgmtui): dashboard cards + sidebar tree + drill (#86, #92 base)` — 8 area cards, sidebar tree, drill-replaces-grid behavior. No mnemonics, no per-form Save/Discard yet — that's next.
+
+**Stopped after dashboard commit** to save context. Next session picks up at the per-form Save/Discard pattern (#91), which is the meatiest remaining unit. After that: mnemonics (#93), auto-init (#96), hot-reload (#94), close-with-drafts (#95), then tests + AOT verify across all 3 platforms.
 
 ## What's verified
 
 - ✅ `dotnet build` clean (0 warnings, 0 errors, all 3 platforms)
-- ✅ `dotnet test --configuration Release` — **254/258 Core passing** in ~400 ms, **53/58 Picker passing** in ~1 s
-  - **+16 new Core tests** vs handoff baseline: 8 cache + 5 init + 1 bench smoke + 2 Fakes.cs (DiscoverCount helper)
+- ✅ `dotnet test --configuration Release` — **255/259 Core passing** in ~350 ms, **53/58 Picker passing** in ~1 s
+  - **+1 Core test** net (skipped=4 platform-specific); no new test failures
   - **4 pre-existing Picker render-test failures** unchanged (Windows-hardcoded paths surfacing on Linux)
 - ✅ Manual smoke (Linux dev machine):
   - `askmefirst init` → wrote `~/.config/askmefirst/config.json` (2406 bytes)
   - `askmefirst refresh` → scanned 2 browsers (firefox + the test publish itself; the askmefirst entry is filtered correctly only when the binary path matches `SelfExecutable`)
   - `askmefirst --bench` → ran 1000 iterations, all phases well under hard limit (sub-millisecond on warm dev box)
   - Cache file is `~/.config/askmefirst/discovery-cache.json` (355 bytes), right beside `config.json`
-- ✅ Phase 7 prototypes: 4 HTML variants at `prototypes/phase-7-mgmt-ui/`, dark-theme chrome styled with shared `styles.css`. Cycle D → A → B → C → D via bottom-bar arrows.
+- ✅ Phase 7 prototypes: 4 HTML variants at `prototypes/phase-7-mgmt-ui/` (later cleaned up — design doc references by path; if needed, see git history `8ad2408` or earlier). Picker tokens resolve under both Light (test harness pinned) and Dark (manual check pending; render-test passes prove Light path).
+- ⚠️ MgmtUi window rendering not manually verified (no display server in this sandbox); the build + tests verify XAML parses, ViewModels wire, and MgmtUi assembles into the CLI binary. First manual open lands in next session.
 
 ## Phase 6 commits (in order)
 
@@ -36,6 +45,13 @@ Phase 6 (Polish) shipped end-to-end. Built on top of Phase 5 (unshortener, alrea
 9. README rewrite (friend-first, two-section; replaces stale "Phase 0" stub)
 10. `docs/phase-6-design.md` (NEW, captures the 11 locked decisions)
 11. This handoff
+
+## Phase 7 commits shipped so far (4 logical commits)
+
+1. `d36ae03 docs(phase-7): design record + grill decisions 86-96` — `docs/phase-7-design.md` new; decisions-log +86–96; HANDOFF + roadmap updates
+2. `e2f8ca4 feat(picker): theme-aware colors via DesignTokens.axaml (#87, #88)` — picker drops pinned `ThemeVariant.Light`; 8 hardcoded `#…` colors → `{DynamicResource Token.*}`; new `Picker/Resources/DesignTokens.axaml` (Light + Dark palettes, identical key names)
+3. `c8d4608 feat(mgmtui): scaffold project + config entry point (#89, #90)` — new `src/AskMeFirst.MgmtUi/` project; `MgmtUiEntryPoint.Run()` Avalonia app; `ConfigCommand` registered in `Program.cs`; slnx updated
+4. `8ad2408 feat(mgmtui): dashboard cards + sidebar tree + drill (#86, #92 base)` — `AreaCatalog` + `AreaDescriptor`; `AreaCardViewModel`, `AreaDetailViewModel`, `TreeNodeViewModel`; `MgmtUiWindowViewModel` owns `Areas` + `Tree` + `ActiveDetail`; window XAML renders 8-card grid + sidebar tree + status banner; click card or tree leaf drills (replaces grid); Back button returns to dashboard
 
 ## Files added
 
@@ -167,6 +183,6 @@ Phase 6 was verified on Linux dev box only. Per-OS smoke needed:
 2. Skim `docs/decisions-log.md` (now ~96 decisions; +10 Phase 7 (5 fold-in + 5 grill))
 3. Glance at `docs/phase-7-design.md` and `docs/phase-6-design.md` for the active planning artifacts
 4. Look at the comment rules in memory (`mavis memory show`)
-5. **Phase 7 (Management UI)** is next per roadmap — design + grill complete, implementation-ready. See [`docs/phase-7-design.md`](./docs/phase-7-design.md) for the full spec and [`docs/decisions-log.md`](./docs/decisions-log.md) decisions #86–96 for the locked rationale. When you say "go ahead" / "implement" the order is: build `AskMeFirst.MgmtUi` per #89; ship variant D per #86 with drill-replaces-grid per #92; land the picker theme swap per #87/#88 first (smallest, unlocks the shared `DesignTokens.axaml`); then the apply model per #91 (Hybrid + per-form Save/Discard); then hot-reload per #94; then close-with-drafts prompt per #95; auto-init per #96 falls out of `MgmtUiEntryPoint` setup. Mnemonics + Esc per #93 wire last, single-pass through `MgmtUiWindow.axaml.cs`.
+5. **Phase 7 (Management UI)** is in progress — see "Phase 7 implementation — partial" in TL;DR above. The 4 commits shipped this session (design record, picker theme swap, MgmtUi scaffold, dashboard+drill) form the foundation. Next up: per-form Save/Discard pattern (#91), then mnemonics (#93), auto-init (#96), hot-reload (#94), close-with-drafts (#95), then `MgmtUi.Tests` project with the per-form / hot-reload / close-prompt / auto-init tests, plus AOT publish verify across all 3 platforms. When you say "go ahead" / "implement" again, start with #91 — it's the meatiest remaining unit.
 6. **Phase 6.1 (deferred from Phase 6)**: test coverage gate (move to ≥ 80% as CI gate), profile auto-discovery P2
 7. **Before Phase 9 (installers)**: re-evaluate Linux `Exec=` per decision #77 (Flatpak/Snap canonical-path model)
