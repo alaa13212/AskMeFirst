@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <None Include="Resources\Mac\Info.plist" />
+    <EmbeddedResource Include="Resources\askmefirst.example.json" />
   </ItemGroup>
 
   <ItemGroup>
