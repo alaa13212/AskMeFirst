@@ -109,15 +109,20 @@ Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 
 ## Phase 7 (optional) — Management UI (1-2 weeks)
 
-- [ ] `askmefirst config` opens a avaloniaui
+**Status**: 🚧 Fold-in from prototype session 2026-07-10. Two locked decisions: layout = variant D (sidebar + cards + drill-in, see `prototypes/phase-7-mgmt-ui/`); both Avalonia surfaces follow OS Light/Dark via `ThemeVariant.Default`. Full design: [`docs/phase-7-design.md`](./docs/phase-7-design.md).
+
+- [ ] `askmefirst config` opens `AskMeFirst.MgmtUi` Avalonia UI
 - [ ] Browse / edit / sort / pin browsers and profiles
 - [ ] Edit rule command and add custom
 - [ ] Test browsers (open https://example.com)
 - [ ] View / edit / sort rules + test (URL input → show matched rule)
 - [ ] Suggest rules based on usage (read `usage.jsonl`)
 - [ ] Configurable unshortener domains + tracking params in UI
+- [ ] Theme follows OS Light/Dark (`DynamicResource` tokens; no hardcoded colors)
+- [ ] Picker theme cleanup (replace 8 hardcoded `#…` colors in PickerWindow.axaml; drop pinned Light)
+- [ ] Embedded browser icons in picker (carried over from Phase 6)
 
-**Exit criteria**: full config management without touching JSON files.
+**Exit criteria**: full config management without touching JSON files; both surfaces feel native to whatever OS theme the user is in.
 
 ---
 

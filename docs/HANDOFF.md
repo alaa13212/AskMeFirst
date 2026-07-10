@@ -6,6 +6,10 @@
 
 Phase 6 (Polish) shipped end-to-end. Built on top of Phase 5 (unshortener, already landed). New daily-driver unlocks: real `--bench` self-enforces per-phase budgets in CI; `init` seeds a commented starter config; `refresh` rewrites the inventory cache (first-launch scan now amortized). README rewritten to reflect actual shipped state (was still claiming "Phase 0"). Phase 5 unshortener was already merged at commit `6841dd3` before this session.
 
+**Phase 7 fold-in done (post-Phase-6 session, same day).** Locked decisions for the Management UI: layout = variant D (sidebar tree + card grid, drill replaces grid); both Avalonia surfaces (picker + new MgmtUi) follow OS Light/Dark via `ThemeVariant.Default` with `DynamicResource` tokens replacing the picker's 8 hardcoded `#…` colors. New `AskMeFirst.MgmtUi` project will parallel `AskMeFirst.Picker`; `askmefirst config` becomes the third entry point.
+
+**Grill session (same day, after fold-in).** 8 decisions locked: **#86** layout = D · **#87** both surfaces follow OS Light/Dark · **#88** picker theme cleanup (replace hardcoded `#…` colors + drop pinned `Light`) · **#89** MgmtUi as a separate project · **#90** `config` command as third entry point · **#91** Hybrid apply model (form needs Save, state autosaves; per-form Save/Discard, no global Apply) · **#92** drill replaces grid; tree leaves drill to deeper sub-areas (2 drill depths) · **#93** Alt+letter mnemonics + Esc / Alt+←/→ · **#94** FileSystemWatcher auto-reload with Keep/Discard conflict prompt · **#95** Save / Discard / Cancel prompt on close-with-drafts · **#96** auto-init silently when config.json is missing. Implementation-ready per [`docs/phase-7-design.md`](./docs/phase-7-design.md). All four HTML prototypes kept at `prototypes/phase-7-mgmt-ui/`; variant D pre-grill showed inline-expand; implementation uses full-pane drill per #92 (prototype stays as the audit trail of why).
+
 ## What's verified
 
 - ✅ `dotnet build` clean (0 warnings, 0 errors, all 3 platforms)
@@ -17,6 +21,7 @@ Phase 6 (Polish) shipped end-to-end. Built on top of Phase 5 (unshortener, alrea
   - `askmefirst refresh` → scanned 2 browsers (firefox + the test publish itself; the askmefirst entry is filtered correctly only when the binary path matches `SelfExecutable`)
   - `askmefirst --bench` → ran 1000 iterations, all phases well under hard limit (sub-millisecond on warm dev box)
   - Cache file is `~/.config/askmefirst/discovery-cache.json` (355 bytes), right beside `config.json`
+- ✅ Phase 7 prototypes: 4 HTML variants at `prototypes/phase-7-mgmt-ui/`, dark-theme chrome styled with shared `styles.css`. Cycle D → A → B → C → D via bottom-bar arrows.
 
 ## Phase 6 commits (in order)
 
@@ -88,6 +93,13 @@ docs/phase-6-design.md                 ← planning artifact
 
 ## Decisions recap (Phase 6 = 11 decisions, see `phase-6-design.md`)
 
+Phase 7 fold-in (2026-07-10, pre-grill) added 5 more — see [`docs/decisions-log.md`](./docs/decisions-log.md#phase-7-decisions-added-2026-07-10) and the new [`docs/phase-7-design.md`](./docs/phase-7-design.md):
+- **86.** MgmtUi layout = variant D (sidebar + cards + drill-in). See prototypes at `prototypes/phase-7-mgmt-ui/`.
+- **87.** Both Avalonia surfaces follow OS Light/Dark via `ThemeVariant.Default` (no user toggle in v1).
+- **88.** Picker theme cleanup — drop pinned Light, replace 8 hardcoded `#…` colors with `DynamicResource`.
+- **89.** MgmtUi as a separate project (`AskMeFirst.MgmtUi`), parallel to `AskMeFirst.Picker` and Core-only deps.
+- **90.** `askmefirst config` as third entry point, parallel to `pick`.
+
 | # | Decision | Pick | Rationale |
 |---|---|---|---|
 | 1 | Scope | bench + cache + init + README (icons → Phase 7) | Visible-win ordering, defers warm-inv speedup |
@@ -152,9 +164,9 @@ Phase 6 was verified on Linux dev box only. Per-OS smoke needed:
 ## How to pick up
 
 1. Read this file (`docs/HANDOFF.md`)
-2. Skim `docs/decisions-log.md` (now ~94 decisions; Phase 6 = 11 + Phase 5 = 7 + Phase 4 = 8 + earlier = ~68)
-3. Glance at `docs/phase-6-design.md` for the planning artifact
+2. Skim `docs/decisions-log.md` (now ~96 decisions; +10 Phase 7 (5 fold-in + 5 grill))
+3. Glance at `docs/phase-7-design.md` and `docs/phase-6-design.md` for the active planning artifacts
 4. Look at the comment rules in memory (`mavis memory show`)
-5. **Phase 7 (Management UI)** is next per roadmap — `askmefirst config` opens an Avalonia UI for browsing/editing/sorting browsers, profiles, rules; testing URLs; viewing usage-based suggestions
+5. **Phase 7 (Management UI)** is next per roadmap — design + grill complete, implementation-ready. See [`docs/phase-7-design.md`](./docs/phase-7-design.md) for the full spec and [`docs/decisions-log.md`](./docs/decisions-log.md) decisions #86–96 for the locked rationale. When you say "go ahead" / "implement" the order is: build `AskMeFirst.MgmtUi` per #89; ship variant D per #86 with drill-replaces-grid per #92; land the picker theme swap per #87/#88 first (smallest, unlocks the shared `DesignTokens.axaml`); then the apply model per #91 (Hybrid + per-form Save/Discard); then hot-reload per #94; then close-with-drafts prompt per #95; auto-init per #96 falls out of `MgmtUiEntryPoint` setup. Mnemonics + Esc per #93 wire last, single-pass through `MgmtUiWindow.axaml.cs`.
 6. **Phase 6.1 (deferred from Phase 6)**: test coverage gate (move to ≥ 80% as CI gate), profile auto-discovery P2
 7. **Before Phase 9 (installers)**: re-evaluate Linux `Exec=` per decision #77 (Flatpak/Snap canonical-path model)
