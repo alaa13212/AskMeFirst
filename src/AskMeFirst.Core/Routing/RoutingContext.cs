@@ -8,11 +8,7 @@ public sealed record RoutingContext
 
     public required string HostPath { get; init; }
 
-    public string? SourceProcess { get; init; }
-
     public required DateTimeOffset Now { get; init; }
-
-    public bool IsTargetBrowserRunning { get; init; }
 
     public string? ExplicitBrowserId { get; init; }
 
@@ -20,9 +16,7 @@ public sealed record RoutingContext
 
     public static RoutingContext Create(
         Uri url,
-        string? sourceProcess,
         DateTimeOffset now,
-        bool isRunning = false,
         string? explicitBrowserId = null,
         string? explicitProfileId = null)
     {
@@ -34,9 +28,7 @@ public sealed record RoutingContext
             Url = url,
             Host = host,
             HostPath = hostPath,
-            SourceProcess = sourceProcess,
             Now = now,
-            IsTargetBrowserRunning = isRunning,
             ExplicitBrowserId = explicitBrowserId,
             ExplicitProfileId = explicitProfileId,
         };

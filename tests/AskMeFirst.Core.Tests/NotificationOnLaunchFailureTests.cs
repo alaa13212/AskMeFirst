@@ -70,7 +70,6 @@ public class NotificationOnLaunchFailureTests
             resolvers,
             executor,
             inv,
-            new FakeSourceAppDetector(),
             picker ?? new RecordingPickerLauncher(),
             usePickerAsCatchAll,
             empty.Profiles,
@@ -78,7 +77,10 @@ public class NotificationOnLaunchFailureTests
             launcher,
             logger,
             notifier,
-            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));
+            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)),
+            new FakeUnshortener(),
+            new FakeShortenerDomainList(),
+            stripper);
     }
 
     private sealed class BrowserLaunchingPickerLauncher(Browser browser) : IPickerLauncher

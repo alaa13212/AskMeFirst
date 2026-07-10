@@ -14,7 +14,6 @@ public class RuleRouterPickerTests
     {
         PickerRequest req = new(
             OriginalUrl: new Uri("https://example.com"),
-            SourceApp: null,
             UnshortenTask: null,
             AvailableBrowsers: []);
         RoutingOutcome outcome = new ShowPicker(req);
@@ -45,10 +44,9 @@ public class RuleRouterPickerTests
         FakeInventory inv = new();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
         RecordingPickerLauncher picker = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, picker, logger, usePickerAsCatchAll: false);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: false);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
@@ -65,17 +63,15 @@ public class RuleRouterPickerTests
         };
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("slack", null, "") };
         FakeLogger logger = new();
         RecordingPickerLauncher picker = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, picker, logger, usePickerAsCatchAll: true);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
         Assert.Equal((int)RoutingExitCode.Success, code);
         Assert.Single(picker.Requests);
         Assert.Equal("example.com", picker.Requests[0].OriginalUrl.Host);
-        Assert.Equal("slack", picker.Requests[0].SourceApp);
         Assert.Single(picker.Requests[0].AvailableBrowsers);
     }
 
@@ -86,10 +82,9 @@ public class RuleRouterPickerTests
         FakeInventory inv = new() { Browsers = { browser } };
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
         BrowserLaunchingPickerLauncher picker = new(browser);
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, picker, logger, usePickerAsCatchAll: true);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
@@ -107,10 +102,9 @@ public class RuleRouterPickerTests
         };
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RecordingPickerLauncher picker = new();   // returns Cancelled
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, picker, logger, usePickerAsCatchAll: true);
+        RecordingPickerLauncher picker = new();
+        RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
@@ -123,7 +117,6 @@ public class RuleRouterPickerTests
         FakeInventory inv,
         FakeLauncher launcher,
         FakeProfileDetector profiles,
-        FakeSourceAppDetector sourceApp,
         IPickerLauncher picker,
         FakeLogger logger,
         bool usePickerAsCatchAll)
@@ -138,7 +131,6 @@ public class RuleRouterPickerTests
             resolvers,
             executor,
             inv,
-            sourceApp,
             picker,
             usePickerAsCatchAll,
             empty.Profiles,
@@ -146,7 +138,10 @@ public class RuleRouterPickerTests
             launcher,
             logger,
             new NullNotifier(),
-            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)));
+            new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)),
+            new FakeUnshortener(),
+            new FakeShortenerDomainList(),
+            stripper);
     }
 
     private sealed class BrowserLaunchingPickerLauncher(Browser browser) : IPickerLauncher

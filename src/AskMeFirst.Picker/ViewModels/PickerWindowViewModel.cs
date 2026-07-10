@@ -23,6 +23,7 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
 
+    private Uri _finalUrl;
     private PickerResult _result = new Cancelled();
 
     public PickerWindowViewModel(
@@ -37,9 +38,9 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         _configWriter = configWriter;
         _icons = icons ?? new NullIconProvider();
         _recentPicks = recentPicks ?? new NoOpRecentPicksLog();
+        _finalUrl = request.OriginalUrl;
 
         DisplayUrl = request.OriginalUrl.ToString();
-        SourceAppLabel = request.SourceApp is null ? "" : $"From {request.SourceApp}";
         BrowserOptions = BuildBrowserOptions(request);
         RememberOptions = BuildRememberOptions(request);
         SelectedBrowserIndex = 0;
@@ -70,16 +71,10 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
     private string _displayUrl = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSourceAppLabelVisible))]
-    private string _sourceAppLabel = "";
-
-    [ObservableProperty]
     private bool _isResolving;
 
     [ObservableProperty]
     private int _selectedBrowserIndex;
-
-    public bool IsSourceAppLabelVisible => !string.IsNullOrEmpty(SourceAppLabel);
 
     public PickerResult Result => _result;
 
@@ -120,13 +115,12 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         _recentPicks.Append(new RecentPickEntry(
             Timestamp: DateTimeOffset.UtcNow,
             Url: _request.OriginalUrl,
-            SourceApp: _request.SourceApp,
             BrowserId: browser.Id,
             ProfileId: browser.Profile?.DirectoryName,
             RuleWritten: ruleWritten));
 
         _logger.LogInfo($"Picker committed: {browser.DisplayName} ({rememberOpt.Kind})");
-        _result = new Launched(browser, _request.OriginalUrl);
+        _result = new Launched(browser, _finalUrl);
         Status = PickerStatus.Done;
     }
 
@@ -177,8 +171,9 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
             using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
             timeoutCts.CancelAfter(UnshortenTimeout);
             string? resolved = await _request.UnshortenTask.WaitAsync(timeoutCts.Token).ConfigureAwait(true);
-            if (resolved is not null)
+            if (resolved is not null && Uri.TryCreate(resolved, UriKind.Absolute, out Uri? resolvedUri))
             {
+                _finalUrl = resolvedUri;
                 DisplayUrl = resolved;
                 _logger.LogInfo($"Unshortener resolved to {resolved}");
             }
@@ -214,7 +209,6 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
 
     private static ObservableCollection<RememberOptionViewModel> BuildRememberOptions(PickerRequest request)
     {
-        bool hasSource = !string.IsNullOrEmpty(request.SourceApp);
         string host = request.OriginalUrl.Host;
         bool hasHost = !string.IsNullOrEmpty(host);
 
@@ -223,22 +217,17 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
             new(RememberKind.Once, "Just this once"),
             new(RememberKind.AlwaysExactHost, $"Always {host}", isAvailable: hasHost, unavailableReason: "No host in URL"),
             new(RememberKind.AlwaysWildcardHost, $"Always *.{host}", isAvailable: hasHost, unavailableReason: "No host in URL"),
-            new(RememberKind.AlwaysSource, $"Always {request.SourceApp ?? ""}", isAvailable: hasSource, unavailableReason: "Source app not detected"),
-            new(RememberKind.SourcePlusHost, $"{request.SourceApp ?? "?"} + {host}", isAvailable: hasSource && hasHost, unavailableReason: "Need source + host"),
         ];
     }
 
     private Rule BuildRememberRule(RememberKind kind)
     {
-        string? sourceApp = _request.SourceApp;
         string host = _request.OriginalUrl.Host;
 
         RuleWhen when = kind switch
         {
             RememberKind.AlwaysExactHost    => new RuleWhen { UrlMatchesAny = [host] },
             RememberKind.AlwaysWildcardHost => new RuleWhen { UrlMatchesAny = [$"*.{host}"] },
-            RememberKind.AlwaysSource       => new RuleWhen { ProcessIn = sourceApp is null ? [] : [sourceApp] },
-            RememberKind.SourcePlusHost     => new RuleWhen { ProcessIn = sourceApp is null ? [] : [sourceApp], UrlMatchesAny = [host] },
             _                               => new RuleWhen(),
         };
 
@@ -246,8 +235,6 @@ public sealed partial class PickerWindowViewModel : ObservableObject, IDisposabl
         {
             RememberKind.AlwaysExactHost    => $"Remembered: * {host}",
             RememberKind.AlwaysWildcardHost => $"Remembered: * *.{host}",
-            RememberKind.AlwaysSource       => $"Remembered: {sourceApp ?? ""}",
-            RememberKind.SourcePlusHost     => $"Remembered: {sourceApp ?? ""} + {host}",
             _                               => "Remembered",
         };
 

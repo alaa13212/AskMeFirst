@@ -4,7 +4,7 @@
 
 ## Project snapshot
 
-Cross-platform browser router (Windows / macOS / Linux). Installs as the OS default for `http` / `https`, picks the right browser per link based on rules (source app + URL pattern + what's running + user prefs), optionally unshortens and strips tracking query params.
+Cross-platform browser router (Windows / macOS / Linux). Installs as the OS default for `http` / `https`, picks the right browser per link based on URL rules and user prefs, optionally unshortens and strips tracking query params.
 
 Tagline / philosophy: *"Ask me first, then remember forever."* The picker is the **learning** mechanism, not the daily driver — rules accumulate via "remember" actions.
 

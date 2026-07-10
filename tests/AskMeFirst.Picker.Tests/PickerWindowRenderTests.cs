@@ -58,7 +58,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_RendersAllRememberOptions()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
 
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
@@ -72,7 +72,7 @@ public class PickerWindowRenderTests
         List<RadioButton> radios = rememberList.GetVisualDescendants()
             .OfType<RadioButton>()
             .ToList();
-        Assert.Equal(5, radios.Count);
+        Assert.Equal(3, radios.Count);
 
         Assert.Single(radios, r => r.IsChecked == true);
     }
@@ -393,7 +393,6 @@ public class PickerWindowRenderTests
 
         PickerRequest request = MakeRequest(
             "https://test.example.com/path?q=1",
-            sourceApp: "slack",
             browsers:
             [
                 MakeBrowser("chrome", "Google Chrome"),
@@ -444,7 +443,6 @@ public class PickerWindowRenderTests
 
         PickerRequest request = new(
             OriginalUrl: new Uri("https://company.atlassian.net/wiki/spaces/ENG"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers: options);
 
@@ -488,7 +486,6 @@ public class PickerWindowRenderTests
 
         PickerRequest request = new(
             OriginalUrl: new Uri("https://example.com"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers: options);
 
@@ -581,7 +578,6 @@ public class PickerWindowRenderTests
     {
         PickerRequest request = MakeRequest(
             "https://example.com",
-            sourceApp: "slack",
             browsers:
             [
                 MakeBrowser("chrome", "Chrome"),
@@ -612,7 +608,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_PressingArrowRight_FromBrowser_SwitchesToRemember()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -634,7 +630,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_PressingArrowLeft_FromRemember_SwitchesToBrowser()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -658,7 +654,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_PressingArrowUp_WithinRememberSection_WrapsToLastRadio()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -682,7 +678,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_PressingArrowDown_FromLastRememberRadio_WrapsToFirstRadio()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -707,7 +703,6 @@ public class PickerWindowRenderTests
     {
         PickerRequest request = MakeRequest(
             "https://example.com",
-            sourceApp: "slack",
             browsers:
             [
                 MakeBrowser("chrome", "Chrome"),
@@ -748,7 +743,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_PressingArrowRight_FromRemember_StaysAtRememberCursor()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -801,7 +796,7 @@ public class PickerWindowRenderTests
     [AvaloniaFact]
     public void Window_FocusedRadio_HasHighlightBackground()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm);
         window.Show();
@@ -830,7 +825,7 @@ public class PickerWindowRenderTests
         string screenshotPath = @"C:\Users\Ali\.mavis\cache\askmefirst-picker-radio-focus.png";
         Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath)!);
 
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("https://example.com");
         using PickerWindowViewModel vm = new(request, new NullLogger());
         Window window = new PickerWindow(vm)
         {
@@ -903,7 +898,6 @@ public class PickerWindowRenderTests
 
         PickerRequest request = new(
             OriginalUrl: new Uri("https://example.com"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers: options);
 
@@ -950,10 +944,9 @@ public class PickerWindowRenderTests
         }
     }
 
-    private static PickerRequest MakeRequest(string url, string? sourceApp = null, IReadOnlyList<Browser>? browsers = null) =>
+    private static PickerRequest MakeRequest(string url, IReadOnlyList<Browser>? browsers = null) =>
         new(
             OriginalUrl: new Uri(url),
-            SourceApp: sourceApp,
             UnshortenTask: null,
             AvailableBrowsers: (browsers ?? [MakeBrowser("chrome", "Chrome")]).Select(b => new PickerBrowserOption(b, b.Profile)).ToList());
 

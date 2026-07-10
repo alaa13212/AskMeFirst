@@ -36,8 +36,14 @@ internal static partial class Composition
         services.AddSingleton<IRoutingExecutor>(sp => new RoutingExecutor(
             sp.GetRequiredService<IBrowserInventory>(),
             sp.GetRequiredService<ProfileResolver>(),
-            new TrackingStripper(sp.GetRequiredService<AppConfig>()),
+            sp.GetRequiredService<TrackingStripper>(),
             sp.GetRequiredService<AppConfig>()));
+        services.AddSingleton<TrackingStripper>(sp => new TrackingStripper(sp.GetRequiredService<AppConfig>()));
+        services.AddSingleton<IShortenerDomainList>(sp => new ConfigShortenerDomainList(sp.GetRequiredService<AppConfig>()));
+        services.AddSingleton<IUnshortener>(sp => new HttpUnshortener(
+            new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 10 },
+            TimeSpan.FromSeconds(1),
+            sp.GetRequiredService<ILogger>()));
         services.AddSingleton<IConfigWriter>(sp => new JsonConfigWriter(
             sp.GetRequiredService<IConfigPathResolver>().DefaultConfigPath,
             sp.GetRequiredService<ILogger>()));
@@ -53,7 +59,6 @@ internal static partial class Composition
             sp.GetRequiredService<IReadOnlyList<ITargetResolver>>(),
             sp.GetRequiredService<IRoutingExecutor>(),
             sp.GetRequiredService<IBrowserInventory>(),
-            sp.GetRequiredService<ISourceAppDetector>(),
             sp.GetRequiredService<IPickerLauncher>(),
             usePickerAsCatchAll: true,
             sp.GetRequiredService<AppConfig>().Profiles,
@@ -61,7 +66,10 @@ internal static partial class Composition
             sp.GetRequiredService<IUrlLauncher>(),
             sp.GetRequiredService<ILogger>(),
             sp.GetRequiredService<INotifier>(),
-            sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<IUnshortener>(),
+            sp.GetRequiredService<IShortenerDomainList>(),
+            sp.GetRequiredService<TrackingStripper>()));
 
         foreach (ICommand cmd in registry.All())
         {

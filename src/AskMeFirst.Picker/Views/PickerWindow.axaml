@@ -52,10 +52,6 @@
     <Grid Margin="16" RowDefinitions="Auto,*">
 
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
-            <TextBlock Text="{Binding SourceAppLabel}"
-                       FontSize="12"
-                       Foreground="Gray"
-                       IsVisible="{Binding IsSourceAppLabelVisible}" />
             <TextBlock Text="{Binding DisplayUrl}"
                        FontSize="14"
                        TextWrapping="Wrap" />

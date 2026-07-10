@@ -12,7 +12,7 @@ public class ResolverTests
     [Fact]
     public void ExplicitOverrideResolver_NoExplicitArgs_ReturnsNull()
     {
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
+        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), Monday10am);
         Assert.Null(new ExplicitOverrideResolver().Resolve(ctx));
     }
 
@@ -20,7 +20,7 @@ public class ResolverTests
     public void ExplicitOverrideResolver_WithExplicitArgs_ReturnsIntent()
     {
         RoutingContext ctx = RoutingContext.Create(
-            new Uri("https://example.com"), null, Monday10am,
+            new Uri("https://example.com"), Monday10am,
             explicitBrowserId: "chrome-personal", explicitProfileId: "chrome-personal-profile");
         RoutingIntent? intent = new ExplicitOverrideResolver().Resolve(ctx);
         Assert.NotNull(intent);
@@ -35,7 +35,7 @@ public class ResolverTests
     {
         AppConfig config = new() { Rules = [] };
         RuleMatchingResolver resolver = new(config.Rules, Evaluator);
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
+        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), Monday10am);
         Assert.Null(resolver.Resolve(ctx));
     }
 
@@ -50,7 +50,7 @@ public class ResolverTests
             },
         };
         RuleMatchingResolver resolver = new(config.Rules, Evaluator);
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://github.com/foo"), null, Monday10am);
+        RoutingContext ctx = RoutingContext.Create(new Uri("https://github.com/foo"), Monday10am);
         RoutingIntent? intent = resolver.Resolve(ctx);
         Assert.NotNull(intent);
         Assert.Equal("chrome-work", intent!.BrowserId);
@@ -70,7 +70,7 @@ public class ResolverTests
         };
         IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(config, Evaluator);
 
-        RoutingContext noArgs = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
+        RoutingContext noArgs = RoutingContext.Create(new Uri("https://example.com"), Monday10am);
         RoutingIntent? first = null;
         foreach (ITargetResolver r in resolvers)
         {
@@ -85,7 +85,7 @@ public class ResolverTests
         Assert.Equal(RoutingExitCode.RuleBrowserNotFound, first.NotFoundExitCode);
 
         RoutingContext withExplicit = RoutingContext.Create(
-            new Uri("https://example.com"), null, Monday10am,
+            new Uri("https://example.com"), Monday10am,
             explicitBrowserId: "explicit-browser");
         RoutingIntent? firstExplicit = null;
         foreach (ITargetResolver r in resolvers)
@@ -109,7 +109,7 @@ public class ResolverTests
             Rules = [],
         };
         IReadOnlyList<ITargetResolver> resolvers = TestResolvers.For(config, Evaluator);
-        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), null, Monday10am);
+        RoutingContext ctx = RoutingContext.Create(new Uri("https://example.com"), Monday10am);
 
         RoutingIntent? intent = null;
         foreach (ITargetResolver r in resolvers)

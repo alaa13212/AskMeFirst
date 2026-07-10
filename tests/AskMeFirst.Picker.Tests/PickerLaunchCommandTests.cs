@@ -28,7 +28,6 @@ public class PickerLaunchCommandTests
         BrowserProfile workProfile = new("Work", "Work", IsDefault: false);
         PickerRequest request = new(
             OriginalUrl: new Uri("https://google.com/"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers:
             [
@@ -81,7 +80,6 @@ public class PickerLaunchCommandTests
         BrowserProfile workProfile = new("Work", "Profile 1", IsDefault: false);
         PickerRequest request = new(
             OriginalUrl: new Uri("https://google.com/"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers:
             [
@@ -133,7 +131,6 @@ public class PickerLaunchCommandTests
         BrowserProfile defaultProfile = new("Default", "Default", IsDefault: true);
         PickerRequest request = new(
             OriginalUrl: new Uri("https://google.com/"),
-            SourceApp: "slack",
             UnshortenTask: null,
             AvailableBrowsers:
             [
@@ -189,7 +186,6 @@ public class PickerLaunchCommandTests
 
         PickerRequest request = new(
             OriginalUrl: new Uri("https://google.com/"),
-            SourceApp: null,
             UnshortenTask: null,
             AvailableBrowsers:
             [

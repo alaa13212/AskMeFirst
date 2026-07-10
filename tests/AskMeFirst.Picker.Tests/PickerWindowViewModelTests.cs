@@ -11,7 +11,7 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Constructor_PopulatesDisplayUrlFromRequest()
     {
-        PickerRequest request = MakeRequest("https://example.com/path", sourceApp: null);
+        PickerRequest request = MakeRequest("https://example.com/path");
         TestLogger logger = new();
         PickerWindowViewModel vm = new(request, logger);
 
@@ -21,9 +21,9 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Constructor_PopulatesBrowserOptionsFromRequest()
     {
-        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
-        Browser firefox = new() { Id = "firefox", DisplayName = "Firefox", ExecutablePath = "/firefox", LaunchStrategy = BrowserLaunchStrategies.For("firefox") };
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome, firefox]);
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        Browser firefox = MakeBrowser("firefox", "Firefox", "/firefox");
+        PickerRequest request = MakeRequest("https://example.com", browsers: [chrome, firefox]);
         TestLogger logger = new();
         PickerWindowViewModel vm = new(request, logger);
 
@@ -35,67 +35,44 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Constructor_SetsFirstBrowserAsHotkey1()
     {
-        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome]);
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://example.com", browsers: [chrome]);
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         Assert.Equal("1", vm.BrowserOptions[0].HotkeyLabel);
     }
 
     [Fact]
-    public void Constructor_NoSourceApp_HidesSourceAppLabel()
+    public void Constructor_BuildsRememberOptions_ForHostOnly()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerRequest request = MakeRequest("https://company.atlassian.net/wiki");
         PickerWindowViewModel vm = new(request, new TestLogger());
 
-        Assert.Equal("", vm.SourceAppLabel);
-        Assert.False(vm.IsSourceAppLabelVisible);
+        Assert.Equal(3, vm.RememberOptions.Count);
+        Assert.Equal(RememberKind.Once, vm.RememberOptions[0].Kind);
+        Assert.Equal(RememberKind.AlwaysExactHost, vm.RememberOptions[1].Kind);
+        Assert.Equal(RememberKind.AlwaysWildcardHost, vm.RememberOptions[2].Kind);
+        Assert.All(vm.RememberOptions, option => Assert.True(option.IsAvailable));
     }
 
     [Fact]
-    public void Constructor_WithSourceApp_ShowsSourceAppLabel()
+    public void Constructor_NoHost_DisablesHostRememberOptions()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: "slack");
+        PickerRequest request = MakeRequest("file:///tmp/example.html");
         PickerWindowViewModel vm = new(request, new TestLogger());
 
-        Assert.Equal("From slack", vm.SourceAppLabel);
-        Assert.True(vm.IsSourceAppLabelVisible);
-    }
-
-    [Fact]
-    public void Constructor_BuildsRememberOptions_AllFiveWhenSourceAndHost()
-    {
-        PickerRequest request = MakeRequest("https://company.atlassian.net/wiki", sourceApp: "slack");
-        PickerWindowViewModel vm = new(request, new TestLogger());
-
-        Assert.Equal(5, vm.RememberOptions.Count);
+        Assert.Equal(3, vm.RememberOptions.Count);
         Assert.True(vm.RememberOptions[0].IsAvailable);
-        Assert.True(vm.RememberOptions[1].IsAvailable);
-        Assert.True(vm.RememberOptions[2].IsAvailable);
-        Assert.True(vm.RememberOptions[3].IsAvailable);
-        Assert.True(vm.RememberOptions[4].IsAvailable);
-    }
-
-    [Fact]
-    public void Constructor_NoSourceApp_DisablesSourceBasedOptions()
-    {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
-        PickerWindowViewModel vm = new(request, new TestLogger());
-
-        Assert.Equal(5, vm.RememberOptions.Count);
-        Assert.True(vm.RememberOptions[0].IsAvailable);
-        Assert.True(vm.RememberOptions[1].IsAvailable);
-        Assert.True(vm.RememberOptions[2].IsAvailable);
-        Assert.False(vm.RememberOptions[3].IsAvailable);
-        Assert.False(vm.RememberOptions[4].IsAvailable);
+        Assert.False(vm.RememberOptions[1].IsAvailable);
+        Assert.False(vm.RememberOptions[2].IsAvailable);
     }
 
     [Fact]
     public void Constructor_DefaultsSelectedBrowserIndexToZero()
     {
-        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
-        Browser firefox = new() { Id = "firefox", DisplayName = "Firefox", ExecutablePath = "/firefox", LaunchStrategy = BrowserLaunchStrategies.For("firefox") };
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome, firefox]);
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        Browser firefox = MakeBrowser("firefox", "Firefox", "/firefox");
+        PickerRequest request = MakeRequest("https://example.com", browsers: [chrome, firefox]);
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         Assert.Equal(0, vm.SelectedBrowserIndex);
@@ -104,7 +81,7 @@ public class PickerWindowViewModelTests
     [Fact]
     public void CommitCommand_CanExecute_ReadyAfterConstruction()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerRequest request = MakeRequest("https://example.com");
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         Assert.True(vm.CommitCommand.CanExecute(null));
@@ -113,7 +90,7 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Constructor_SelectsFirstRememberOption()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerRequest request = MakeRequest("https://example.com");
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         Assert.True(vm.RememberOptions[0].IsSelected);
@@ -123,8 +100,8 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Commit_WithFirstBrowser_SetsLaunchedResult()
     {
-        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome]);
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://example.com", browsers: [chrome]);
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         vm.CommitCommand.Execute(null);
@@ -137,9 +114,9 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Commit_WithSelectedSecondBrowser_UsesThatBrowser()
     {
-        Browser chrome = new() { Id = "chrome", DisplayName = "Chrome", ExecutablePath = "/chrome", LaunchStrategy = BrowserLaunchStrategies.For("chrome") };
-        Browser firefox = new() { Id = "firefox", DisplayName = "Firefox", ExecutablePath = "/firefox", LaunchStrategy = BrowserLaunchStrategies.For("firefox") };
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null, browsers: [chrome, firefox]);
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        Browser firefox = MakeBrowser("firefox", "Firefox", "/firefox");
+        PickerRequest request = MakeRequest("https://example.com", browsers: [chrome, firefox]);
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         vm.SelectedBrowserIndex = 1;
@@ -152,7 +129,7 @@ public class PickerWindowViewModelTests
     [Fact]
     public void Cancel_SetsCancelledResult()
     {
-        PickerRequest request = MakeRequest("https://example.com", sourceApp: null);
+        PickerRequest request = MakeRequest("https://example.com");
         PickerWindowViewModel vm = new(request, new TestLogger());
 
         vm.CancelCommand.Execute(null);
@@ -160,11 +137,71 @@ public class PickerWindowViewModelTests
         Assert.IsType<Cancelled>(vm.Result);
     }
 
-    private static PickerRequest MakeRequest(string url, string? sourceApp, IReadOnlyList<Browser>? browsers = null) =>
+    [Fact]
+    public async Task Constructor_WithCompletedUnshortenTask_UpdatesDisplayUrl()
+    {
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://t.co/abc", browsers: [chrome], unshortenTask: Task.FromResult<string?>("https://example.com/article"));
+        PickerWindowViewModel vm = new(request, new TestLogger());
+        await Task.Yield();
+
+        Assert.Equal("https://example.com/article", vm.DisplayUrl);
+    }
+
+    [Fact]
+    public async Task Commit_WithResolvedUrl_LaunchesResolved()
+    {
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://t.co/abc", browsers: [chrome], unshortenTask: Task.FromResult<string?>("https://example.com/article"));
+        PickerWindowViewModel vm = new(request, new TestLogger());
+        await Task.Yield();
+
+        vm.CommitCommand.Execute(null);
+
+        Launched launched = Assert.IsType<Launched>(vm.Result);
+        Assert.Equal(new Uri("https://example.com/article"), launched.Url);
+    }
+
+    [Fact]
+    public async Task Commit_WithNullUnshortenResult_LaunchesOriginalUrl()
+    {
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://t.co/abc", browsers: [chrome], unshortenTask: Task.FromResult<string?>(null));
+        PickerWindowViewModel vm = new(request, new TestLogger());
+        await Task.Yield();
+
+        vm.CommitCommand.Execute(null);
+
+        Launched launched = Assert.IsType<Launched>(vm.Result);
+        Assert.Equal(new Uri("https://t.co/abc"), launched.Url);
+    }
+
+    [Fact]
+    public async Task Constructor_WithNullUnshortenResult_DisplayUrlStaysOriginal()
+    {
+        Browser chrome = MakeBrowser("chrome", "Chrome", "/chrome");
+        PickerRequest request = MakeRequest("https://t.co/abc", browsers: [chrome], unshortenTask: Task.FromResult<string?>(null));
+        PickerWindowViewModel vm = new(request, new TestLogger());
+        await Task.Yield();
+
+        Assert.Equal("https://t.co/abc", vm.DisplayUrl);
+    }
+
+    private static Browser MakeBrowser(string id, string displayName, string executablePath)
+    {
+        return new Browser
+        {
+            Id = id,
+            DisplayName = displayName,
+            ExecutablePath = executablePath,
+            LaunchStrategy = BrowserLaunchStrategies.For(id),
+        };
+    }
+
+    private static PickerRequest MakeRequest(string url, IReadOnlyList<Browser>? browsers = null, Task<string?>? unshortenTask = null) =>
         new(
             OriginalUrl: new Uri(url),
-            SourceApp: sourceApp,
-            UnshortenTask: null,
+            UnshortenTask: unshortenTask,
             AvailableBrowsers: (browsers ?? []).Select(b => new PickerBrowserOption(b, b.Profile)).ToList());
 
     private sealed class TestLogger : Core.Abstractions.ILogger

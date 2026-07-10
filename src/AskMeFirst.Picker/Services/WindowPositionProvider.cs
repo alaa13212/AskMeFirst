@@ -2,17 +2,10 @@ using AskMeFirst.Core.Abstractions;
 
 namespace AskMeFirst.Picker.Services;
 
-public sealed class WindowPositionProvider(
-    IScreenProvider screens,
-    ISourceAppWindowLocator sourceLocator) : IWindowPositionProvider
+public sealed class WindowPositionProvider(IScreenProvider screens) : IWindowPositionProvider
 {
     public WindowPosition Compute(WindowSize windowSize)
     {
-        if (sourceLocator.TryGetSourceWindowBounds(out ScreenBounds source))
-        {
-            return CenterOver(source, windowSize);
-        }
-
         ScreenBounds primary = screens.GetScreens().Primary;
         return CenterOver(primary, windowSize);
     }

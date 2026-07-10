@@ -80,7 +80,6 @@ public class FileRecentPicksLogTests : IDisposable
         return new RecentPickEntry(
             Timestamp: DateTimeOffset.UtcNow,
             Url: new Uri(url),
-            SourceApp: "slack",
             BrowserId: "firefox-work",
             ProfileId: "firefox-work-profile",
             RuleWritten: ruleWritten);

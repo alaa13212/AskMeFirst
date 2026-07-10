@@ -34,10 +34,9 @@
 
   "Rules": [
     {
-      "Name": "GitHub PRs from work apps go to Chrome Work",
+      "Name": "GitHub PRs go to Chrome Work",
       "Priority": 250,
       "When": {
-        "ProcessIn": ["slack", "outlook"],
         "UrlRegex": "^https://github\\.com/[^/]+/[^/]+/pull/\\d+"
       },
       "Then": {
@@ -47,10 +46,9 @@
       }
     },
     {
-      "Name": "Work apps to Firefox Work profile",
+      "Name": "Work domains go to Firefox Work profile",
       "Priority": 200,
       "When": {
-        "ProcessIn": ["slack", "outlook", "teams"],
         "UrlMatchesAny": [
           "*.atlassian.net",
           "*.github.com",
@@ -71,27 +69,6 @@
       },
       "Then": {
         "Browser": "chrome-personal"
-      }
-    },
-    {
-      "Name": "Weekend: always personal Chrome",
-      "Priority": 100,
-      "When": {
-        "WeekdayIn": ["Sat", "Sun"]
-      },
-      "Then": {
-        "Browser": "chrome-personal"
-      }
-    },
-    {
-      "Name": "Work hours, weekday: default to Chrome Work",
-      "Priority": 50,
-      "When": {
-        "TimeBetween": "09:00-18:00",
-        "WeekdayIn": ["Mon", "Tue", "Wed", "Thu", "Fri"]
-      },
-      "Then": {
-        "Browser": "chrome-work"
       }
     },
     {
@@ -119,17 +96,6 @@
       "Priority": 30,
       "When": {
         "UrlMatchesAll": ["*.amazon.com", "*.amazon.com/dp/*"]
-      },
-      "Then": {
-        "Browser": "chrome-personal"
-      }
-    },
-    {
-      "Name": "Workday evening: prefer personal Chrome",
-      "Priority": 20,
-      "When": {
-        "TimeBetween": "18:00-23:59",
-        "WeekdayIn": ["Mon", "Tue", "Wed", "Thu", "Fri"]
       },
       "Then": {
         "Browser": "chrome-personal"

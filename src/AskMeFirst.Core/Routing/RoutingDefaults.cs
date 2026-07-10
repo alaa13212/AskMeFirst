@@ -6,14 +6,10 @@ public static class RoutingDefaults
 {
     public static IReadOnlyList<IPredicateMatcher> Matchers() =>
     [
-        new ProcessInMatcher(),
         new UrlMatchesAnyMatcher(),
         new UrlMatchesAllMatcher(),
         new UrlRegexMatcher(),
         new SchemeInMatcher(),
-        new TimeBetweenMatcher(),
-        new WeekdayInMatcher(),
-        new BrowserRunningMatcher(),
     ];
 
     public static IReadOnlyList<ITargetResolver> Resolvers(AppConfig appConfig, PredicateEvaluator evaluator) =>

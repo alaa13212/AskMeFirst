@@ -49,12 +49,12 @@ The binary is the same in all modes — mode is selected by CLI flags.
 
 ### 5. Picker UI (`Picker/`, Phase 7+)
 
-- Cross-platform Avalonia window — **not in v1**. Phases 1–6 are CLI-only with deterministic rule resolution.
+- Cross-platform Avalonia window.
 - Centered modal, ~720×440 px. Single screen.
 - **Browser pane**: list of (browser, profile) options as buttons. Click or Enter commits immediately.
 - **Remember pane** (right side): radio buttons. Default = "Just this once." Click or Enter changes state only.
 - Keyboard: arrows, Tab to switch panels, 1-N hotkeys, Enter commits, Esc cancels.
-- Shows source app, original URL, and live-resolved URL (when unshortener is in flight).
+- Shows the original URL and live-resolved URL (when unshortener is in flight).
 
 ### 6. Config (`Config/`)
 
@@ -71,11 +71,8 @@ The binary is the same in all modes — mode is selected by CLI flags.
 
 - OS-specific implementations behind interfaces:
   - `IBrowserInventory` — discovers installed browsers and their profiles
-  - `IRunningBrowserDetector` — finds running browsers
   - `IDefaultBrowserRegistrar` — registers AskMeFirst as default
   - `IUrlLauncher` — launches a URL in a browser
-  - `ISourceAppDetector` — identifies the parent process
-  - `IProcessNameNormalizer` — OS-specific process name → canonical form
 - Three implementations: Windows, macOS, Linux. See [platform-integration.md](./platform-integration.md).
 
 ### 8. Composition (`Composition.cs`)
@@ -91,36 +88,33 @@ The binary is the same in all modes — mode is selected by CLI flags.
 2. Process startup (Native AOT)                                    (~50 ms)
 3. CLI parses args                                                (~2 ms)
 4. Load config (cache hit, mtime unchanged)                       (~3 ms)
-5. Identify source process via parent PID → normalize             (~5 ms)
-6. Pre-process URL (strip tracking params, if enabled)            (~1 ms)
-7. Evaluate rules (precompiled patterns)                          (~2 ms)
+5. Pre-process URL (strip tracking params, if enabled)            (~1 ms)
+6. Evaluate rules (precompiled patterns)                          (~2 ms)
    - Result: { Browser: firefox, Profile: work }
-8. Find running firefox (process scan)                            (~10 ms)
-9. Launch URL in firefox work profile                             (~200–500 ms browser startup)
-10. Exit
+7. Launch URL in firefox work profile                             (~200–500 ms browser startup)
+8. Exit
 ```
 
-Total our-code time: **~80 ms**. Total wall-clock: dominated by browser startup (~250 ms+). Comfortably under 1 s on warm systems.
+Total our-code time: **~60 ms**. Total wall-clock: dominated by browser startup (~250 ms+). Comfortably under 1 s on warm systems.
 
 ## Data flow (router mode, picker case — no rule hit)
 
 ```
-Steps 1–7 as above.
-7. No rule matched → implicit catchall = "show picker"
-8. Detect URL is from known shortener domain?
+Steps 1–6 as above.
+6. No rule matched → implicit catchall = "show picker"
+7. Detect URL is from known shortener domain?
    - If yes: kick off async unshortener, pass Task<string?> to picker
    - If no: pass null
-9. Show picker (Avalonia window)                                  (~150 ms window show)
-10. Picker displays:
-    - Source app name
-    - Original URL (short or not)
-    - "Resolving..." indicator if unshortener in flight
-    - Resolved URL when complete (live update)
-    - Browser pane (click-or-Enter to commit)
-    - Remember pane (default = "Just this once")
-11. User interaction (variable)
-12. User commits → launch chosen browser, optionally save rule
-13. Exit
+8. Show picker (Avalonia window)                                  (~150 ms window show)
+9. Picker displays:
+   - Original URL (short or not)
+   - "Resolving..." indicator if unshortener in flight
+   - Resolved URL when complete (live update)
+   - Browser pane (click-or-Enter to commit)
+   - Remember pane (default = "Just this once")
+10. User interaction (variable)
+11. User commits → launch chosen browser, optionally save rule
+12. Exit
 ```
 
 ## No daemon — confirmed
