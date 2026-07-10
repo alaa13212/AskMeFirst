@@ -10,7 +10,6 @@ public sealed class RuleRouter(
     IReadOnlyList<ITargetResolver> resolvers,
     IRoutingExecutor executor,
     IBrowserInventory browserInventory,
-    ISourceAppDetector sourceAppDetector,
     IPickerLauncher pickerLauncher,
     bool usePickerAsCatchAll,
     IReadOnlyList<ProfileSpec> profileSpecs,
@@ -18,19 +17,13 @@ public sealed class RuleRouter(
     IUrlLauncher launcher,
     ILogger logger,
     INotifier notifier,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IUnshortenTaskBuilder unshortenTasks)
 {
     public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
     {
-        SourceApp? sourceApp = sourceAppDetector.Detect();
-        if (sourceApp is not null)
-        {
-            logger.LogInfo($"source app: {sourceApp.ProcessName}");
-        }
-
         RoutingContext ctx = RoutingContext.Create(
             url,
-            sourceApp?.ProcessName,
             timeProvider.GetUtcNow(),
             explicitBrowserId: explicitBrowserId,
             explicitProfileId: explicitProfileId);
@@ -49,7 +42,7 @@ public sealed class RuleRouter(
         {
             if (usePickerAsCatchAll)
             {
-                PickerRequest request = BuildPickerRequest(ctx, url, sourceApp?.ProcessName);
+                PickerRequest request = BuildPickerRequest(url);
                 return HandlePicker(request, url);
             }
             logger.LogError(
@@ -88,15 +81,14 @@ private int LogAndLaunch(Success success, Uri url)
         return (int)failure.Code;
     }
 
-    private PickerRequest BuildPickerRequest(RoutingContext ctx, Uri url, string? sourceApp)
+    private PickerRequest BuildPickerRequest(Uri url)
     {
         IReadOnlyList<Browser> browsers = browserInventory.Discover();
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(browsers, profileDetector);
         IReadOnlyList<PickerBrowserOption> filtered = PinnedProfileFilter.Filter(options, profileSpecs);
         return new PickerRequest(
             OriginalUrl: url,
-            SourceApp: sourceApp,
-            UnshortenTask: null,
+            UnshortenTask: unshortenTasks.Build(url),
             AvailableBrowsers: filtered);
     }
 

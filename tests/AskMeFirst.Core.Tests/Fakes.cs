@@ -66,13 +66,6 @@ internal sealed class FakeProfileDetector : IBrowserProfileDetector
     }
 }
 
-internal sealed class FakeSourceAppDetector : ISourceAppDetector
-{
-    public SourceApp? Value { get; set; }
-
-    public SourceApp? Detect() => Value;
-}
-
 internal sealed class FixedTimeProvider : TimeProvider
 {
     private readonly DateTimeOffset now;
@@ -110,14 +103,6 @@ internal static class TestResolvers
 internal sealed class FakeConfigPathResolver : IConfigPathResolver
 {
     public string DefaultConfigPath { get; set; } = Path.Combine(Path.GetTempPath(), "askmefirst-test-config.json");
-}
-
-internal sealed class FakeProcessNameNormalizer : IProcessNameNormalizer
-{
-    public string Normalize(string rawName, string? bundleId = null, string? executablePath = null)
-    {
-        return rawName.ToLowerInvariant();
-    }
 }
 
 internal static class TestCommandContext
@@ -202,5 +187,40 @@ internal sealed class FakeOsSettingsOpener : IOsSettingsOpener
     {
         TryOpenCalls++;
         return TryOpenResult;
+    }
+}
+
+internal sealed class FakeUnshortener : IUnshortener
+{
+    public List<Uri> ResolveCalls { get; } = [];
+    public Func<Uri, string?>? ResolveResult { get; set; }
+
+    public Task<string?> ResolveAsync(Uri url, CancellationToken ct)
+    {
+        ResolveCalls.Add(url);
+        if (ResolveResult is null)
+        {
+            return Task.FromResult<string?>(url.ToString());
+        }
+        return Task.FromResult(ResolveResult(url));
+    }
+}
+
+internal sealed class FakeShortenerDomainList : IShortenerDomainList
+{
+    public HashSet<string> Hosts { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool IsKnown(string host) => Hosts.Contains(host);
+}
+
+internal sealed class FakeUnshortenTaskBuilder : IUnshortenTaskBuilder
+{
+    public List<Uri> BuildCalls { get; } = [];
+    public Func<Uri, Task<string?>?>? BuildResult { get; set; }
+
+    public Task<string?>? Build(Uri url)
+    {
+        BuildCalls.Add(url);
+        return BuildResult is null ? null : BuildResult(url);
     }
 }

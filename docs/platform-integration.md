@@ -82,13 +82,6 @@ Cache to `browsers.json` with TTL 24h.
 - For Firefox: use `-new-tab <url>` against the running instance
 - To bring window to front: `SetForegroundWindow` on the matching process's main HWND
 
-### Source-app detection (L1)
-
-- Get parent PID of the current process via `NtQueryInformationProcess` P/Invoke (`ProcessBasicInformation` class)
-- Resolve PID → process name
-- **Normalize** process name to canonical form: lowercase, strip `.exe`. `Slack.exe` → `slack`.
-- v1 does NOT inspect window titles. Defer to L2/v2 if needed.
-
 ---
 
 ## macOS
@@ -161,11 +154,6 @@ For Firefox:
 - For Chromium-based: append `--profile-directory=<name>`
 - For Firefox: append `-P <name> -new-tab <url>`
 
-### Source-app detection (L1)
-
-- `NSWorkspace.shared.frontmostApplication` for the frontmost app at the moment we're invoked
-- **Normalize** bundle ID to canonical form: lowercase, strip prefix components if ambiguous. `com.tinyspeck.chatlyo` → `slack` via known-bundle-ID map.
-
 ---
 
 ## Linux
@@ -236,12 +224,6 @@ For Firefox:
 - For Chromium-based: append `--profile-directory=<name>`
 - For Firefox: append `-P <name> -new-tab <url>`
 
-### Source-app detection (L1)
-
-- `/proc/<ppid>/comm` (Linux-specific, fast)
-- **Normalize** process name: lowercase, strip path. `slack` → `slack`.
-- Best effort — many Linux apps don't have a clean concept of "source app" for URL launches.
-
 ---
 
 ## Common types
@@ -266,17 +248,7 @@ public record BrowserProfile(
 );
 ```
 
-### Source app record
-
-```csharp
-public record SourceApp(
-    string ProcessName,         // canonical normalized name
-    string? BundleId,           // macOS only
-    string ExecutablePath
-);
-```
-
-User maps source apps to categories via direct process-name references in rules. No tags indirection.
+User maps browsers to URLs via URL rules and pinned profiles in config. No tags indirection.
 
 ---
 

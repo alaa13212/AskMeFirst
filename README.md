@@ -1,6 +1,6 @@
 # AskMeFirst
 
-A cross-platform **browser router** — install once as the OS default, and it picks the right browser for every link based on rules (source app, URL pattern, what's already open, your prefs). Optionally unshortens links and strips tracking query params.
+A cross-platform **browser router** — install once as the OS default, and it picks the right browser for every link based on URL rules and your preferences. Optionally unshortens links and strips tracking query params.
 
 > The name is the pitch. AskMeFirst is a rebuttal to the default-browser behavior of opening links immediately, ignoring your intent. It asks first, then remembers your decisions forever.
 

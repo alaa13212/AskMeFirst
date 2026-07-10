@@ -15,7 +15,6 @@ public class RuleRouterTests
         FakeInventory inv,
         FakeLauncher launcher,
         FakeProfileDetector profiles,
-        FakeSourceAppDetector sourceApp,
         FakeLogger logger,
         AppConfig appConfig,
         DateTimeOffset? now = null)
@@ -30,7 +29,6 @@ public class RuleRouterTests
             resolvers,
             executor,
             inv,
-            sourceApp,
             pickerLauncher,
             usePickerAsCatchAll: false,
             appConfig.Profiles,
@@ -38,7 +36,8 @@ public class RuleRouterTests
             launcher,
             logger,
             new NullNotifier(),
-            new FixedTimeProvider(now ?? Monday10amUtc));
+            new FixedTimeProvider(now ?? Monday10amUtc),
+            new FakeUnshortenTaskBuilder());
     }
 
     private static AppConfig TenRuleConfig()
@@ -57,22 +56,20 @@ public class RuleRouterTests
             {
                 new()
                 {
-                    Name = "GitHub PRs from work apps",
+                    Name = "GitHub PRs",
                     Priority = 250,
                     When = new()
                     {
-                        ProcessIn = ["slack", "outlook"],
                         UrlRegex = "^https://github\\.com/[^/]+/[^/]+/pull/\\d+",
                     },
                     Then = new() { Browser = "chrome-work", StripTracking = true },
                 },
                 new()
                 {
-                    Name = "Work apps to Firefox Work profile",
+                    Name = "Work domains to Firefox Work profile",
                     Priority = 200,
                     When = new()
                     {
-                        ProcessIn = ["slack", "outlook", "teams"],
                         UrlMatchesAny = ["*.atlassian.net", "*.github.com", "*.slack.com"],
                     },
                     Then = new() { Browser = "firefox-work", ProfileId = "firefox-work-profile", StripTracking = true },
@@ -86,21 +83,13 @@ public class RuleRouterTests
                 },
                 new()
                 {
-                    Name = "Weekend: always personal",
-                    Priority = 100,
-                    When = new() { WeekdayIn = ["Sat", "Sun"] },
-                    Then = new() { Browser = "chrome-personal" },
-                },
-                new()
-                {
-                    Name = "Work hours weekday fallback",
-                    Priority = 50,
+                    Name = "All matches: amazon must include /dp/",
+                    Priority = 60,
                     When = new()
                     {
-                        TimeBetween = "09:00-18:00",
-                        WeekdayIn = ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                        UrlMatchesAll = ["*.amazon.com", "*.amazon.com/dp/*"],
                     },
-                    Then = new() { Browser = "chrome-work" },
+                    Then = new() { Browser = "chrome-personal" },
                 },
                 new()
                 {
@@ -114,27 +103,6 @@ public class RuleRouterTests
                     Name = "HTTP only to Chrome personal",
                     Priority = 35,
                     When = new() { SchemeIn = ["http"] },
-                    Then = new() { Browser = "chrome-personal" },
-                },
-                new()
-                {
-                    Name = "All matches: amazon must include /dp/",
-                    Priority = 30,
-                    When = new()
-                    {
-                        UrlMatchesAll = ["*.amazon.com", "*.amazon.com/dp/*"],
-                    },
-                    Then = new() { Browser = "chrome-personal" },
-                },
-                new()
-                {
-                    Name = "Workday evening: prefer personal",
-                    Priority = 20,
-                    When = new()
-                    {
-                        TimeBetween = "18:00-23:59",
-                        WeekdayIn = ["Mon", "Tue", "Wed", "Thu", "Fri"],
-                    },
                     Then = new() { Browser = "chrome-personal" },
                 },
                 new()
@@ -167,9 +135,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("slack", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://company.atlassian.net/x"), "chrome-personal", null);
 
@@ -183,9 +150,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://example.com"), "lynx", null);
 
@@ -195,7 +161,7 @@ public class RuleRouterTests
     }
 
     [Fact]
-    public void HighPriorityProcessPlusUrl_RoutesToFirefoxWork()
+    public void WorkDomain_RoutesToFirefoxWork()
     {
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
@@ -206,9 +172,8 @@ public class RuleRouterTests
                 ["firefox-work"] = [new BrowserProfile("Work", "work", IsDefault: true)],
             },
         };
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("slack", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://company.atlassian.net/browse/X-1"), null, null);
 
@@ -218,14 +183,13 @@ public class RuleRouterTests
     }
 
     [Fact]
-    public void GitHubPrFromOutlook_RoutesToChromeWork()
+    public void GitHubPr_RoutesToChromeWork()
     {
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("outlook", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://github.com/foo/repo/pull/42"), null, null);
 
@@ -239,9 +203,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("code", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://youtube.com/watch?v=abc"), null, null);
 
@@ -250,14 +213,13 @@ public class RuleRouterTests
     }
 
     [Fact]
-    public void WorkHoursFallback_RoutesToChromeWork()
+    public void HttpsFallback_RoutesToChromeWork()
     {
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("code", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://random-site.example/x"), null, null);
 
@@ -266,17 +228,15 @@ public class RuleRouterTests
     }
 
     [Fact]
-    public void Weekend_RoutesToChromePersonal()
+    public void AmazonProduct_RoutesToChromePersonal()
     {
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("code", null, "") };
         FakeLogger logger = new();
-        DateTimeOffset saturday = new(2026, 6, 6, 10, 0, 0, TimeSpan.Zero);
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, new FakeLogger(), TenRuleConfig(), now: saturday);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://random-site.example/x"), null, null);
+        int code = router.Route(new Uri("https://www.amazon.com/dp/123"), null, null);
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-personal", launcher.Launches[0].Browser.Id);
@@ -293,9 +253,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, config);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
@@ -309,9 +268,8 @@ public class RuleRouterTests
         FakeInventory inv = new();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
@@ -325,9 +283,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new() { Value = new SourceApp("slack", null, "") };
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://company.atlassian.net/x?utm_source=foo"), null, null);
 
@@ -341,9 +298,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, TenRuleConfig());
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
         int code = router.Route(new Uri("https://example.com/?utm_source=foo&q=keep"), "chrome-personal", null);
 
@@ -371,9 +327,8 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, config);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
         int code = router.Route(new Uri("https://example.com/?utm_source=foo"), null, null);
 
@@ -395,14 +350,12 @@ public class RuleRouterTests
         FakeInventory inv = StandardInventory();
         FakeLauncher launcher = new();
         FakeProfileDetector profiles = new();
-        FakeSourceAppDetector sourceApp = new();
         FakeLogger logger = new();
-        RuleRouter router = BuildRouter(inv, launcher, profiles, sourceApp, logger, config);
+        RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
         int code = router.Route(new Uri("https://example.com"), null, null);
 
         Assert.Equal(4, code);
         Assert.Contains(logger.Errors, e => e.Contains("does-not-exist"));
     }
-
 }

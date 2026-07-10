@@ -29,9 +29,7 @@ public sealed class AvaloniaPickerLauncher : IPickerLauncher
             configWriter,
             icons ?? new NullIconProvider(),
             recentPicks ?? new NoOpRecentPicksLog(),
-            new WindowPositionProvider(
-                new AvaloniaScreenProvider(TryGetCurrentScreens),
-                new NullSourceAppWindowLocator()))
+            new WindowPositionProvider(new AvaloniaScreenProvider(TryGetCurrentScreens)))
     {
     }
 

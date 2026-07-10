@@ -108,7 +108,7 @@ public class JsonConfigWriterTests : IDisposable
         {
             Name = name,
             Priority = priority,
-            When = new RuleWhen { ProcessIn = ["slack"] },
+            When = new RuleWhen { UrlMatchesAny = ["example.com"] },
             Then = new RuleThen { Browser = browser.Id },
             Origin = origin,
         };

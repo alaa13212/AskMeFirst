@@ -7,8 +7,6 @@ public enum RememberKind
     Once,
     AlwaysExactHost,
     AlwaysWildcardHost,
-    AlwaysSource,
-    SourcePlusHost,
 }
 
 public sealed partial class RememberOptionViewModel : ObservableObject

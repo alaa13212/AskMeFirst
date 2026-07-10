@@ -9,9 +9,9 @@ public class RuleEngineTests
     private static readonly DateTimeOffset Monday10am = new(2026, 6, 1, 10, 0, 0, TimeSpan.Zero);
     private static readonly PredicateEvaluator Evaluator = TestEvaluator.Default();
 
-    private static RoutingContext Ctx(Uri url, string? sourceProcess = null)
+    private static RoutingContext Ctx(Uri url)
     {
-        return RoutingContext.Create(url, sourceProcess, Monday10am);
+        return RoutingContext.Create(url, Monday10am);
     }
 
     [Fact]
@@ -26,9 +26,9 @@ public class RuleEngineTests
     {
         IReadOnlyList<Rule> rules = new Rule[]
         {
-            new() { Name = "Work only", Priority = 100, When = new() { ProcessIn = ["slack"] }, Then = new() { Browser = "firefox" } },
+            new() { Name = "GitHub only", Priority = 100, When = new() { UrlMatchesAny = ["github.com"] }, Then = new() { Browser = "firefox" } },
         };
-        RoutingDecision? decision = RuleEngine.Evaluate(rules, Ctx(new Uri("https://example.com"), sourceProcess: "code"), Evaluator);
+        RoutingDecision? decision = RuleEngine.Evaluate(rules, Ctx(new Uri("https://example.com")), Evaluator);
         Assert.Null(decision);
     }
 
@@ -90,18 +90,18 @@ public class RuleEngineTests
             new()
             {
                 Priority = 100,
-                When = new() { ProcessIn = ["slack"], UrlMatchesAny = ["*.atlassian.net"] },
+                When = new() { UrlMatchesAny = ["*.atlassian.net"], SchemeIn = ["https"] },
                 Then = new() { Browser = "firefox-work" },
             },
         };
 
-        RoutingDecision? match = RuleEngine.Evaluate(rules, Ctx(new Uri("https://company.atlassian.net/x"), sourceProcess: "slack"), Evaluator);
+        RoutingDecision? match = RuleEngine.Evaluate(rules, Ctx(new Uri("https://company.atlassian.net/x")), Evaluator);
         Assert.NotNull(match);
 
-        RoutingDecision? noSource = RuleEngine.Evaluate(rules, Ctx(new Uri("https://company.atlassian.net/x")), Evaluator);
-        Assert.Null(noSource);
+        RoutingDecision? wrongScheme = RuleEngine.Evaluate(rules, Ctx(new Uri("http://company.atlassian.net/x")), Evaluator);
+        Assert.Null(wrongScheme);
 
-        RoutingDecision? wrongUrl = RuleEngine.Evaluate(rules, Ctx(new Uri("https://github.com"), sourceProcess: "slack"), Evaluator);
+        RoutingDecision? wrongUrl = RuleEngine.Evaluate(rules, Ctx(new Uri("https://github.com")), Evaluator);
         Assert.Null(wrongUrl);
     }
 

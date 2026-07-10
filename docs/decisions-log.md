@@ -43,26 +43,26 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 
 ## 6. App tags: Dropped
 
-**Rationale**: Grouping benefit only matters at scale. Direct `ProcessIn: [list]` references in rules are equally readable for <10 source apps per category. OS-specific process name normalization happens in the platform layer (one file, ~50 LOC per OS), decoupling rules from `Slack.exe` vs `slack` vs `com.tinyspeck.chatlyo`.
+**Rationale**: Tag grouping would matter at scale, but with no source-app concept in v1 we don't need indirection. URL patterns and pinned profiles carry the routing signal on their own.
 
-**Reconsider**: if rule schemas grow painful with long process lists. Add tags back as an *optional* convenience layer — additive change.
+**Reconsider**: only if we re-introduce source-app detection later.
 
 ## 7. Config sync across machines: Not considered for v1
 
 **Rationale**: User explicitly deprioritized cross-OS config sharing. Per-OS configs are fine.
 
-## 8. Rule schema: Rich (per docs, minus dropped predicates)
+## 8. Rule schema: URL-based only
 
-**Rationale**: User pushed back on my initial simplification proposal. The richer schema (multiple predicates, regex, time-of-day, weekday, scheme, etc.) can do everything a simpler one can and more. Picker-generated rules just produce simple entries in the richer schema.
+**Rationale**: URL-based predicates cover the routing signals the user cares about (`UrlMatchesAny`, `UrlMatchesAll`, `UrlRegex`, `SchemeIn`). Source-app detection was attempted but is unreliable on Linux (`systemd` shows up as parent) and Windows (no caller contract). Time-of-day and running-browser predicates were dropped alongside source-app to avoid feature drift.
 
-**Predicates included**: `ProcessIn`, `UrlMatchesAny`, `UrlMatchesAll`, `UrlRegex`, `SchemeIn`, `TimeBetween`, `WeekdayIn`, `BrowserRunning`.
-**Predicates excluded**: `tag_in` (tags dropped).
+**Predicates included**: `UrlMatchesAny`, `UrlMatchesAll`, `UrlRegex`, `SchemeIn`.
+**Predicates excluded**: `ProcessIn`, `TimeBetween`, `WeekdayIn`, `BrowserRunning`, `tag_in`.
 
-## 9. Source-app detection depth: L1 (process name only)
+## 9. Source-app detection: Dropped entirely
 
-**Rationale**: L1 covers 95% of the case ("came from Slack → route accordingly"). L2 (window title) has real Linux Wayland fragmentation problems (no portable API across Sway, Hyprland, GNOME, KDE) and macOS Accessibility permission prompts. L3 (IPC / app context) is per-app bespoke work with low coverage.
+**Rationale**: Cross-platform source-app identity is unreliable. Windows has no caller contract in `ShellExecuteEx`. Linux PPID is commonly `systemd` under modern launchers. macOS would need Apple Events plus Accessibility permission. Routing on URL rules keeps the engine deterministic across OSes; if a future use case needs source context, it ships as opt-in per platform.
 
-**Reconsider**: add L2 in v2 as opt-in per-platform if a use case demands it (Outlook email-domain detection is the most likely ask).
+**Reconsider**: only as opt-in per-platform addition; never as a core rule predicate.
 
 ## 10. Browser profile management: P2 (auto-discovered)
 

@@ -27,21 +27,18 @@ public sealed class PickCommand : ICommand
         }
 
         ILogger logger = ctx.Resolve<ILogger>();
-        ISourceAppDetector sourceApp = ctx.Resolve<ISourceAppDetector>();
         IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
         IBrowserProfileDetector profiles = ctx.Resolve<IBrowserProfileDetector>();
         IPickerLauncher pickerLauncher = ctx.Resolve<IPickerLauncher>();
+        IUnshortenTaskBuilder unshortenTasks = ctx.Resolve<IUnshortenTaskBuilder>();
 
-        SourceApp? source = sourceApp.Detect();
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profiles);
-
         PickerRequest request = new(
             OriginalUrl: url,
-            SourceApp: source?.ProcessName,
-            UnshortenTask: null,
+            UnshortenTask: unshortenTasks.Build(url),
             AvailableBrowsers: options);
 
-        logger.LogInfo($"Opening picker for {url} (source: {source?.ProcessName ?? "unknown"})");
+        logger.LogInfo($"Opening picker for {url}");
         PickerResult result = pickerLauncher.Show(request);
 
         return result switch

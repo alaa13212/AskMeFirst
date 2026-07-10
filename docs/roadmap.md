@@ -34,16 +34,14 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 
 ---
 
-## Phase 2 — Rule engine + source detection (1 week)
+## Phase 2 — Rule engine (1 week)
 
 - [ ] JSON config parser + validator
 - [ ] Rule evaluation with priority + predicates + actions
-- [ ] Source-app detection per platform (parent process / NSWorkspace / /proc)
-- [ ] OS-normalized process names
 - [ ] Tracking-param stripping (on by default)
 - [ ] Hand-rolled `Composition.cs` per platform
 
-**Exit criteria**: a config with 10 rules routes correctly via unit tests + manual checks on each OS.
+**Exit criteria**: a config with 10 URL rules routes correctly via unit tests + manual checks on each OS.
 
 ---
 
@@ -51,7 +49,7 @@ Goal: a working CLI that takes a URL and launches it in a hardcoded browser. No 
 
 **Status**: 🚧 Started 2026-06-28. Design locked via grill session. Vertical slice in progress.
 
-Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
+Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 
 - [ ] AskMeFirst.Picker project + Avalonia + CommunityToolkit.Mvvm packages
 - [ ] `RoutingOutcome.ShowPicker(PickerRequest)` variant + tests
@@ -60,9 +58,9 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 - [ ] Keyboard navigation (Tab cycles, arrows within panel, 1-9 hotkeys, Enter commits, Esc cancels)
 - [ ] Live URL display with unshortener status (1s timeout, cancel on commit, silent fallback on error)
 - [ ] MVVM ViewModels (`PickerWindowViewModel`, `BrowserOptionViewModel`, `RememberOptionViewModel`)
-- [ ] Window position: source-app-center where easy, else active-monitor center
+- [ ] Window position: primary-screen center
 - [ ] Modeless + always-on-top; X / Esc / Cancel all close without launching
-- [ ] Picker writes "remember" rules per `docs/rule-engine.md` table (5 radios)
+- [ ] Picker writes "remember" rules per `docs/rule-engine.md` table (URL radios)
 - [ ] Recent-picks JSONL append-only log
 - [ ] Post-commit browser-launch failure → OS notification (not silent)
 
@@ -79,7 +77,7 @@ Full design: [`docs/phase-3-design.md`](./phase-3-design.md).
 - [x] `uninstall` command — reverse
 - [x] ~~`NewWindow` action wired into browser-family launch strategies~~ (later removed — see decision #85)
 
-**Exit criteria**: install registers AskMeFirst as a default-browser candidate on all 3 OSes; uninstall removes it; user gets the OS-standard "make this the default" prompt; picker centers over source-app window on Win/Mac.
+**Exit criteria**: install registers AskMeFirst as a default-browser candidate on all 3 OSes; uninstall removes it; user gets the OS-standard "make this the default" prompt.
 
 ---
 
