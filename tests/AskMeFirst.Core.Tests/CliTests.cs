@@ -61,12 +61,16 @@ public class CliTests
     }
 
     [Fact]
-    public void Bench_PrintsPlaceholderAndExitsZero()
+    public void Bench_PrintsPerPhaseTimingsAndExitsZero()
     {
         (int exitCode, string stdout, _) = Run("--bench");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("placeholder", stdout, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rule_eval", stdout);
+        Assert.Contains("execute", stdout);
+        Assert.Contains("inventory", stdout);
+        Assert.Contains("total_warm", stdout);
+        Assert.Contains("iterations:", stdout);
     }
 
     private static (int ExitCode, string StdOut, string StdErr) Run(string args)
