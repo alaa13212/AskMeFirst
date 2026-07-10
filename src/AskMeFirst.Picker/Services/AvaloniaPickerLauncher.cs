@@ -65,7 +65,6 @@ public sealed class AvaloniaPickerLauncher : IPickerLauncher
                 {
                     Application.Current.Styles.Add(new FluentTheme());
                 }
-                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
 
                 const int width = 720;
                 const int height = 440;
