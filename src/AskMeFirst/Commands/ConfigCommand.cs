@@ -1,4 +1,5 @@
 using AskMeFirst.Core.Commands;
+using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi;
 
 namespace AskMeFirst.Commands;
@@ -13,6 +14,7 @@ public sealed class ConfigCommand : ICommand
 
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
-        return Task.FromResult(MgmtUiEntryPoint.Run());
+        IConfigPathResolver pathResolver = ctx.Resolve<IConfigPathResolver>();
+        return Task.FromResult(MgmtUiEntryPoint.Run(pathResolver.DefaultConfigPath));
     }
 }

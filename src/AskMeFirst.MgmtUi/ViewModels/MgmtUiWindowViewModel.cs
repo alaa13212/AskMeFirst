@@ -3,12 +3,16 @@ namespace AskMeFirst.MgmtUi.ViewModels;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using AskMeFirst.MgmtUi.Areas;
+using AskMeFirst.MgmtUi.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 public sealed partial class MgmtUiWindowViewModel : ObservableObject
 {
-    public MgmtUiWindowViewModel()
+    private readonly IConfigPersister _persister;
+
+    public MgmtUiWindowViewModel(IConfigPersister persister)
     {
+        _persister = persister;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Phase 7 · dashboard online — click a card or tree leaf to drill.";
@@ -23,6 +27,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         TreeNodeViewModel[] built = BuildTree(all, this);
         Tree = new ObservableCollection<TreeNodeViewModel>(built);
         ActiveDetail = null;
+
+        _persister.Changed += (_, _) => RebuildActiveArea();
     }
 
     [ObservableProperty]
@@ -43,17 +49,44 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
 
     public bool IsDashboard => ActiveDetail is null;
 
+    public bool HasDrafts => ActiveDetail?.HasDrafts ?? false;
+
     public void DrillTo(AreaId? areaId)
     {
         if (areaId.HasValue)
         {
-            ActiveDetail = new AreaDetailViewModel(areaId.Value, this);
+            ActiveDetail = CreateDetailViewModel(areaId.Value);
+            ActiveDetail.Rebuild(_persister);
         }
         else
         {
             ActiveDetail = null;
         }
         OnPropertyChanged(nameof(IsDashboard));
+        OnPropertyChanged(nameof(HasDrafts));
+    }
+
+    public void RebuildActiveArea()
+    {
+        AreaDetailViewModel? active = ActiveDetail;
+        if (active is null)
+        {
+            return;
+        }
+        active.Rebuild(_persister);
+        OnPropertyChanged(nameof(HasDrafts));
+    }
+
+    private AreaDetailViewModel CreateDetailViewModel(AreaId areaId)
+    {
+        return areaId switch
+        {
+            AreaId.Rules => new RuleDetailViewModel(this, _persister),
+            _ => new NoFormsDetailViewModel(
+                areaId,
+                this,
+                $"Detail view for {areaId} — form controls land in the next commit."),
+        };
     }
 
     private static TreeNodeViewModel[] BuildTree(IReadOnlyList<AreaDescriptor> all, MgmtUiWindowViewModel root)

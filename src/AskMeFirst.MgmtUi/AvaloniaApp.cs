@@ -20,7 +20,8 @@ public sealed class AvaloniaApp : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            MgmtUiWindowViewModel viewModel = new();
+            MgmtUiEntryPointComposition composition = MgmtUiEntryPoint.BuildComposition();
+            MgmtUiWindowViewModel viewModel = new(composition.ConfigPersister);
             MgmtUiWindow window = new() { DataContext = viewModel };
             window.Position = new Avalonia.PixelPoint(120, 80);
             desktop.MainWindow = window;

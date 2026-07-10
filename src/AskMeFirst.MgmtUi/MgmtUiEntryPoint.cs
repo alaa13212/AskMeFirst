@@ -1,19 +1,50 @@
 namespace AskMeFirst.MgmtUi;
 
+using AskMeFirst.Core.Abstractions;
+using AskMeFirst.Core.Config;
+using AskMeFirst.MgmtUi.Services;
 using Avalonia;
-using AskMeFirst.MgmtUi.ViewModels;
-using AskMeFirst.MgmtUi.Views;
-using Avalonia.Controls.ApplicationLifetimes;
+
+public sealed record MgmtUiEntryPointComposition(IConfigPersister ConfigPersister);
 
 public static class MgmtUiEntryPoint
 {
-    public static int Run()
+    public static int Run(string? configPath = null)
     {
+        MgmtUiEntryPointComposition composition = BuildComposition(configPath);
         AppBuilder builder = AppBuilder.Configure<AvaloniaApp>()
             .UsePlatformDetect()
             .LogToTrace()
             .UseSkia();
-        builder.StartWithClassicDesktopLifetime(System.Array.Empty<string>());
+        builder.StartWithClassicDesktopLifetime(Array.Empty<string>());
         return 0;
+    }
+
+    public static MgmtUiEntryPointComposition BuildComposition(string? configPath = null)
+    {
+        NoOpLogger logger = new();
+        string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
+        return new MgmtUiEntryPointComposition(new JsonConfigPersister(resolvedPath, logger));
+    }
+
+    private static string DefaultConfigPath()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(profile, ".config", "askmefirst", ConfigPath.FileName);
+    }
+
+    private sealed class NoOpLogger : ILogger
+    {
+        public void LogInfo(string message)
+        {
+        }
+
+        public void LogWarn(string message)
+        {
+        }
+
+        public void LogError(string message)
+        {
+        }
     }
 }
