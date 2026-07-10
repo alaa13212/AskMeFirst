@@ -24,7 +24,7 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         _rulePreview = rulePreview;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
-        _banner = "Phase 7 · dashboard online — click a card or tree leaf to drill.";
+        _banner = "Alt+letter to open an area · Esc to back out · Alt+←/→ to step through areas.";
 
         IReadOnlyList<AreaDescriptor> all = AreaCatalog.All;
         Areas = new ObservableCollection<AreaCardViewModel>();
@@ -122,6 +122,69 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     public void BackToArea(AreaId areaId)
     {
         DrillTo(areaId);
+    }
+
+    [RelayCommand]
+    private void Escape()
+    {
+        if (ActiveDetail is EntityDetailViewModel entity)
+        {
+            BackToArea(entity.ParentArea);
+            return;
+        }
+        if (ActiveDetail is AreaDetailViewModel)
+        {
+            DrillTo(null);
+        }
+    }
+
+    [RelayCommand]
+    private void DrillByMnemonic(string? mnemonic)
+    {
+        if (string.IsNullOrEmpty(mnemonic))
+        {
+            return;
+        }
+        foreach (AreaDescriptor descriptor in AreaCatalog.All)
+        {
+            if (string.Equals(descriptor.Mnemonic, mnemonic, StringComparison.OrdinalIgnoreCase))
+            {
+                DrillTo(descriptor.Id);
+                return;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void NextArea()
+    {
+        StepArea(1);
+    }
+
+    [RelayCommand]
+    private void PrevArea()
+    {
+        StepArea(-1);
+    }
+
+    private void StepArea(int delta)
+    {
+        IReadOnlyList<AreaDescriptor> all = AreaCatalog.All;
+        int count = all.Count;
+        AreaId? current = GetActiveAreaId();
+        int currentIndex = current.HasValue
+            ? all.ToList().FindIndex(d => d.Id == current.Value)
+            : -1;
+        int nextIndex;
+        if (currentIndex < 0)
+        {
+            nextIndex = delta > 0 ? 0 : count - 1;
+        }
+        else
+        {
+            nextIndex = ((currentIndex + delta) % count + count) % count;
+        }
+        DrillTo(all[nextIndex].Id);
     }
 
     public void RebuildActiveArea()

@@ -11,6 +11,20 @@
         Width="1024"
         Height="720">
 
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
+        <KeyBinding Gesture="Alt+Left" Command="{Binding PrevAreaCommand}" />
+        <KeyBinding Gesture="Alt+Right" Command="{Binding NextAreaCommand}" />
+        <KeyBinding Gesture="Alt+B" Command="{Binding DrillByMnemonicCommand}" CommandParameter="B" />
+        <KeyBinding Gesture="Alt+P" Command="{Binding DrillByMnemonicCommand}" CommandParameter="P" />
+        <KeyBinding Gesture="Alt+R" Command="{Binding DrillByMnemonicCommand}" CommandParameter="R" />
+        <KeyBinding Gesture="Alt+U" Command="{Binding DrillByMnemonicCommand}" CommandParameter="U" />
+        <KeyBinding Gesture="Alt+S" Command="{Binding DrillByMnemonicCommand}" CommandParameter="S" />
+        <KeyBinding Gesture="Alt+N" Command="{Binding DrillByMnemonicCommand}" CommandParameter="N" />
+        <KeyBinding Gesture="Alt+T" Command="{Binding DrillByMnemonicCommand}" CommandParameter="T" />
+        <KeyBinding Gesture="Alt+C" Command="{Binding DrillByMnemonicCommand}" CommandParameter="C" />
+    </Window.KeyBindings>
+
     <Grid RowDefinitions="Auto,*,Auto"
           Background="{DynamicResource Token.Surface.Primary}">
 

@@ -190,6 +190,88 @@ public class MgmtUiWindowViewModelTests : IDisposable
         Assert.True(window.HasDrafts);
     }
 
+    [Fact]
+    public void MnemonicDrill_OpensTargetArea()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.DrillByMnemonicCommand.Execute("R");
+
+        Assert.IsType<RuleDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void MnemonicDrill_UnknownMnemonic_NoOp()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.DrillByMnemonicCommand.Execute("Z");
+
+        Assert.Null(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void NextArea_StepsThroughCardOrder()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.NextAreaCommand.Execute(null);
+        Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
+
+        window.NextAreaCommand.Execute(null);
+        Assert.IsType<ProfileDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void PrevArea_StepsBackThroughCardOrder()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.PrevAreaCommand.Execute(null);
+        Assert.IsType<CacheDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void PrevArea_FromDashboard_WrapsToLastArea()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        Assert.Null(window.ActiveDetail);
+        window.PrevAreaCommand.Execute(null);
+        Assert.IsType<CacheDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void Escape_FromArea_ReturnsToDashboard()
+    {
+        SeedConfig(MakeRule("first"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+
+        window.EscapeCommand.Execute(null);
+
+        Assert.Null(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void Escape_FromEntity_ReturnsToParentArea()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillToEntity(AreaId.Browsers, "firefox");
+
+        window.EscapeCommand.Execute(null);
+
+        Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
+    }
+
     private void SeedConfig(params Rule[] rules)
     {
         AppConfig seed = new() { Rules = [.. rules] };
