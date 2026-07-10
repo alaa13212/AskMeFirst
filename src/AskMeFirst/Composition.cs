@@ -4,6 +4,7 @@ using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Config;
+using AskMeFirst.Core.Inventory;
 using AskMeFirst.Core.Logging;
 using AskMeFirst.Core.Routing;
 using AskMeFirst.Picker.Services;
@@ -22,6 +23,14 @@ internal static partial class Composition
         services.AddSingleton<ILogger>(logger);
         services.AddSingleton(new PlatformInfo(platformName));
         RegisterPlatform(services);
+
+        services.AddSingleton<IDiscoveryCache>(sp =>
+        {
+            string configPath = sp.GetRequiredService<IConfigPathResolver>().DefaultConfigPath;
+            string dir = Path.GetDirectoryName(configPath) ?? ".";
+            string cachePath = Path.Combine(dir, "discovery-cache.json");
+            return new FileDiscoveryCache(cachePath, sp.GetRequiredService<ILogger>());
+        });
 
         services.AddSingleton<AppConfig>(sp => LoadAndValidateConfig(sp, logger));
 

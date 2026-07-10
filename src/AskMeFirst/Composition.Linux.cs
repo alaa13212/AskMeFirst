@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using AskMeFirst.Core.Abstractions;
 #if LINUX
+using AskMeFirst.Core.Inventory;
 using AskMeFirst.Platforms.Linux;
 #endif
 using AskMeFirst.Core.Config;
@@ -15,7 +16,10 @@ internal static partial class Composition
     [SupportedOSPlatform("freebsd")]
     private static void AddLinux(IServiceCollection services)
     {
-        services.AddSingleton<IBrowserInventory, LinuxBrowserInventory>();
+        services.AddSingleton<LinuxBrowserInventory>();
+        services.AddSingleton<IBrowserInventory>(sp => new CachingBrowserInventory(
+            sp.GetRequiredService<LinuxBrowserInventory>(),
+            sp.GetRequiredService<IDiscoveryCache>()));
         services.AddSingleton<IUrlLauncher, LinuxUrlLauncher>();
         services.AddSingleton<IBrowserProfileDetector, LinuxBrowserProfileDetector>();
         services.AddSingleton<IConfigPathResolver, LinuxConfigPathResolver>();

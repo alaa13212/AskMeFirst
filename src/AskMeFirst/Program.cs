@@ -52,6 +52,8 @@ internal static class Program
             .Register(new BenchCommand())
             .Register(new ListCommand())
             .Register(new PickCommand())
+            .Register(new InitCommand())
+            .Register(new RefreshCommand())
             .Register(new InstallCommand())
             .Register(new UninstallCommand());
     }

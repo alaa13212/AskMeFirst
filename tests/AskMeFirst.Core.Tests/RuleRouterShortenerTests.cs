@@ -26,7 +26,7 @@ public class RuleRouterShortenerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, new AppConfig(), unshortener, shorteners, picker);
 
-        int code = router.Route(new Uri("https://t.co/abc"), null, null);
+        int code = router.Route(new Uri("https://t.co/abc"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.Success, code);
         Assert.Single(picker.Requests);
@@ -50,7 +50,7 @@ public class RuleRouterShortenerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, new AppConfig(), unshortener, shorteners, picker);
 
-        router.Route(new Uri("https://example.com/article"), null, null);
+        _ = router.Route(new Uri("https://example.com/article"), null, null);
 
         Assert.Single(picker.Requests);
         Assert.Null(picker.Requests[0].UnshortenTask);
@@ -75,7 +75,7 @@ public class RuleRouterShortenerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, new AppConfig(), unshortener, shorteners, picker);
 
-        router.Route(new Uri("https://t.co/abc"), null, null);
+        _ = router.Route(new Uri("https://t.co/abc"), null, null);
 
         Task<string?>? task = picker.Requests[0].UnshortenTask;
         Assert.NotNull(task);
@@ -98,7 +98,7 @@ public class RuleRouterShortenerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, new AppConfig(), unshortener, shorteners, picker);
 
-        router.Route(new Uri("https://t.co/abc"), null, null);
+        _ = router.Route(new Uri("https://t.co/abc"), null, null);
 
         Task<string?>? task = picker.Requests[0].UnshortenTask;
         Assert.NotNull(task);

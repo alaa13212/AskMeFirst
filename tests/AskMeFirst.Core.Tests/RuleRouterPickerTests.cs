@@ -48,7 +48,7 @@ public class RuleRouterPickerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: false);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.NoRouteFound, code);
         Assert.Empty(picker.Requests);
@@ -67,7 +67,7 @@ public class RuleRouterPickerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.Success, code);
         Assert.Single(picker.Requests);
@@ -86,7 +86,7 @@ public class RuleRouterPickerTests
         BrowserLaunchingPickerLauncher picker = new(browser);
         RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.Success, code);
         Assert.Single(launcher.Launches);
@@ -106,7 +106,7 @@ public class RuleRouterPickerTests
         RecordingPickerLauncher picker = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, picker, logger, usePickerAsCatchAll: true);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.Success, code);
         Assert.Empty(launcher.Launches);

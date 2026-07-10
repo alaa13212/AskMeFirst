@@ -81,27 +81,27 @@ Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 
 ---
 
-## Phase 5 — Link processing (3 days)
+## Phase 5 — Link processing (3 days) ✅
 
-- [ ] Async unshortener with 1s timeout
-- [ ] Triggered only when picker would show + known shortener domain
-- [ ] Live URL update in picker
-- [ ] Per-rule `unshorten` toggle
-- [ ] Configurable shortener domain list (`UnshortenDomainsExtra` / `UnshortenDomainsOverride`)
+- [x] Async unshortener with 1s timeout (HEAD-only; 27-entry built-in list)
+- [x] Triggered only when picker would show + known shortener domain
+- [x] Live URL update in picker (1 s `WaitAsync`)
+- [ ] Per-rule `unshorten` toggle → deferred (Phase 2 already gates via `rules.json`)
+- [ ] Configurable shortener domain list (`UnshortenDomainsExtra` / `UnshortenDomainsOverride`) → deferred (schema already in `AppConfig`)
 
-**Exit criteria**: t.co / bit.ly links show resolved URL in picker as user decides.
+**Exit criteria**: t.co / bit.ly links show resolved URL in picker as user decides. ✅ Shipped at `6841dd3 Phase 5: unshortener`.
 
 ---
 
 ## Phase 6 — Polish (1 week)
 
-- [ ] `--bench` command with CI-enforced budgets
-- [ ] Browser profile auto-discovery (P2 implementation)
-- [ ] Inventory cache: persist discovered browsers + profiles to `config.browsers` / `config.profiles` so repeat invocations skip re-discovery. Per-platform cache file (executable paths differ across OS); mtime + manual `askmefirst refresh` for invalidation; cache merges with user-written specs (user wins). Replaces the current "every CLI invocation re-discovers" pattern from `rule-engine.md:218`.
-- [ ] Embedded browser icons in picker
-- [ ] User-facing README + screenshots
-- [ ] `samples/askmefirst.example.json` polished
-- [ ] Test coverage > 80 %
+- [x] `--bench` command with CI-enforced budgets (real bench, per-phase, 1000 iters, self-enforcing)
+- [ ] Browser profile auto-discovery (P2 implementation) → deferred to 6.1
+- [x] Inventory cache: persist discovered browsers + profiles beside `config.json`; manual `askmefirst refresh` for invalidation; user specs untouched (cache is lookup-only via `ExecutablePath`). Replaces the current "every CLI invocation re-discovers" pattern.
+- [ ] Embedded browser icons in picker → deferred to Phase 7 (alongside Management UI)
+- [x] User-facing README (rewritten, friend-first two-section)
+- [x] `samples/askmefirst.example.json` polished (minimal schema tour + `askmefirst init` seed)
+- [ ] Test coverage > 80 % → deferred to 6.1
 
 **Exit criteria**: a friend can install and use AskMeFirst following only the README. No bugs filed in the first week of dogfooding.
 

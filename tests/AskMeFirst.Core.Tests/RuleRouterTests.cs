@@ -138,7 +138,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://company.atlassian.net/x"), "chrome-personal", null);
+        int code = router.Route(new Uri("https://company.atlassian.net/x"), "chrome-personal", null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-personal", launcher.Launches[0].Browser.Id);
@@ -153,7 +153,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://example.com"), "lynx", null);
+        int code = router.Route(new Uri("https://example.com"), "lynx", null).ExitCode;
 
         Assert.Equal(3, code);
         Assert.Empty(launcher.Launches);
@@ -175,7 +175,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://company.atlassian.net/browse/X-1"), null, null);
+        int code = router.Route(new Uri("https://company.atlassian.net/browse/X-1"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("firefox-work", launcher.Launches[0].Browser.Id);
@@ -191,7 +191,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://github.com/foo/repo/pull/42"), null, null);
+        int code = router.Route(new Uri("https://github.com/foo/repo/pull/42"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-work", launcher.Launches[0].Browser.Id);
@@ -206,7 +206,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://youtube.com/watch?v=abc"), null, null);
+        int code = router.Route(new Uri("https://youtube.com/watch?v=abc"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-personal", launcher.Launches[0].Browser.Id);
@@ -221,7 +221,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://random-site.example/x"), null, null);
+        int code = router.Route(new Uri("https://random-site.example/x"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-work", launcher.Launches[0].Browser.Id);
@@ -236,7 +236,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://www.amazon.com/dp/123"), null, null);
+        int code = router.Route(new Uri("https://www.amazon.com/dp/123"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Equal("chrome-personal", launcher.Launches[0].Browser.Id);
@@ -256,7 +256,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal(5, code);
         Assert.Contains(logger.Errors, e => e.Contains("No rule matched"));
@@ -271,7 +271,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal(2, code);
         Assert.Empty(launcher.Launches);
@@ -286,7 +286,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://company.atlassian.net/x?utm_source=foo"), null, null);
+        int code = router.Route(new Uri("https://company.atlassian.net/x?utm_source=foo"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.DoesNotContain("utm_source", launcher.Launches[0].Url.ToString());
@@ -301,7 +301,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, TenRuleConfig());
 
-        int code = router.Route(new Uri("https://example.com/?utm_source=foo&q=keep"), "chrome-personal", null);
+        int code = router.Route(new Uri("https://example.com/?utm_source=foo&q=keep"), "chrome-personal", null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.DoesNotContain("utm_source", launcher.Launches[0].Url.ToString());
@@ -330,7 +330,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
-        int code = router.Route(new Uri("https://example.com/?utm_source=foo"), null, null);
+        int code = router.Route(new Uri("https://example.com/?utm_source=foo"), null, null).ExitCode;
 
         Assert.Equal(0, code);
         Assert.Contains("utm_source", launcher.Launches[0].Url.ToString());
@@ -353,7 +353,7 @@ public class RuleRouterTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(inv, launcher, profiles, logger, config);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal(4, code);
         Assert.Contains(logger.Errors, e => e.Contains("does-not-exist"));

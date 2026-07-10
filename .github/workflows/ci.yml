@@ -67,10 +67,9 @@ jobs:
             *)              ./publish/${{ matrix.rid }}/askmefirst --version ;;
           esac
 
-      - name: Cold-start benchmark
+      - name: Routing benchmark gate
         shell: bash
         run: |
-          set -e
           case "${{ matrix.os }}" in
             windows-latest)
               BIN=./publish/${{ matrix.rid }}/askmefirst.exe
@@ -79,10 +78,12 @@ jobs:
               BIN=./publish/${{ matrix.rid }}/askmefirst
               ;;
           esac
-          TIMEFORMAT='%R'
-          for i in 1 2 3; do
-            { time "$BIN" --version > /dev/null; } 2>&1 | tail -n 1
-          done
+          "$BIN" --bench
+          BENCH_EXIT=$?
+          if [ "$BENCH_EXIT" -ne 0 ]; then
+            echo "::error::Routing benchmark exited with code $BENCH_EXIT — a per-phase hard limit was breached."
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

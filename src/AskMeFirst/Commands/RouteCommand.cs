@@ -15,7 +15,7 @@ public sealed class RouteCommand : ICommand
         RuleRouter router = ctx.Resolve<RuleRouter>();
         string platformName = ctx.Resolve<PlatformInfo>().Name;
         Console.Error.WriteLine($"[info] platform: {platformName}");
-        return Task.FromResult(router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId));
+        return Task.FromResult(router.Route(parsed.Url, parsed.BrowserId, parsed.ProfileId).ExitCode);
     }
 
     public static RouteArgs ParseArgs(string[] args)
