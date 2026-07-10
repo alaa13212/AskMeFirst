@@ -11,12 +11,6 @@
         Width="1024"
         Height="720">
 
-    <Window.Resources>
-        <DataTemplate x:Key="AreaDetailTemplate" x:DataType="vm:AreaDetailViewModel">
-            <v:AreaDetailView Margin="24" />
-        </DataTemplate>
-    </Window.Resources>
-
     <Grid RowDefinitions="Auto,*,Auto"
           Background="{DynamicResource Token.Surface.Primary}">
 
@@ -80,8 +74,16 @@
             </Border>
 
             <Grid Grid.Column="1">
-                <ContentControl Content="{Binding ActiveDetail}"
-                                ContentTemplate="{StaticResource AreaDetailTemplate}" />
+                <ContentControl Content="{Binding ActiveDetail}">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:AreaDetailViewModel">
+                            <v:AreaDetailView Margin="24" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:EntityDetailViewModel">
+                            <v:EntityDetailView Margin="24" />
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
 
                 <ItemsControl ItemsSource="{Binding Areas}"
                               IsVisible="{Binding ActiveDetail, Converter={x:Static ObjectConverters.IsNull}}"

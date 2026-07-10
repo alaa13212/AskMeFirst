@@ -7,10 +7,11 @@ using CommunityToolkit.Mvvm.Input;
 
 public sealed partial class TreeNodeViewModel : ObservableObject
 {
-    public TreeNodeViewModel(string label, AreaId? targetArea, MgmtUiWindowViewModel root)
+    public TreeNodeViewModel(string label, AreaId? targetArea, string? targetEntityId, MgmtUiWindowViewModel root)
     {
         Label = label;
         TargetArea = targetArea;
+        TargetEntityId = targetEntityId;
         _root = root;
         Children = new ObservableCollection<TreeNodeViewModel>();
     }
@@ -19,9 +20,13 @@ public sealed partial class TreeNodeViewModel : ObservableObject
 
     public AreaId? TargetArea { get; }
 
+    public string? TargetEntityId { get; }
+
     public ObservableCollection<TreeNodeViewModel> Children { get; }
 
-    public bool IsLeaf => TargetArea.HasValue;
+    public bool IsLeaf => TargetArea.HasValue && TargetEntityId is null;
+
+    public bool IsEntityLeaf => TargetEntityId is not null;
 
     public bool HasChildren => Children.Count > 0;
 
@@ -31,7 +36,11 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [RelayCommand]
     private void Drill()
     {
-        if (TargetArea.HasValue)
+        if (TargetEntityId is not null && TargetArea.HasValue)
+        {
+            _root.DrillToEntity(TargetArea.Value, TargetEntityId);
+        }
+        else if (TargetArea.HasValue)
         {
             _root.DrillTo(TargetArea.Value);
         }

@@ -2,9 +2,11 @@ namespace AskMeFirst.MgmtUi.ViewModels;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 public sealed partial class MgmtUiWindowViewModel : ObservableObject
 {
@@ -26,11 +28,11 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
             Areas.Add(new AreaCardViewModel(descriptor, this));
         }
 
-        TreeNodeViewModel[] built = BuildTree(all, this);
-        Tree = new ObservableCollection<TreeNodeViewModel>(built);
+        Tree = new ObservableCollection<TreeNodeViewModel>();
+        RebuildTree();
         ActiveDetail = null;
 
-        _persister.Changed += (_, _) => RebuildActiveArea();
+        _persister.Changed += (_, _) => OnConfigChanged();
     }
 
     [ObservableProperty]
@@ -43,7 +45,7 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     private string _banner;
 
     [ObservableProperty]
-    private AreaDetailViewModel? _activeDetail;
+    private object? _activeDetail;
 
     public ObservableCollection<AreaCardViewModel> Areas { get; }
 
@@ -51,14 +53,36 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
 
     public bool IsDashboard => ActiveDetail is null;
 
-    public bool HasDrafts => ActiveDetail?.HasDrafts ?? false;
+    public bool HasDrafts
+    {
+        get
+        {
+            if (ActiveDetail is AreaDetailViewModel area)
+            {
+                return area.HasDrafts;
+            }
+            if (ActiveDetail is EntityDetailViewModel entity)
+            {
+                foreach (DraftableRowViewModel row in entity.Rows)
+                {
+                    if (row.HasDraft)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    }
 
     public void DrillTo(AreaId? areaId)
     {
         if (areaId.HasValue)
         {
-            ActiveDetail = CreateDetailViewModel(areaId.Value);
-            ActiveDetail.Rebuild(_persister);
+            AreaDetailViewModel detail = CreateAreaDetail(areaId.Value);
+            detail.Rebuild(_persister);
+            ActiveDetail = detail;
+            RebuildTree();
         }
         else
         {
@@ -68,18 +92,128 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasDrafts));
     }
 
-    public void RebuildActiveArea()
+    public void DrillToEntity(AreaId areaId, string entityId)
     {
-        AreaDetailViewModel? active = ActiveDetail;
-        if (active is null)
+        EntityDetailViewModel? entity = areaId switch
+        {
+            AreaId.Browsers => new BrowserEntityDetailViewModel(entityId, this, _persister),
+            AreaId.Profiles => new ProfileEntityDetailViewModel(entityId, this, _persister),
+            _ => null,
+        };
+        if (entity is null)
         {
             return;
         }
-        active.Rebuild(_persister);
+        entity.Rebuild(_persister);
+        ActiveDetail = entity;
+        RebuildTree();
+        OnPropertyChanged(nameof(IsDashboard));
         OnPropertyChanged(nameof(HasDrafts));
     }
 
-    private AreaDetailViewModel CreateDetailViewModel(AreaId areaId)
+    public void BackToArea(AreaId areaId)
+    {
+        DrillTo(areaId);
+    }
+
+    public void RebuildActiveArea()
+    {
+        if (ActiveDetail is AreaDetailViewModel area)
+        {
+            area.Rebuild(_persister);
+        }
+        else if (ActiveDetail is EntityDetailViewModel entity)
+        {
+            entity.Rebuild(_persister);
+        }
+        RebuildTree();
+        OnPropertyChanged(nameof(HasDrafts));
+    }
+
+    private void OnConfigChanged()
+    {
+        RebuildActiveArea();
+        RebuildTree();
+        OnPropertyChanged(nameof(HasDrafts));
+    }
+
+    private void RebuildTree()
+    {
+        Tree.Clear();
+        TreeNodeViewModel inventory = new("Inventory", null, null, this) { IsExpanded = true };
+        TreeNodeViewModel browsersNode = new("Browsers", AreaId.Browsers, null, this);
+        PopulateEntityChildren(browsersNode, AreaId.Browsers,
+            _persister.Current.Browsers.Select(b => (Id: b.Id, Label: b.DisplayName)));
+        inventory.Children.Add(browsersNode);
+        TreeNodeViewModel profilesNode = new("Profiles", AreaId.Profiles, null, this);
+        PopulateEntityChildren(profilesNode, AreaId.Profiles,
+            _persister.Current.Profiles.Select(p => (Id: p.Id, Label: p.DisplayName ?? p.Name ?? p.Id)));
+        inventory.Children.Add(profilesNode);
+
+        TreeNodeViewModel rulesNode = new("Rules", null, null, this);
+        rulesNode.Children.Add(new TreeNodeViewModel("Active", AreaId.Rules, null, this));
+
+        TreeNodeViewModel usageNode = new("Usage", null, null, this) { IsExpanded = true };
+        usageNode.Children.Add(new TreeNodeViewModel("Suggestions", AreaId.Suggestions, null, this));
+        usageNode.Children.Add(new TreeNodeViewModel("Recent picks", AreaId.Usage, null, this));
+
+        TreeNodeViewModel advanced = new("Advanced", null, null, this);
+        advanced.Children.Add(new TreeNodeViewModel("Unshortener", AreaId.Unshortener, null, this));
+        advanced.Children.Add(new TreeNodeViewModel("Tracking params", AreaId.Tracking, null, this));
+        advanced.Children.Add(new TreeNodeViewModel("Cache", AreaId.Cache, null, this));
+
+        Tree.Add(inventory);
+        Tree.Add(rulesNode);
+        Tree.Add(usageNode);
+        Tree.Add(advanced);
+
+        AutoExpandActiveArea();
+    }
+
+    private void PopulateEntityChildren(
+        TreeNodeViewModel parent,
+        AreaId areaId,
+        IEnumerable<(string Id, string Label)> entities)
+    {
+        foreach ((string Id, string Label) entity in entities)
+        {
+            parent.Children.Add(new TreeNodeViewModel(entity.Label, areaId, entity.Id, this));
+        }
+    }
+
+    private void AutoExpandActiveArea()
+    {
+        AreaId? activeArea = GetActiveAreaId();
+        if (activeArea is null)
+        {
+            return;
+        }
+        foreach (TreeNodeViewModel rootNode in Tree)
+        {
+            foreach (TreeNodeViewModel child in rootNode.Children)
+            {
+                if (child.TargetArea == activeArea && child.Children.Count > 0)
+                {
+                    child.IsExpanded = true;
+                }
+            }
+        }
+    }
+
+    private AreaId? GetActiveAreaId()
+    {
+        if (ActiveDetail is AreaDetailViewModel area)
+        {
+            return area.AreaId;
+        }
+        if (ActiveDetail is EntityDetailViewModel entity)
+        {
+            return entity.ParentArea;
+        }
+        return null;
+    }
+
+    private AreaDetailViewModel CreateAreaDetail(AreaId areaId)
     {
         return areaId switch
         {
@@ -93,26 +227,5 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
             AreaId.Cache => new CacheDetailViewModel(this, _persister),
             _ => new NoFormsDetailViewModel(areaId, this, $"Detail view for {areaId}."),
         };
-    }
-
-    private static TreeNodeViewModel[] BuildTree(IReadOnlyList<AreaDescriptor> all, MgmtUiWindowViewModel root)
-    {
-        TreeNodeViewModel inventory = new("Inventory", null, root) { IsExpanded = true };
-        inventory.Children.Add(new TreeNodeViewModel("Browsers", AreaId.Browsers, root));
-        inventory.Children.Add(new TreeNodeViewModel("Profiles", AreaId.Profiles, root));
-
-        TreeNodeViewModel rules = new("Rules", null, root);
-        rules.Children.Add(new TreeNodeViewModel("Active", AreaId.Rules, root));
-
-        TreeNodeViewModel usage = new("Usage", null, root) { IsExpanded = true };
-        usage.Children.Add(new TreeNodeViewModel("Suggestions", AreaId.Suggestions, root));
-        usage.Children.Add(new TreeNodeViewModel("Recent picks", AreaId.Usage, root));
-
-        TreeNodeViewModel advanced = new("Advanced", null, root);
-        advanced.Children.Add(new TreeNodeViewModel("Unshortener", AreaId.Unshortener, root));
-        advanced.Children.Add(new TreeNodeViewModel("Tracking params", AreaId.Tracking, root));
-        advanced.Children.Add(new TreeNodeViewModel("Cache", AreaId.Cache, root));
-
-        return new TreeNodeViewModel[] { inventory, rules, usage, advanced };
     }
 }

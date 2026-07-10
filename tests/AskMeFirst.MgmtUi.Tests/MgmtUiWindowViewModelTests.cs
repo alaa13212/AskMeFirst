@@ -50,7 +50,77 @@ public class MgmtUiWindowViewModelTests : IDisposable
         window.DrillTo(AreaId.Browsers);
 
         Assert.NotNull(window.ActiveDetail);
-        Assert.False(window.ActiveDetail!.HasRows);
+        AreaDetailViewModel detail = Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
+        Assert.False(detail.HasRows);
+    }
+
+    [Fact]
+    public void DrillToEntity_Browser_PopulatesEntityRow()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+
+        window.DrillToEntity(AreaId.Browsers, "firefox");
+
+        Assert.NotNull(window.ActiveDetail);
+        BrowserEntityDetailViewModel entity = Assert.IsType<BrowserEntityDetailViewModel>(window.ActiveDetail);
+        Assert.Single(entity.Rows);
+        BrowserRowViewModel row = (BrowserRowViewModel) entity.Rows[0];
+        Assert.Equal("Firefox", row.DisplayName);
+    }
+
+    [Fact]
+    public void DrillToEntity_Profile_PopulatesEntityRow()
+    {
+        SeedProfiles(MakeProfile("p1", "firefox", displayName: "Work"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+
+        window.DrillToEntity(AreaId.Profiles, "p1");
+
+        ProfileEntityDetailViewModel entity = Assert.IsType<ProfileEntityDetailViewModel>(window.ActiveDetail);
+        Assert.Single(entity.Rows);
+    }
+
+    [Fact]
+    public void BackToArea_RestoresAreaDetail()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        window.DrillToEntity(AreaId.Browsers, "firefox");
+        window.BackToArea(AreaId.Browsers);
+
+        Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void Tree_PopulatesBrowserLeaves_PerConfigEntry()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+
+        TreeNodeViewModel inventory = window.Tree[0];
+        TreeNodeViewModel browsersNode = inventory.Children[0];
+        Assert.Equal(2, browsersNode.Children.Count);
+        Assert.Equal("Firefox", browsersNode.Children[0].Label);
+        Assert.Equal("firefox", browsersNode.Children[0].TargetEntityId);
+    }
+
+    [Fact]
+    public void Tree_RebuildsOnConfigChange()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+
+        Assert.Single(window.Tree[0].Children[0].Children);
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
+        persister.Reload();
+
+        Assert.Equal(2, window.Tree[0].Children[0].Children.Count);
     }
 
     [Fact]
@@ -80,9 +150,38 @@ public class MgmtUiWindowViewModelTests : IDisposable
         window.DrillTo(AreaId.Rules);
 
         Assert.False(window.HasDrafts);
-        RuleRowViewModel firstRow = (RuleRowViewModel) window.ActiveDetail!.Rows[0];
+        RuleRowViewModel firstRow = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
         firstRow.Name = "edited";
         Assert.True(window.HasDrafts);
+    }
+
+    private void SeedBrowsers(params BrowserSpec[] browsers)
+    {
+        AppConfig seed = new() { Browsers = [.. browsers] };
+        ConfigLoader.WriteAtomic(seed, _configPath);
+    }
+
+    private void SeedProfiles(params ProfileSpec[] profiles)
+    {
+        AppConfig seed = new() { Profiles = [.. profiles] };
+        ConfigLoader.WriteAtomic(seed, _configPath);
+    }
+
+    private static BrowserSpec BrowserSpecFor(string id, string displayName)
+    {
+        return new BrowserSpec { Id = id, DisplayName = displayName, Executable = "auto" };
+    }
+
+    private static ProfileSpec MakeProfile(string id, string browserId, string displayName)
+    {
+        return new ProfileSpec
+        {
+            Id = id,
+            BrowserId = browserId,
+            Name = id,
+            DisplayName = displayName,
+            Pinned = false,
+        };
     }
 
     private void SeedConfig(params Rule[] rules)
