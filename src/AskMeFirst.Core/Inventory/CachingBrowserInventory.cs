@@ -7,7 +7,6 @@ public sealed class CachingBrowserInventory(
     IBrowserInventory inner,
     IDiscoveryCache cache) : IBrowserInventory
 {
-    private readonly object gate = new();
     private IReadOnlyList<Browser>? snapshot;
 
     public IReadOnlyList<Browser> Discover()
@@ -16,23 +15,17 @@ public sealed class CachingBrowserInventory(
         {
             return snapshot;
         }
-        lock (gate)
+        IReadOnlyList<Browser>? cached = cache.TryRead();
+        if (cached is not null)
         {
-            if (snapshot is not null)
-            {
-                return snapshot;
-            }
-            IReadOnlyList<Browser>? cached = cache.TryRead();
-            if (cached is not null)
-            {
-                snapshot = cached;
-                return snapshot;
-            }
-            IReadOnlyList<Browser> fresh = inner.Discover();
-            cache.Write(fresh);
-            snapshot = fresh;
-            return snapshot;
+            snapshot = cached;
         }
+        else
+        {
+            snapshot = inner.Discover();
+            cache.Write(snapshot);
+        }
+        return snapshot;
     }
 
     public Browser? FindById(string id)
@@ -42,12 +35,8 @@ public sealed class CachingBrowserInventory(
 
     public IReadOnlyList<Browser> Refresh()
     {
-        lock (gate)
-        {
-            IReadOnlyList<Browser> fresh = inner.Refresh();
-            cache.Write(fresh);
-            snapshot = fresh;
-            return snapshot;
-        }
+        snapshot = inner.Refresh();
+        cache.Write(snapshot);
+        return snapshot;
     }
 }

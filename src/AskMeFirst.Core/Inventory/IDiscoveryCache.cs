@@ -7,6 +7,4 @@ public interface IDiscoveryCache
     IReadOnlyList<Browser>? TryRead();
 
     void Write(IReadOnlyList<Browser> browsers);
-
-    DateTimeOffset? LastGenerated { get; }
 }

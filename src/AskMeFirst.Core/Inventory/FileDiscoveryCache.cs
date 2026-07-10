@@ -10,8 +10,6 @@ public sealed class FileDiscoveryCache(
     string cacheFilePath,
     ILogger logger) : IDiscoveryCache
 {
-    public DateTimeOffset? LastGenerated { get; private set; }
-
     public IReadOnlyList<Browser>? TryRead()
     {
         if (!File.Exists(cacheFilePath))
@@ -28,13 +26,6 @@ public sealed class FileDiscoveryCache(
             {
                 return null;
             }
-            if (cached.Version != CurrentVersion)
-            {
-                logger.LogWarn($"discovery-cache: version {cached.Version} unsupported, expected {CurrentVersion} — ignoring.");
-                return null;
-            }
-
-            LastGenerated = cached.GeneratedAt;
             return cached.Browsers.Select(Materialize).ToList();
         }
         catch (Exception ex)
@@ -54,23 +45,17 @@ public sealed class FileDiscoveryCache(
                 Directory.CreateDirectory(dir);
             }
 
-            CachedInventory payload = new(
-                Version: CurrentVersion,
-                GeneratedAt: DateTimeOffset.UtcNow,
-                Browsers: browsers.Select(Project).ToList());
+            CachedInventory payload = new(DateTimeOffset.UtcNow, browsers.Select(Project).ToList());
 
             using FileStream stream = File.Create(cacheFilePath);
             JsonSerializer.Serialize(
                 stream, payload, DiscoveryCacheJsonContext.Default.CachedInventory);
-            LastGenerated = payload.GeneratedAt;
         }
         catch (Exception ex)
         {
             logger.LogWarn($"discovery-cache: write failed ({ex.Message}) — continuing without cache.");
         }
     }
-
-    private const int CurrentVersion = 1;
 
     private static CachedBrowserDto Project(Browser browser) => new(
         Id: browser.Id,

@@ -87,16 +87,4 @@ public class FileDiscoveryCacheTests : IDisposable
         Assert.NotNull(result);
         Assert.Empty(result);
     }
-
-    [Fact]
-    public void Write_PopulatesLastGenerated()
-    {
-        string path = Path.Combine(tempDir, "cache.json");
-        FileDiscoveryCache sut = new(path, new FakeLogger());
-
-        Assert.Null(sut.LastGenerated);
-        sut.Write([TestBrowser.Make("chrome", "Chrome", "/usr/bin/google-chrome")]);
-
-        Assert.NotNull(sut.LastGenerated);
-    }
 }
