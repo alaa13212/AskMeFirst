@@ -24,7 +24,11 @@ public sealed class InitCommand : ICommand
             return Task.FromResult(0);
         }
 
-        string sample = LoadEmbeddedSample();
+        Assembly assembly = typeof(InitCommand).Assembly;
+        using Stream stream = assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException($"Embedded resource '{ResourceName}' not found.");
+        string sample = new StreamReader(stream).ReadToEnd();
+
         string? dir = Path.GetDirectoryName(configPath);
         if (!string.IsNullOrEmpty(dir))
         {
@@ -33,15 +37,5 @@ public sealed class InitCommand : ICommand
         File.WriteAllText(configPath, sample);
         Console.WriteLine($"Wrote {configPath}");
         return Task.FromResult(0);
-    }
-
-    private static string LoadEmbeddedSample()
-    {
-        Assembly assembly = typeof(InitCommand).Assembly;
-        using Stream stream = assembly.GetManifestResourceStream(ResourceName)
-            ?? throw new InvalidOperationException(
-                $"Embedded resource '{ResourceName}' not found in {assembly.GetName().Name}.");
-        using StreamReader reader = new(stream);
-        return reader.ReadToEnd();
     }
 }

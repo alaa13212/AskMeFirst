@@ -14,7 +14,6 @@ namespace AskMeFirst.Commands;
 public sealed class BenchCommand : ICommand
 {
     private const int Iterations = 1000;
-    private const int WarmupIterations = 5;
 
     private static readonly BenchBudget ConfigLoadBudget =
         new("cold_config_load", TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(25));
@@ -33,21 +32,16 @@ public sealed class BenchCommand : ICommand
     {
         ILogger logger = ctx.Resolve<ILogger>();
         Stopwatch configLoadSw = Stopwatch.StartNew();
-        BenchHarness harness = BenchHarness.Build(logger);
+        RuleRouter router = BuildBenchRouter(logger);
         configLoadSw.Stop();
-        TimeSpan configLoadMs = configLoadSw.Elapsed;
-
-        for (int i = 0; i < WarmupIterations; i++)
-        {
-            harness.Router.Route(harness.Url, null, null);
-        }
+        Uri url = new("https://example.com/abc");
 
         List<TimeSpan> ruleEval = new(Iterations);
         List<TimeSpan> inventory = new(Iterations);
         List<TimeSpan> total = new(Iterations);
         for (int i = 0; i < Iterations; i++)
         {
-            RouteResult result = harness.Router.Route(harness.Url, null, null);
+            RouteResult result = router.Route(url, null, null);
             ruleEval.Add(result.Timings.RuleEval);
             inventory.Add(result.Timings.InventoryLoad);
             total.Add(result.Timings.Total);
@@ -56,44 +50,38 @@ public sealed class BenchCommand : ICommand
         Console.WriteLine($"{ProgramInfo.ExecutableName} --bench");
         Console.WriteLine($"  iterations: {Iterations}");
         bool ok = true;
-        ok &= ReportSingle("cold_config_load", configLoadMs, ConfigLoadBudget);
+        ok &= Report("cold_config_load", [configLoadSw.Elapsed], ConfigLoadBudget);
         ok &= Report("cold_rule_eval", ruleEval, RuleEvalBudget);
         ok &= Report("cold_inventory", inventory, InventoryBudget);
         ok &= Report("warm_total", total, TotalBudget);
         return Task.FromResult(ok ? 0 : 1);
     }
 
-    private static bool ReportSingle(string phaseName, TimeSpan sample, BenchBudget budget)
-    {
-        Console.WriteLine(
-            $"  {phaseName,-15} sample={sample.TotalMilliseconds,7:F2}ms          budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
-        if (sample > budget.HardLimit)
-        {
-            Console.WriteLine(
-                $"  BENCH FAIL: {phaseName} = {sample.TotalMilliseconds:F2}ms exceeds hard limit {budget.HardLimit.TotalMilliseconds:F0}ms");
-            return false;
-        }
-        return true;
-    }
-
     private static bool Report(string phaseName, List<TimeSpan> samples, BenchBudget budget)
     {
+        bool single = samples.Count == 1;
+        TimeSpan headline = single ? samples[0] : Percentile(samples, 0.95);
+        double headlineMs = headline.TotalMilliseconds;
+        string headlineLabel = single ? "sample" : "p95";
         TimeSpan p50 = Percentile(samples, 0.50);
-        TimeSpan p95 = Percentile(samples, 0.95);
-        TimeSpan max = TimeSpan.Zero;
-        foreach (TimeSpan s in samples)
+        TimeSpan max = samples.Max();
+        Console.WriteLine(
+            single
+                ? $"  {phaseName,-15} sample={headlineMs,7:F2}ms          budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms"
+                : $"  {phaseName,-15} p50={p50.TotalMilliseconds,6:F2}ms  p95={headlineMs,6:F2}ms  max={max.TotalMilliseconds,7:F2}ms  budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
+        if (single)
         {
-            if (s > max)
+            if (samples[0] > budget.HardLimit)
             {
-                max = s;
+                Console.WriteLine(
+                    $"  BENCH FAIL: {phaseName} sample={samples[0].TotalMilliseconds:F2}ms exceeds hard limit {budget.HardLimit.TotalMilliseconds:F0}ms");
+                return false;
             }
         }
-        Console.WriteLine(
-            $"  {phaseName,-15} p50={p50.TotalMilliseconds,6:F2}ms  p95={p95.TotalMilliseconds,6:F2}ms  max={max.TotalMilliseconds,7:F2}ms  budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
-        if (p95 > budget.HardLimit)
+        else if (headline > budget.HardLimit)
         {
             Console.WriteLine(
-                $"  BENCH FAIL: {phaseName} p95={p95.TotalMilliseconds:F2}ms exceeds hard limit {budget.HardLimit.TotalMilliseconds:F0}ms");
+                $"  BENCH FAIL: {phaseName} p95={headlineMs:F2}ms exceeds hard limit {budget.HardLimit.TotalMilliseconds:F0}ms");
             return false;
         }
         return true;
@@ -109,78 +97,59 @@ public sealed class BenchCommand : ICommand
 
     private sealed record BenchBudget(string Name, TimeSpan Target, TimeSpan HardLimit);
 
-    private sealed class BenchHarness
+    private static RuleRouter BuildBenchRouter(ILogger logger)
     {
-        public required RuleRouter Router { get; init; }
-
-        public required BenchInventory Inventory { get; init; }
-
-        public required Uri Url { get; init; }
-
-        public static BenchHarness Build(ILogger logger)
+        BenchInventory inventory = new();
+        inventory.Browsers.Add(new Browser
         {
-            Browser benchBrowser = new()
-            {
-                Id = "bench",
-                DisplayName = "Bench",
-                ExecutablePath = OperatingSystem.IsWindows() ? @"C:\bench\bench.exe" : "/dev/null",
-                LaunchStrategy = DefaultLaunchStrategy.Instance,
-            };
+            Id = "bench",
+            DisplayName = "Bench",
+            ExecutablePath = "/dev/null",
+            LaunchStrategy = DefaultLaunchStrategy.Instance,
+        });
 
-            BenchInventory inventory = new();
-            inventory.Browsers.Add(benchBrowser);
+        AppConfig config = new()
+        {
+            Settings = new Settings(),
+            Browsers = [new BrowserSpec { Id = "bench", DisplayName = "Bench", Executable = "/dev/null" }],
+            Profiles = [],
+            Rules =
+            [
+                new Rule
+                {
+                    Name = "bench-match",
+                    Priority = 1,
+                    When = new RuleWhen { UrlMatchesAny = ["example.com"] },
+                    Then = new RuleThen { Browser = "bench", StripTracking = false },
+                },
+            ],
+        };
 
-            AppConfig config = new()
-            {
-                Settings = new Settings(),
-                Browsers = [new BrowserSpec { Id = "bench", DisplayName = "Bench", Executable = benchBrowser.ExecutablePath }],
-                Profiles = [],
-                Rules =
-                [
-                    new Rule
-                    {
-                        Name = "bench-match",
-                        Priority = 1,
-                        When = new RuleWhen { UrlMatchesAny = ["example.com"] },
-                        Then = new RuleThen { Browser = "bench", StripTracking = false },
-                    },
-                ],
-            };
+        PredicateEvaluator predicateEvaluator = new(RoutingDefaults.Matchers());
+        IReadOnlyList<ITargetResolver> resolvers = RoutingDefaults.Resolvers(config, predicateEvaluator);
+        TrackingStripper stripper = new(config);
+        ProfileResolver profileResolver = new(new NoProfilesDetector(), config.Profiles, logger);
+        IRoutingExecutor executor = new RoutingExecutor(inventory, profileResolver, stripper, config);
 
-            PredicateEvaluator predicateEvaluator = new(RoutingDefaults.Matchers());
-            IReadOnlyList<ITargetResolver> resolvers = RoutingDefaults.Resolvers(config, predicateEvaluator);
-            TrackingStripper stripper = new(config);
-            ProfileResolver profileResolver = new(new NoProfilesDetector(), config.Profiles, logger);
-            IRoutingExecutor executor = new RoutingExecutor(inventory, profileResolver, stripper, config);
+        IUnshortenTaskBuilder unshorten = new UnshortenTaskBuilder(
+            new NoOpUnshortener(),
+            new StaticShortenerDomainList([]),
+            stripper,
+            logger);
 
-            IUnshortenTaskBuilder unshorten = new UnshortenTaskBuilder(
-                new NoOpUnshortener(),
-                new StaticShortenerDomainList([]),
-                stripper,
-                logger);
-
-            BenchLauncher launcher = new();
-            RuleRouter router = new(
-                resolvers,
-                executor,
-                inventory,
-                new NoOpPickerLauncher(logger),
-                usePickerAsCatchAll: false,
-                profileSpecs: config.Profiles,
-                new NoProfilesDetector(),
-                launcher,
-                logger,
-                new NullNotifier(),
-                TimeProvider.System,
-                unshorten);
-
-            return new BenchHarness
-            {
-                Router = router,
-                Inventory = inventory,
-                Url = new Uri("https://example.com/abc"),
-            };
-        }
+        return new RuleRouter(
+            resolvers,
+            executor,
+            inventory,
+            new NoOpPickerLauncher(logger),
+            usePickerAsCatchAll: false,
+            profileSpecs: config.Profiles,
+            new NoProfilesDetector(),
+            new BenchLauncher(),
+            logger,
+            new NullNotifier(),
+            TimeProvider.System,
+            unshorten);
     }
 
     private sealed class BenchInventory : IBrowserInventory
