@@ -139,9 +139,7 @@ public class RuleRouterPickerTests
             logger,
             new NullNotifier(),
             new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero)),
-            new FakeUnshortener(),
-            new FakeShortenerDomainList(),
-            stripper);
+            new FakeUnshortenTaskBuilder());
     }
 
     private sealed class BrowserLaunchingPickerLauncher(Browser browser) : IPickerLauncher

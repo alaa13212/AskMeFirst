@@ -212,3 +212,15 @@ internal sealed class FakeShortenerDomainList : IShortenerDomainList
 
     public bool IsKnown(string host) => Hosts.Contains(host);
 }
+
+internal sealed class FakeUnshortenTaskBuilder : IUnshortenTaskBuilder
+{
+    public List<Uri> BuildCalls { get; } = [];
+    public Func<Uri, Task<string?>?>? BuildResult { get; set; }
+
+    public Task<string?>? Build(Uri url)
+    {
+        BuildCalls.Add(url);
+        return BuildResult is null ? null : BuildResult(url);
+    }
+}

@@ -1,6 +1,5 @@
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
-using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Routing;
 
 namespace AskMeFirst.Commands;
@@ -31,16 +30,12 @@ public sealed class PickCommand : ICommand
         IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
         IBrowserProfileDetector profiles = ctx.Resolve<IBrowserProfileDetector>();
         IPickerLauncher pickerLauncher = ctx.Resolve<IPickerLauncher>();
-        IUnshortener unshortener = ctx.Resolve<IUnshortener>();
-        IShortenerDomainList shortenerDomains = ctx.Resolve<IShortenerDomainList>();
-        TrackingStripper stripper = ctx.Resolve<TrackingStripper>();
+        IUnshortenTaskBuilder unshortenTasks = ctx.Resolve<IUnshortenTaskBuilder>();
 
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(inventory.Discover(), profiles);
-        Task<string?>? unshortenTask = BuildUnshortenTask(url, unshortener, shortenerDomains, stripper, logger);
-
         PickerRequest request = new(
             OriginalUrl: url,
-            UnshortenTask: unshortenTask,
+            UnshortenTask: unshortenTasks.Build(url),
             AvailableBrowsers: options);
 
         logger.LogInfo($"Opening picker for {url}");
@@ -52,51 +47,6 @@ public sealed class PickCommand : ICommand
             Launched l => LaunchAndReturn(l, ctx),
             _ => Task.FromResult(99),
         };
-    }
-
-    private static Task<string?>? BuildUnshortenTask(
-        Uri url,
-        IUnshortener unshortener,
-        IShortenerDomainList shortenerDomains,
-        TrackingStripper stripper,
-        ILogger logger)
-    {
-        if (string.IsNullOrEmpty(url.Host) || !shortenerDomains.IsKnown(url.Host))
-        {
-            return null;
-        }
-        return ResolveAndStripAsync(url, unshortener, stripper, logger, CancellationToken.None);
-    }
-
-    private static async Task<string?> ResolveAndStripAsync(
-        Uri url,
-        IUnshortener unshortener,
-        TrackingStripper stripper,
-        ILogger logger,
-        CancellationToken ct)
-    {
-        try
-        {
-            string? resolved = await unshortener.ResolveAsync(url, ct).ConfigureAwait(false);
-            if (resolved is null)
-            {
-                return null;
-            }
-            if (!Uri.TryCreate(resolved, UriKind.Absolute, out Uri? resolvedUri))
-            {
-                return null;
-            }
-            return stripper.Strip(resolvedUri).ToString();
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarn($"Unshorten failed for {url}: {ex.Message}");
-            return null;
-        }
     }
 
     private static Task<int> LaunchAndReturn(Launched launched, CommandContext ctx)

@@ -120,6 +120,7 @@ public class RuleRouterShortenerTests
         ProfileResolver profileResolver = new(profiles, appConfig.Profiles, logger);
         TrackingStripper stripper = new(appConfig);
         IRoutingExecutor executor = new RoutingExecutor(inv, profileResolver, stripper, appConfig);
+        IUnshortenTaskBuilder unshortenTasks = new UnshortenTaskBuilder(unshortener, shorteners, stripper, logger);
         return new RuleRouter(
             resolvers,
             executor,
@@ -132,9 +133,7 @@ public class RuleRouterShortenerTests
             logger,
             new NullNotifier(),
             new FixedTimeProvider(Monday10amUtc),
-            unshortener,
-            shorteners,
-            stripper);
+            unshortenTasks);
     }
 
     private sealed class RecordingPickerLauncher : IPickerLauncher

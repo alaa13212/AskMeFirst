@@ -37,9 +37,7 @@ public class RuleRouterTests
             logger,
             new NullNotifier(),
             new FixedTimeProvider(now ?? Monday10amUtc),
-            new FakeUnshortener(),
-            new FakeShortenerDomainList(),
-            stripper);
+            new FakeUnshortenTaskBuilder());
     }
 
     private static AppConfig TenRuleConfig()

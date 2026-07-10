@@ -44,6 +44,11 @@ internal static partial class Composition
             new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 10 },
             TimeSpan.FromSeconds(1),
             sp.GetRequiredService<ILogger>()));
+        services.AddSingleton<IUnshortenTaskBuilder>(sp => new UnshortenTaskBuilder(
+            sp.GetRequiredService<IUnshortener>(),
+            sp.GetRequiredService<IShortenerDomainList>(),
+            sp.GetRequiredService<TrackingStripper>(),
+            sp.GetRequiredService<ILogger>()));
         services.AddSingleton<IConfigWriter>(sp => new JsonConfigWriter(
             sp.GetRequiredService<IConfigPathResolver>().DefaultConfigPath,
             sp.GetRequiredService<ILogger>()));
@@ -67,9 +72,7 @@ internal static partial class Composition
             sp.GetRequiredService<ILogger>(),
             sp.GetRequiredService<INotifier>(),
             sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<IUnshortener>(),
-            sp.GetRequiredService<IShortenerDomainList>(),
-            sp.GetRequiredService<TrackingStripper>()));
+            sp.GetRequiredService<IUnshortenTaskBuilder>()));
 
         foreach (ICommand cmd in registry.All())
         {

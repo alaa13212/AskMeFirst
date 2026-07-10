@@ -1,14 +1,16 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using AskMeFirst.Core.Abstractions;
 
 namespace AskMeFirst.Core.Routing;
 
-public sealed class HttpUnshortener : IUnshortener, IDisposable
+[SuppressMessage("Design", "CA1001", Justification = "DI singleton; lifetime is the app lifetime.")]
+public sealed class HttpUnshortener : IUnshortener
 {
     private const string UserAgent = "AskMeFirst/1.0 (Unshortening)";
 
     private readonly HttpClient client;
     private readonly ILogger logger;
-    private bool _disposed;
 
     public HttpUnshortener(HttpMessageHandler handler, TimeSpan timeout, ILogger logger)
     {
@@ -36,18 +38,8 @@ public sealed class HttpUnshortener : IUnshortener, IDisposable
         }
         catch (HttpRequestException ex)
         {
-            logger.LogWarn($"Unshorten failed for {url}: {ex.Message}");
+            logger.LogWarn(FormattableString.Invariant($"Unshorten failed for {url}: {ex.Message}"));
             return null;
         }
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        _disposed = true;
-        client.Dispose();
     }
 }

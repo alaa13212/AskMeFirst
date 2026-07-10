@@ -18,9 +18,7 @@ public sealed class RuleRouter(
     ILogger logger,
     INotifier notifier,
     TimeProvider timeProvider,
-    IUnshortener unshortener,
-    IShortenerDomainList shortenerDomains,
-    TrackingStripper stripper)
+    IUnshortenTaskBuilder unshortenTasks)
 {
     public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
     {
@@ -88,46 +86,10 @@ private int LogAndLaunch(Success success, Uri url)
         IReadOnlyList<Browser> browsers = browserInventory.Discover();
         IReadOnlyList<PickerBrowserOption> options = PickerOptions.Build(browsers, profileDetector);
         IReadOnlyList<PickerBrowserOption> filtered = PinnedProfileFilter.Filter(options, profileSpecs);
-        Task<string?>? unshortenTask = BuildUnshortenTask(url);
         return new PickerRequest(
             OriginalUrl: url,
-            UnshortenTask: unshortenTask,
+            UnshortenTask: unshortenTasks.Build(url),
             AvailableBrowsers: filtered);
-    }
-
-    private Task<string?>? BuildUnshortenTask(Uri url)
-    {
-        if (string.IsNullOrEmpty(url.Host) || !shortenerDomains.IsKnown(url.Host))
-        {
-            return null;
-        }
-        return ResolveAndStripAsync(url, CancellationToken.None);
-    }
-
-    private async Task<string?> ResolveAndStripAsync(Uri url, CancellationToken ct)
-    {
-        try
-        {
-            string? resolved = await unshortener.ResolveAsync(url, ct).ConfigureAwait(false);
-            if (resolved is null)
-            {
-                return null;
-            }
-            if (!Uri.TryCreate(resolved, UriKind.Absolute, out Uri? resolvedUri))
-            {
-                return null;
-            }
-            return stripper.Strip(resolvedUri).ToString();
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarn($"Unshorten failed for {url}: {ex.Message}");
-            return null;
-        }
     }
 
     private int HandlePicker(PickerRequest request, Uri url)

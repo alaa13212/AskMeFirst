@@ -14,7 +14,7 @@ public class HttpUnshortenerTests
         {
             RequestMessage = finalReq,
         });
-        using HttpUnshortener sut = Build(handler);
+        HttpUnshortener sut = Build(handler);
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/abc"), CancellationToken.None);
 
@@ -24,7 +24,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_SuccessWithoutRedirect_ReturnsOriginalUrl()
     {
-        using HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
+        HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/abc"), CancellationToken.None);
 
@@ -34,7 +34,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_NotFound_ReturnsNull()
     {
-        using HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)));
+        HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)));
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/missing"), CancellationToken.None);
 
@@ -44,7 +44,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_HeadBlocked_ReturnsNull()
     {
-        using HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.MethodNotAllowed)));
+        HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.MethodNotAllowed)));
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/blocked"), CancellationToken.None);
 
@@ -54,7 +54,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_ServerError_ReturnsNull()
     {
-        using HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)));
+        HttpUnshortener sut = Build(new RecordingHandler(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)));
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/error"), CancellationToken.None);
 
@@ -64,7 +64,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_Cancelled_ReturnsNull()
     {
-        using HttpUnshortener sut = Build(new BlockingHandler(), TimeSpan.FromSeconds(10));
+        HttpUnshortener sut = Build(new BlockingHandler(), TimeSpan.FromSeconds(10));
         using CancellationTokenSource cts = new();
 
         Task<string?> task = sut.ResolveAsync(new Uri("https://t.co/slow"), cts.Token);
@@ -77,7 +77,7 @@ public class HttpUnshortenerTests
     [Fact]
     public async Task ResolveAsync_NetworkError_ReturnsNull()
     {
-        using HttpUnshortener sut = Build(new ThrowingHandler(new HttpRequestException("connection refused")));
+        HttpUnshortener sut = Build(new ThrowingHandler(new HttpRequestException("connection refused")));
 
         string? result = await sut.ResolveAsync(new Uri("https://t.co/down"), CancellationToken.None);
 
@@ -88,7 +88,7 @@ public class HttpUnshortenerTests
     public async Task ResolveAsync_SetsUserAgent()
     {
         RecordingHandler handler = new(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
-        using HttpUnshortener sut = Build(handler);
+        HttpUnshortener sut = Build(handler);
 
         await sut.ResolveAsync(new Uri("https://t.co/abc"), CancellationToken.None);
 
@@ -100,7 +100,7 @@ public class HttpUnshortenerTests
     public async Task ResolveAsync_UsesHeadMethod()
     {
         RecordingHandler handler = new(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
-        using HttpUnshortener sut = Build(handler);
+        HttpUnshortener sut = Build(handler);
 
         await sut.ResolveAsync(new Uri("https://t.co/abc"), CancellationToken.None);
 
