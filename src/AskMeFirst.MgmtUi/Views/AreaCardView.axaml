@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+             x:Class="AskMeFirst.MgmtUi.Views.AreaCardView"
+             x:DataType="vm:AreaCardViewModel"
+             x:CompileBindings="True">
+
+    <Border Padding="16"
+            BorderBrush="{DynamicResource Token.Border.Default}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Background="{DynamicResource Token.Surface.Card}">
+        <Border.Styles>
+            <Style Selector="Border:pointerover">
+                <Setter Property="BorderBrush" Value="{DynamicResource Token.Accent.Default}" />
+            </Style>
+        </Border.Styles>
+        <StackPanel Spacing="6">
+            <Border Width="36" Height="36"
+                    CornerRadius="6"
+                    Background="{DynamicResource Token.Surface.Elevated}"
+                    HorizontalAlignment="Left">
+                <TextBlock Text="{Binding IconGlyph}"
+                           FontSize="18"
+                           Foreground="{DynamicResource Token.Accent.Default}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="{Binding Title}"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Summary}"
+                       FontSize="11"
+                       Foreground="{DynamicResource Token.Text.Dim}"
+                       TextWrapping="Wrap" />
+            <Button Content="Open"
+                    Command="{Binding DrillCommand}"
+                    HorizontalAlignment="Left"
+                    Margin="0,4,0,0" />
+        </StackPanel>
+    </Border>
+</UserControl>

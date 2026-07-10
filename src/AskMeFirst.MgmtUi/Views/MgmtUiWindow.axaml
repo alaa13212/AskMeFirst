@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+        xmlns:v="using:AskMeFirst.MgmtUi.Views"
         x:Class="AskMeFirst.MgmtUi.Views.MgmtUiWindow"
         x:DataType="vm:MgmtUiWindowViewModel"
         x:CompileBindings="True"
@@ -9,6 +10,12 @@
         ShowInTaskbar="True"
         Width="1024"
         Height="720">
+
+    <Window.Resources>
+        <DataTemplate x:Key="AreaDetailTemplate" x:DataType="vm:AreaDetailViewModel">
+            <v:AreaDetailView Margin="24" />
+        </DataTemplate>
+    </Window.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto"
           Background="{DynamicResource Token.Surface.Primary}">
@@ -24,32 +31,73 @@
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 <TextBlock DockPanel.Dock="Right"
-                           Text="v0.2.0 · config"
+                           Text="{Binding VersionLabel}"
                            FontSize="11"
                            Foreground="{DynamicResource Token.Text.Dim}"
                            VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="24">
-            <Border Padding="20"
+        <Grid Grid.Row="1" ColumnDefinitions="260,*">
+
+            <Border Grid.Column="0"
                     BorderBrush="{DynamicResource Token.Border.Default}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    Background="{DynamicResource Token.Surface.Card}">
-                <StackPanel Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="{Binding Title}"
-                               FontSize="20"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding BodyMessage}"
-                               FontSize="13"
-                               Foreground="{DynamicResource Token.Text.Dim}"
-                               TextWrapping="Wrap"
-                               MaxWidth="520"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
+                    BorderThickness="0,0,1,0"
+                    Background="{DynamicResource Token.Surface.Card}"
+                    Padding="12">
+                <ScrollViewer>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Status"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Token.Text.Dim}"
+                                   Margin="4,0,0,4" />
+                        <Border Padding="10,8"
+                                BorderBrush="{DynamicResource Token.Accent.SoftBg}"
+                                BorderThickness="2,0,0,0"
+                                Background="{DynamicResource Token.Surface.Card}"
+                                CornerRadius="4"
+                                Margin="0,0,0,12">
+                            <TextBlock Text="{Binding Banner}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Token.Text.Dim}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <TextBlock Text="Areas"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Token.Text.Dim}"
+                                   Margin="4,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding Tree}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TreeNodeViewModel">
+                                    <v:TreeNodeView />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
+
+            <Grid Grid.Column="1">
+                <ContentControl Content="{Binding ActiveDetail}"
+                                ContentTemplate="{StaticResource AreaDetailTemplate}" />
+
+                <ItemsControl ItemsSource="{Binding Areas}"
+                              IsVisible="{Binding ActiveDetail, Converter={x:Static ObjectConverters.IsNull}}"
+                              Margin="24">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AreaCardViewModel">
+                            <v:AreaCardView Width="240" Margin="0,0,16,16" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
         </Grid>
 
         <Border Grid.Row="2"
@@ -57,7 +105,7 @@
                 BorderBrush="{DynamicResource Token.Border.Default}"
                 BorderThickness="0,1,0,0"
                 Background="{DynamicResource Token.Surface.Card}">
-            <TextBlock Text="Phase 7 — scaffold commit"
+            <TextBlock Text="Phase 7 — MgmtUi scaffold + dashboard layout + drill behavior."
                        FontSize="11"
                        Foreground="{DynamicResource Token.Text.Dim}" />
         </Border>
