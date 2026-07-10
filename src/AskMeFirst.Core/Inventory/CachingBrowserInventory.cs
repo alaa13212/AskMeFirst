@@ -37,15 +37,7 @@ public sealed class CachingBrowserInventory(
 
     public Browser? FindById(string id)
     {
-        IReadOnlyList<Browser> browsers = Discover();
-        foreach (Browser browser in browsers)
-        {
-            if (string.Equals(browser.Id, id, StringComparison.OrdinalIgnoreCase))
-            {
-                return browser;
-            }
-        }
-        return null;
+        return Discover().FirstOrDefault(b => string.Equals(b.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
     public IReadOnlyList<Browser> Refresh()

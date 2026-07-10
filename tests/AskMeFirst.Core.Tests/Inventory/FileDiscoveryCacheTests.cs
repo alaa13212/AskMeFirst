@@ -31,7 +31,7 @@ public class FileDiscoveryCacheTests : IDisposable
     [Fact]
     public void TryRead_AbsentFile_ReturnsNull()
     {
-        FileDiscoveryCache sut = new(Path.Combine(tempDir, "nope.json"), "linux", new FakeLogger());
+        FileDiscoveryCache sut = new(Path.Combine(tempDir, "nope.json"), new FakeLogger());
 
         IReadOnlyList<Browser>? result = sut.TryRead();
 
@@ -42,7 +42,7 @@ public class FileDiscoveryCacheTests : IDisposable
     public void Write_ThenTryRead_RoundtripsBrowsers()
     {
         string path = Path.Combine(tempDir, "cache.json");
-        FileDiscoveryCache sut = new(path, "linux", new FakeLogger());
+        FileDiscoveryCache sut = new(path, new FakeLogger());
 
         IReadOnlyList<Browser> input =
         [
@@ -67,7 +67,7 @@ public class FileDiscoveryCacheTests : IDisposable
     {
         string path = Path.Combine(tempDir, "cache.json");
         File.WriteAllText(path, "{ this is not valid json");
-        FileDiscoveryCache sut = new(path, "linux", new FakeLogger());
+        FileDiscoveryCache sut = new(path, new FakeLogger());
 
         IReadOnlyList<Browser>? result = sut.TryRead();
 
@@ -75,22 +75,10 @@ public class FileDiscoveryCacheTests : IDisposable
     }
 
     [Fact]
-    public void TryRead_DifferentPlatform_ReturnsNull()
-    {
-        string path = Path.Combine(tempDir, "cache.json");
-        FileDiscoveryCache writer = new(path, "linux", new FakeLogger());
-        writer.Write([TestBrowser.Make("chrome", "Chrome", "/usr/bin/google-chrome")]);
-
-        FileDiscoveryCache reader = new(path, "windows", new FakeLogger());
-
-        Assert.Null(reader.TryRead());
-    }
-
-    [Fact]
     public void Write_EmptyList_RoundtripsEmpty()
     {
         string path = Path.Combine(tempDir, "cache.json");
-        FileDiscoveryCache sut = new(path, "linux", new FakeLogger());
+        FileDiscoveryCache sut = new(path, new FakeLogger());
 
         sut.Write([]);
 
@@ -104,7 +92,7 @@ public class FileDiscoveryCacheTests : IDisposable
     public void Write_PopulatesLastGenerated()
     {
         string path = Path.Combine(tempDir, "cache.json");
-        FileDiscoveryCache sut = new(path, "linux", new FakeLogger());
+        FileDiscoveryCache sut = new(path, new FakeLogger());
 
         Assert.Null(sut.LastGenerated);
         sut.Write([TestBrowser.Make("chrome", "Chrome", "/usr/bin/google-chrome")]);

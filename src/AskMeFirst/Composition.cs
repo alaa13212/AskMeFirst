@@ -29,7 +29,7 @@ internal static partial class Composition
             string configPath = sp.GetRequiredService<IConfigPathResolver>().DefaultConfigPath;
             string dir = Path.GetDirectoryName(configPath) ?? ".";
             string cachePath = Path.Combine(dir, "discovery-cache.json");
-            return new FileDiscoveryCache(cachePath, platformName, sp.GetRequiredService<ILogger>());
+            return new FileDiscoveryCache(cachePath, sp.GetRequiredService<ILogger>());
         });
 
         services.AddSingleton<AppConfig>(sp => LoadAndValidateConfig(sp, logger));

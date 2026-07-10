@@ -66,10 +66,10 @@ public class CliTests
         (int exitCode, string stdout, _) = Run("--bench");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("rule_eval", stdout);
-        Assert.Contains("execute", stdout);
-        Assert.Contains("inventory", stdout);
-        Assert.Contains("total_warm", stdout);
+        Assert.Contains("cold_config_load", stdout);
+        Assert.Contains("cold_rule_eval", stdout);
+        Assert.Contains("cold_inventory", stdout);
+        Assert.Contains("warm_total", stdout);
         Assert.Contains("iterations:", stdout);
     }
 

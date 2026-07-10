@@ -17,7 +17,7 @@ public class NotificationOnLaunchFailureTests
         FakeLogger logger = new();
         RuleRouter router = BuildRouter(launcher, notifier, logger);
 
-        int code = router.Route(new Uri("https://example.com"), "chrome-work", null);
+        int code = router.Route(new Uri("https://example.com"), "chrome-work", null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.BrowserNotFound, code);
         Assert.Single(notifier.Calls);
@@ -36,7 +36,7 @@ public class NotificationOnLaunchFailureTests
         BrowserLaunchingPickerLauncher picker = new(browser);
         RuleRouter router = BuildRouter(launcher, notifier, logger, picker, usePickerAsCatchAll: true);
 
-        int code = router.Route(new Uri("https://example.com"), null, null);
+        int code = router.Route(new Uri("https://example.com"), null, null).ExitCode;
 
         Assert.Equal((int)RoutingExitCode.BrowserNotFound, code);
         Assert.Single(notifier.Calls);

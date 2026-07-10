@@ -13,6 +13,7 @@
   "settings": {
     "stripTracking": true,            // strip utm_/fbclid/etc from query strings
     "unshorten": false,               // show resolved URL for known shorteners (picker only)
+    "inventoryCacheTtl": "1.00:00:00", // (unused for now — discovery cache invalidation is manual via `askmefirst refresh`)
     "unshortenTimeout": "00:00:01"    // picker unshortener timeout
   },
 

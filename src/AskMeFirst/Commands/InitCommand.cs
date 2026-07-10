@@ -20,7 +20,7 @@ public sealed class InitCommand : ICommand
         if (File.Exists(configPath))
         {
             Console.WriteLine($"Config already exists at {configPath}.");
-            Console.WriteLine("Edit it directly, or delete it before re-running init.");
+            Console.WriteLine($"Run '{ProgramInfo.ExecutableName} refresh' to reset the discovery cache, or edit the config directly.");
             return Task.FromResult(0);
         }
 

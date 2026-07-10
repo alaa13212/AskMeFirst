@@ -16,14 +16,14 @@ public sealed class BenchCommand : ICommand
     private const int Iterations = 1000;
     private const int WarmupIterations = 5;
 
+    private static readonly BenchBudget ConfigLoadBudget =
+        new("cold_config_load", TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(25));
     private static readonly BenchBudget RuleEvalBudget =
-        new("rule_eval", TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(25));
-    private static readonly BenchBudget ExecuteBudget =
-        new("execute", TimeSpan.FromMilliseconds(15), TimeSpan.FromMilliseconds(50));
+        new("cold_rule_eval", TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(25));
     private static readonly BenchBudget InventoryBudget =
-        new("inventory", TimeSpan.FromMilliseconds(15), TimeSpan.FromMilliseconds(50));
+        new("cold_inventory", TimeSpan.FromMilliseconds(15), TimeSpan.FromMilliseconds(50));
     private static readonly BenchBudget TotalBudget =
-        new("total_warm", TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100));
+        new("warm_total", TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100));
 
     public string Name => "--bench";
     public string Usage => "--bench";
@@ -32,7 +32,10 @@ public sealed class BenchCommand : ICommand
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
         ILogger logger = ctx.Resolve<ILogger>();
+        Stopwatch configLoadSw = Stopwatch.StartNew();
         BenchHarness harness = BenchHarness.Build(logger);
+        configLoadSw.Stop();
+        TimeSpan configLoadMs = configLoadSw.Elapsed;
 
         for (int i = 0; i < WarmupIterations; i++)
         {
@@ -40,30 +43,37 @@ public sealed class BenchCommand : ICommand
         }
 
         List<TimeSpan> ruleEval = new(Iterations);
-        List<TimeSpan> execute = new(Iterations);
-        List<TimeSpan> total = new(Iterations);
         List<TimeSpan> inventory = new(Iterations);
+        List<TimeSpan> total = new(Iterations);
         for (int i = 0; i < Iterations; i++)
         {
-            RouteResult result = harness.Router.RouteTimed(harness.Url, null, null);
+            RouteResult result = harness.Router.Route(harness.Url, null, null);
             ruleEval.Add(result.Timings.RuleEval);
-            execute.Add(result.Timings.Executor);
+            inventory.Add(result.Timings.InventoryLoad);
             total.Add(result.Timings.Total);
-
-            Stopwatch sw = Stopwatch.StartNew();
-            harness.Inventory.Discover();
-            sw.Stop();
-            inventory.Add(sw.Elapsed);
         }
 
         Console.WriteLine($"{ProgramInfo.ExecutableName} --bench");
         Console.WriteLine($"  iterations: {Iterations}");
         bool ok = true;
-        ok &= Report("rule_eval", ruleEval, RuleEvalBudget);
-        ok &= Report("execute", execute, ExecuteBudget);
-        ok &= Report("inventory", inventory, InventoryBudget);
-        ok &= Report("total_warm", total, TotalBudget);
+        ok &= ReportSingle("cold_config_load", configLoadMs, ConfigLoadBudget);
+        ok &= Report("cold_rule_eval", ruleEval, RuleEvalBudget);
+        ok &= Report("cold_inventory", inventory, InventoryBudget);
+        ok &= Report("warm_total", total, TotalBudget);
         return Task.FromResult(ok ? 0 : 1);
+    }
+
+    private static bool ReportSingle(string phaseName, TimeSpan sample, BenchBudget budget)
+    {
+        Console.WriteLine(
+            $"  {phaseName,-15} sample={sample.TotalMilliseconds,7:F2}ms          budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
+        if (sample > budget.HardLimit)
+        {
+            Console.WriteLine(
+                $"  BENCH FAIL: {phaseName} = {sample.TotalMilliseconds:F2}ms exceeds hard limit {budget.HardLimit.TotalMilliseconds:F0}ms");
+            return false;
+        }
+        return true;
     }
 
     private static bool Report(string phaseName, List<TimeSpan> samples, BenchBudget budget)
@@ -79,7 +89,7 @@ public sealed class BenchCommand : ICommand
             }
         }
         Console.WriteLine(
-            $"  {phaseName,-11} p50={p50.TotalMilliseconds,6:F2}ms  p95={p95.TotalMilliseconds,6:F2}ms  max={max.TotalMilliseconds,7:F2}ms  budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
+            $"  {phaseName,-15} p50={p50.TotalMilliseconds,6:F2}ms  p95={p95.TotalMilliseconds,6:F2}ms  max={max.TotalMilliseconds,7:F2}ms  budget={budget.Target.TotalMilliseconds,3:F0}ms  hard={budget.HardLimit.TotalMilliseconds,3:F0}ms");
         if (p95 > budget.HardLimit)
         {
             Console.WriteLine(

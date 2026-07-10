@@ -14,12 +14,7 @@ public sealed class RefreshCommand : ICommand
     {
         IBrowserInventory inventory = ctx.Resolve<IBrowserInventory>();
         IReadOnlyList<Browser> browsers = inventory.Refresh();
-        int total = 0;
-        foreach (Browser _ in browsers)
-        {
-            total++;
-        }
-        Console.WriteLine($"Cache refreshed: {total} browser(s).");
+        Console.WriteLine($"Cache refreshed: {browsers.Count} browser(s).");
         return Task.FromResult(0);
     }
 }

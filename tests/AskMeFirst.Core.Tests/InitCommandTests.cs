@@ -53,6 +53,29 @@ public class InitCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Init_AbsentParentDir_CreatesDirectoryAndWrites()
+    {
+        string nestedDir = Path.Combine(_tempDir, "nested", "AskMeFirst");
+        Directory.Delete(_tempDir, recursive: true);
+        Assert.False(Directory.Exists(_tempDir));
+        string nestedPath = Path.Combine(nestedDir, "config.json");
+        FakePathResolver nestedPaths = new(nestedPath);
+        ServiceCollection nestedServices = new();
+        nestedServices.AddSingleton<IConfigPathResolver>(nestedPaths);
+        nestedServices.AddSingleton<ILogger>(_logger);
+        ServiceProvider nestedProvider = nestedServices.BuildServiceProvider();
+        CommandContext nestedCtx = new(_registry, nestedProvider, false);
+
+        InitCommand cmd = new();
+
+        int code = await cmd.Execute(["init"], nestedCtx);
+
+        Assert.Equal(0, code);
+        Assert.True(Directory.Exists(nestedDir));
+        Assert.True(File.Exists(nestedPath));
+    }
+
+    [Fact]
     public async Task Init_ExistingFile_DoesNotOverwrite()
     {
         File.WriteAllText(_configPath, "// user content");

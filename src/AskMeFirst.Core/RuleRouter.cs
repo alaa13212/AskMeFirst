@@ -21,12 +21,7 @@ public sealed class RuleRouter(
     TimeProvider timeProvider,
     IUnshortenTaskBuilder unshortenTasks)
 {
-    public int Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
-    {
-        return RouteTimed(url, explicitBrowserId, explicitProfileId).ExitCode;
-    }
-
-    public RouteResult RouteTimed(Uri url, string? explicitBrowserId, string? explicitProfileId)
+    public RouteResult Route(Uri url, string? explicitBrowserId, string? explicitProfileId)
     {
         Stopwatch totalSw = Stopwatch.StartNew();
         RoutingContext ctx = RoutingContext.Create(

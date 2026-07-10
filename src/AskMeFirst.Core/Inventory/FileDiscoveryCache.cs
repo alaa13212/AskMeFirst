@@ -8,7 +8,6 @@ namespace AskMeFirst.Core.Inventory;
 
 public sealed class FileDiscoveryCache(
     string cacheFilePath,
-    string platformId,
     ILogger logger) : IDiscoveryCache
 {
     public DateTimeOffset? LastGenerated { get; private set; }
@@ -32,11 +31,6 @@ public sealed class FileDiscoveryCache(
             if (cached.Version != CurrentVersion)
             {
                 logger.LogWarn($"discovery-cache: version {cached.Version} unsupported, expected {CurrentVersion} — ignoring.");
-                return null;
-            }
-            if (!string.Equals(cached.Platform, platformId, StringComparison.Ordinal))
-            {
-                logger.LogWarn($"discovery-cache: platform '{cached.Platform}' != current '{platformId}' — ignoring.");
                 return null;
             }
 
@@ -63,7 +57,6 @@ public sealed class FileDiscoveryCache(
             CachedInventory payload = new(
                 Version: CurrentVersion,
                 GeneratedAt: DateTimeOffset.UtcNow,
-                Platform: platformId,
                 Browsers: browsers.Select(Project).ToList());
 
             using FileStream stream = File.Create(cacheFilePath);
