@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+        x:Class="AskMeFirst.MgmtUi.Views.MgmtUiWindow"
+        x:DataType="vm:MgmtUiWindowViewModel"
+        x:CompileBindings="True"
+        Title="{Binding Title}"
+        CanResize="True"
+        ShowInTaskbar="True"
+        Width="1024"
+        Height="720">
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Background="{DynamicResource Token.Surface.Primary}">
+
+        <Border Grid.Row="0"
+                Padding="16,12"
+                BorderBrush="{DynamicResource Token.Border.Default}"
+                BorderThickness="0,0,0,1"
+                Background="{DynamicResource Token.Surface.Card}">
+            <DockPanel>
+                <TextBlock Text="{Binding Title}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right"
+                           Text="v0.2.0 · config"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="24">
+            <Border Padding="20"
+                    BorderBrush="{DynamicResource Token.Border.Default}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Background="{DynamicResource Token.Surface.Card}">
+                <StackPanel Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Title}"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding BodyMessage}"
+                               FontSize="13"
+                               Foreground="{DynamicResource Token.Text.Dim}"
+                               TextWrapping="Wrap"
+                               MaxWidth="520"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Padding="12,8"
+                BorderBrush="{DynamicResource Token.Border.Default}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource Token.Surface.Card}">
+            <TextBlock Text="Phase 7 — scaffold commit"
+                       FontSize="11"
+                       Foreground="{DynamicResource Token.Text.Dim}" />
+        </Border>
+    </Grid>
+</Window>

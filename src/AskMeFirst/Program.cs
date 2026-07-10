@@ -55,7 +55,8 @@ internal static class Program
             .Register(new InitCommand())
             .Register(new RefreshCommand())
             .Register(new InstallCommand())
-            .Register(new UninstallCommand());
+            .Register(new UninstallCommand())
+            .Register(new ConfigCommand());
     }
 
     private static bool IsVerboseRequested(string[] args)
