@@ -12,11 +12,16 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
 {
     private readonly IConfigPersister _persister;
     private readonly IRecentPicksReader _recentPicksReader;
+    private readonly IRulePreviewService _rulePreview;
 
-    public MgmtUiWindowViewModel(IConfigPersister persister, IRecentPicksReader recentPicksReader)
+    public MgmtUiWindowViewModel(
+        IConfigPersister persister,
+        IRecentPicksReader recentPicksReader,
+        IRulePreviewService rulePreview)
     {
         _persister = persister;
         _recentPicksReader = recentPicksReader;
+        _rulePreview = rulePreview;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Phase 7 · dashboard online — click a card or tree leaf to drill.";
@@ -28,6 +33,7 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
             Areas.Add(new AreaCardViewModel(descriptor, this));
         }
 
+        UrlTester = new UrlTesterViewModel(persister, rulePreview);
         Tree = new ObservableCollection<TreeNodeViewModel>();
         RebuildTree();
         ActiveDetail = null;
@@ -50,6 +56,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     public ObservableCollection<AreaCardViewModel> Areas { get; }
 
     public ObservableCollection<TreeNodeViewModel> Tree { get; }
+
+    public UrlTesterViewModel UrlTester { get; }
 
     public bool IsDashboard => ActiveDetail is null;
 
@@ -134,6 +142,7 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     {
         RebuildActiveArea();
         RebuildTree();
+        UrlTester.RefreshFromCurrent();
         OnPropertyChanged(nameof(HasDrafts));
     }
 

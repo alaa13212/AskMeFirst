@@ -103,13 +103,29 @@
         </Grid>
 
         <Border Grid.Row="2"
-                Padding="12,8"
+                Padding="16,10"
                 BorderBrush="{DynamicResource Token.Border.Default}"
                 BorderThickness="0,1,0,0"
                 Background="{DynamicResource Token.Surface.Card}">
-            <TextBlock Text="Phase 7 — MgmtUi scaffold + dashboard layout + drill behavior."
-                       FontSize="11"
-                       Foreground="{DynamicResource Token.Text.Dim}" />
+            <DockPanel LastChildFill="True">
+                <TextBlock Text="Test URL"
+                           DockPanel.Dock="Left"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0" />
+                <TextBox Text="{Binding UrlTester.UrlInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="https://example.com/path"
+                         Padding="6,4"
+                         VerticalAlignment="Center" />
+                <TextBlock Text="{Binding UrlTester.MatchSummary}"
+                           DockPanel.Dock="Right"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0" />
+            </DockPanel>
         </Border>
     </Grid>
 </Window>

@@ -7,7 +7,8 @@ using Avalonia;
 
 public sealed record MgmtUiEntryPointComposition(
     IConfigPersister ConfigPersister,
-    IRecentPicksReader RecentPicksReader);
+    IRecentPicksReader RecentPicksReader,
+    IRulePreviewService RulePreview);
 
 public static class MgmtUiEntryPoint
 {
@@ -29,7 +30,8 @@ public static class MgmtUiEntryPoint
         JsonConfigPersister persister = new(resolvedPath, logger);
         return new MgmtUiEntryPointComposition(
             persister,
-            new FileRecentPicksReader(resolvedPath));
+            new FileRecentPicksReader(resolvedPath),
+            new RulePreviewService());
     }
 
     private static string DefaultConfigPath()

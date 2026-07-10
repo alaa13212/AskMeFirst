@@ -30,7 +30,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedConfig(MakeRule("first", priority: 10), MakeRule("second", priority: 20));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         window.DrillTo(AreaId.Rules);
 
@@ -45,7 +45,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     public void DrillTo_NonFormArea_ShowsPlaceholder_NoRows()
     {
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         window.DrillTo(AreaId.Browsers);
 
@@ -59,7 +59,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         window.DrillToEntity(AreaId.Browsers, "firefox");
 
@@ -75,7 +75,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedProfiles(MakeProfile("p1", "firefox", displayName: "Work"));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         window.DrillToEntity(AreaId.Profiles, "p1");
 
@@ -88,7 +88,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
         window.DrillToEntity(AreaId.Browsers, "firefox");
         window.BackToArea(AreaId.Browsers);
 
@@ -100,7 +100,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         TreeNodeViewModel inventory = window.Tree[0];
         TreeNodeViewModel browsersNode = inventory.Children[0];
@@ -114,7 +114,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
 
         Assert.Single(window.Tree[0].Children[0].Children);
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"), BrowserSpecFor("chrome", "Chrome"));
@@ -124,11 +124,46 @@ public class MgmtUiWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void UrlTester_ResolvesMatchingRule()
+    {
+        SeedConfig(MakeRule("slack", priority: 50, urlRegex: ".*slack\\.com.*"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.UrlTester.UrlInput = "https://slack.com/x";
+
+        Assert.Contains("slack", window.UrlTester.MatchSummary);
+    }
+
+    [Fact]
+    public void UrlTester_NoMatch_ShowsPickerFallback()
+    {
+        SeedConfig(MakeRule("github", priority: 50, urlRegex: ".*github\\.com.*"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.UrlTester.UrlInput = "https://example.com/x";
+
+        Assert.Contains("picker would fire", window.UrlTester.MatchSummary);
+    }
+
+    [Fact]
+    public void UrlTester_InvalidUrl_ShowsValidationMessage()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+
+        window.UrlTester.UrlInput = "not a url";
+
+        Assert.Contains("valid URL", window.UrlTester.MatchSummary);
+    }
+
+    [Fact]
     public void PersisterChanged_WhileDrilled_RebuildsRows()
     {
         SeedConfig(MakeRule("original", priority: 10));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
         window.DrillTo(AreaId.Rules);
         RuleDetailViewModel before = (RuleDetailViewModel) window.ActiveDetail!;
         Assert.Equal("original", before.Rows[0].Label);
@@ -146,13 +181,19 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         SeedConfig(MakeRule("first", priority: 10));
         JsonConfigPersister persister = new(_configPath, _logger);
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader());
+        MgmtUiWindowViewModel window = Build(persister);
         window.DrillTo(AreaId.Rules);
 
         Assert.False(window.HasDrafts);
         RuleRowViewModel firstRow = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
         firstRow.Name = "edited";
         Assert.True(window.HasDrafts);
+    }
+
+    private void SeedConfig(params Rule[] rules)
+    {
+        AppConfig seed = new() { Rules = [.. rules] };
+        ConfigLoader.WriteAtomic(seed, _configPath);
     }
 
     private void SeedBrowsers(params BrowserSpec[] browsers)
@@ -165,6 +206,23 @@ public class MgmtUiWindowViewModelTests : IDisposable
     {
         AppConfig seed = new() { Profiles = [.. profiles] };
         ConfigLoader.WriteAtomic(seed, _configPath);
+    }
+
+    private static Rule MakeRule(string name, int priority = 50, string urlRegex = "")
+    {
+        return new Rule
+        {
+            Name = name,
+            Priority = priority,
+            When = string.IsNullOrEmpty(urlRegex) ? new RuleWhen() : new RuleWhen { UrlRegex = urlRegex },
+            Then = new RuleThen { Browser = "firefox" },
+            Origin = "user",
+        };
+    }
+
+    private static MgmtUiWindowViewModel Build(JsonConfigPersister persister)
+    {
+        return new MgmtUiWindowViewModel(persister, new EmptyRecentPicksReader(), new RulePreviewService());
     }
 
     private static BrowserSpec BrowserSpecFor(string id, string displayName)
@@ -181,24 +239,6 @@ public class MgmtUiWindowViewModelTests : IDisposable
             Name = id,
             DisplayName = displayName,
             Pinned = false,
-        };
-    }
-
-    private void SeedConfig(params Rule[] rules)
-    {
-        AppConfig seed = new() { Rules = [.. rules] };
-        ConfigLoader.WriteAtomic(seed, _configPath);
-    }
-
-    private static Rule MakeRule(string name, int priority = 50, string urlRegex = "")
-    {
-        return new Rule
-        {
-            Name = name,
-            Priority = priority,
-            When = string.IsNullOrEmpty(urlRegex) ? new RuleWhen() : new RuleWhen { UrlRegex = urlRegex },
-            Then = new RuleThen { Browser = "firefox" },
-            Origin = "user",
         };
     }
 }
