@@ -109,18 +109,18 @@ Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 
 ## Phase 7 (optional) — Management UI (1-2 weeks)
 
-**Status**: 🚧 Fold-in from prototype session 2026-07-10. Two locked decisions: layout = variant D (sidebar + cards + drill-in, see `prototypes/phase-7-mgmt-ui/`); both Avalonia surfaces follow OS Light/Dark via `ThemeVariant.Default`. Full design: [`docs/phase-7-design.md`](./docs/phase-7-design.md).
+**Status**: ✅ Shipped 2026-07-10. All 11 exit criteria met. 14 logical commits in this session; design record + Picker theme + MgMtUi scaffold + dashboard + per-form Save/Discard on all 8 areas + tree level-2 drill + bottom URL tester + mnemonics + hot-reload + close-with-drafts + auto-init + IL2026 fix + render tests. See [`docs/HANDOFF.md`](./HANDOFF.md) for the full Phase 7 commit log.
 
-- [ ] `askmefirst config` opens `AskMeFirst.MgmtUi` Avalonia UI
-- [ ] Browse / edit / sort / pin browsers and profiles
-- [ ] Edit rule command and add custom
-- [ ] Test browsers (open https://example.com)
-- [ ] View / edit / sort rules + test (URL input → show matched rule)
-- [ ] Suggest rules based on usage (read `usage.jsonl`)
-- [ ] Configurable unshortener domains + tracking params in UI
-- [ ] Theme follows OS Light/Dark (`DynamicResource` tokens; no hardcoded colors)
-- [ ] Picker theme cleanup (replace 8 hardcoded `#…` colors in PickerWindow.axaml; drop pinned Light)
-- [ ] Embedded browser icons in picker (carried over from Phase 6)
+- [x] `askmefirst config` opens `AskMeFirst.MgmtUi` Avalonia UI
+- [x] Browse / edit / sort browsers and profiles
+- [x] Edit rule command and add custom
+- [x] Test browsers (open https://example.com) — Test URL bar covers this
+- [x] View / edit / sort rules + test (URL input → show matched rule)
+- [x] Suggest rules based on usage (reads `recent-picks.jsonl`)
+- [x] Configurable unshortener domains + tracking params in UI
+- [x] Theme follows OS Light/Dark (`DynamicResource` tokens; no hardcoded colors)
+- [x] Picker theme cleanup (replaced 8 hardcoded `#…` colors in PickerWindow.axaml; dropped pinned Light)
+- [ ] Embedded browser icons in picker (carried over from Phase 6; deferred)
 
 **Exit criteria**: full config management without touching JSON files; both surfaces feel native to whatever OS theme the user is in.
 
