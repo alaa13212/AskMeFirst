@@ -20,7 +20,7 @@
                            FontSize="18"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
-                <Button Content="🔄 Refresh"
+                <Button Content="Refresh"
                         DockPanel.Dock="Right"
                         Command="{Binding RefreshCommand}"
                         Padding="12,4" />
