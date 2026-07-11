@@ -49,7 +49,7 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
             Areas.Add(new AreaCardViewModel(descriptor, this));
         }
 
-        UrlTester = new UrlTesterViewModel(persister, rulePreview);
+        UrlTester = new UrlTesterViewModel(persister, rulePreview, discovery, urlLauncher, notifier);
         Tree = new ObservableCollection<TreeNodeViewModel>();
         RebuildTree();
         ActiveDetail = null;
