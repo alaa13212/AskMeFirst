@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Commands;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi;
@@ -15,6 +16,12 @@ public sealed class ConfigCommand : ICommand
     public Task<int> Execute(string[] args, CommandContext ctx)
     {
         IConfigPathResolver pathResolver = ctx.Resolve<IConfigPathResolver>();
-        return Task.FromResult(MgmtUiEntryPoint.Run(pathResolver.DefaultConfigPath));
+        IServiceProvider services = ctx.Services;
+        IBrowserInventory? inventory = services.GetService(typeof(IBrowserInventory)) as IBrowserInventory;
+        IBrowserProfileDetector? detector = services.GetService(typeof(IBrowserProfileDetector)) as IBrowserProfileDetector;
+        return Task.FromResult(MgmtUiEntryPoint.Run(
+            pathResolver.DefaultConfigPath,
+            inventory,
+            detector));
     }
 }

@@ -26,7 +26,13 @@ public abstract partial class AreaDetailViewModel : ObservableObject
 
     public ObservableCollection<RowViewModelBase> Rows { get; } = new();
 
+    public ObservableCollection<RowViewModelBase> ExtraRows { get; } = new();
+
     public bool HasRows => Rows.Count > 0;
+
+    public bool HasExtraRows => ExtraRows.Count > 0;
+
+    public virtual string? ExtraSectionTitle => null;
 
     public abstract string Placeholder { get; }
 
@@ -58,6 +64,7 @@ public abstract partial class AreaDetailViewModel : ObservableObject
     protected void NotifyRowsChanged()
     {
         OnPropertyChanged(nameof(HasRows));
+        OnPropertyChanged(nameof(HasExtraRows));
     }
 
     public abstract void Rebuild(IConfigPersister persister);

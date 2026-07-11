@@ -1,5 +1,7 @@
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 using AskMeFirst.Core.Config;
+using AskMeFirst.Core.Models;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
 using CommunityToolkit.Mvvm.Input;
@@ -9,13 +11,18 @@ namespace AskMeFirst.MgmtUi.ViewModels;
 public sealed class BrowserDetailViewModel : AreaDetailViewModel
 {
     private readonly IConfigPersister _persister;
+    private readonly IBrowserDiscovery _discovery;
     private int _newBrowserSeq;
 
-    public BrowserDetailViewModel(MgmtUiWindowViewModel parent, IConfigPersister persister)
+    public BrowserDetailViewModel(
+        MgmtUiWindowViewModel parent,
+        IConfigPersister persister,
+        IBrowserDiscovery discovery)
         : base(AreaId.Browsers, parent)
     {
         _persister = persister;
-        Placeholder = "No browsers in config yet. Use the discovery pane to add one.";
+        _discovery = discovery;
+        Placeholder = "No browsers in config yet. Pick from Detected below or click + Add.";
         AddCommand = new RelayCommand(AddBrowser);
     }
 
@@ -24,6 +31,8 @@ public sealed class BrowserDetailViewModel : AreaDetailViewModel
     public override bool SupportsAdd => true;
 
     public override ICommand? AddCommand { get; }
+
+    public override string? ExtraSectionTitle => "Discovered (not in config yet)";
 
     private void AddBrowser()
     {
@@ -47,6 +56,16 @@ public sealed class BrowserDetailViewModel : AreaDetailViewModel
         foreach (BrowserSpec browser in persister.Current.Browsers)
         {
             Rows.Add(new BrowserRowViewModel(browser, persister));
+        }
+        ExtraRows.Clear();
+        HashSet<string> configured = [.. persister.Current.Browsers.Select(b => b.Id)];
+        foreach (DetectedBrowser detected in _discovery.Browsers)
+        {
+            if (configured.Contains(detected.Browser.Id))
+            {
+                continue;
+            }
+            ExtraRows.Add(new DetectedBrowserRowViewModel(detected, persister, withAddButton: true));
         }
         NotifyRowsChanged();
     }

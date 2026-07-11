@@ -51,7 +51,7 @@ public class SuggestionEntryViewModelTests : IDisposable
             MakePick("https://github.com/x", "firefox"),
             MakePick("https://example.com/x", "chrome"),
         ]);
-        MgmtUiWindowViewModel window = new(new JsonConfigPersister(_configPath, _logger), reader, new RulePreviewService(), new StubConfigFileWatcher());
+        MgmtUiWindowViewModel window = new(new JsonConfigPersister(_configPath, _logger), reader, new RulePreviewService(), new StubConfigFileWatcher(), NullBrowserDiscovery.Instance);
         window.DrillTo(AreaId.Suggestions);
 
         SuggestionsDetailViewModel detail = (SuggestionsDetailViewModel) window.ActiveDetail!;

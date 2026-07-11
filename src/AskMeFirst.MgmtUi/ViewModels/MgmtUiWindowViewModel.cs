@@ -14,17 +14,20 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     private readonly IRecentPicksReader _recentPicksReader;
     private readonly IRulePreviewService _rulePreview;
     private readonly IConfigFileWatcher _watcher;
+    private readonly IBrowserDiscovery _discovery;
 
     public MgmtUiWindowViewModel(
         IConfigPersister persister,
         IRecentPicksReader recentPicksReader,
         IRulePreviewService rulePreview,
-        IConfigFileWatcher watcher)
+        IConfigFileWatcher watcher,
+        IBrowserDiscovery discovery)
     {
         _persister = persister;
         _recentPicksReader = recentPicksReader;
         _rulePreview = rulePreview;
         _watcher = watcher;
+        _discovery = discovery;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Alt+letter to open an area · Esc to back out · Alt+←/→ to step through areas.";
@@ -44,6 +47,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         _persister.Changed += (_, _) => OnConfigChanged();
         _watcher.Changed += (_, _) => OnWatcherChanged();
         _watcher.Start();
+
+        discovery.Refresh();
     }
 
     [ObservableProperty]
@@ -419,14 +424,14 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     {
         return areaId switch
         {
-            AreaId.Browsers => new BrowserDetailViewModel(this, _persister),
+            AreaId.Browsers => new BrowserDetailViewModel(this, _persister, _discovery),
             AreaId.Profiles => new ProfileDetailViewModel(this, _persister),
             AreaId.Rules => new RuleDetailViewModel(this, _persister),
             AreaId.Usage => new UsageDetailViewModel(this, _recentPicksReader),
             AreaId.Suggestions => new SuggestionsDetailViewModel(this, _recentPicksReader),
             AreaId.Unshortener => new StringListDetailViewModel(areaId, this, StringListKind.UnshortenDomain, "Unshortener", _persister),
             AreaId.Tracking => new StringListDetailViewModel(areaId, this, StringListKind.TrackingParam, "Tracking params", _persister),
-            AreaId.Cache => new CacheDetailViewModel(this, _persister),
+            AreaId.Cache => new CacheDetailViewModel(this, _persister, _discovery),
             _ => new NoFormsDetailViewModel(areaId, this, $"Detail view for {areaId}."),
         };
     }

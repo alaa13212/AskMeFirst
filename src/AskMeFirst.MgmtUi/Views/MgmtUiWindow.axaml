@@ -90,6 +90,9 @@
             <Grid Grid.Column="1">
                 <ContentControl Content="{Binding ActiveDetail}">
                     <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:CacheDetailViewModel">
+                            <v:CacheDetailView Margin="16" />
+                        </DataTemplate>
                         <DataTemplate DataType="vm:AreaDetailViewModel">
                             <v:AreaDetailView Margin="16" />
                         </DataTemplate>

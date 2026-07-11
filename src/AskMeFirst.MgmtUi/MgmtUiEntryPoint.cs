@@ -9,13 +9,17 @@ public sealed record MgmtUiEntryPointComposition(
     IConfigPersister ConfigPersister,
     IRecentPicksReader RecentPicksReader,
     IRulePreviewService RulePreview,
-    IConfigFileWatcher FileWatcher);
+    IConfigFileWatcher FileWatcher,
+    IBrowserDiscovery Discovery);
 
 public static class MgmtUiEntryPoint
 {
-    public static int Run(string? configPath = null)
+    public static int Run(
+        string? configPath = null,
+        IBrowserInventory? inventory = null,
+        IBrowserProfileDetector? profileDetector = null)
     {
-        MgmtUiEntryPointComposition composition = BuildComposition(configPath);
+        MgmtUiEntryPointComposition composition = BuildComposition(configPath, inventory, profileDetector);
         AppBuilder builder = AppBuilder.Configure<AvaloniaApp>()
             .UsePlatformDetect()
             .LogToTrace()
@@ -25,17 +29,24 @@ public static class MgmtUiEntryPoint
         return 0;
     }
 
-    public static MgmtUiEntryPointComposition BuildComposition(string? configPath = null)
+    public static MgmtUiEntryPointComposition BuildComposition(
+        string? configPath = null,
+        IBrowserInventory? inventory = null,
+        IBrowserProfileDetector? profileDetector = null)
     {
         NoOpLogger logger = new();
         string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
         EnsureSeedConfig(resolvedPath);
         JsonConfigPersister persister = new(resolvedPath, logger);
+        IBrowserDiscovery discovery = inventory is null
+            ? NullBrowserDiscovery.Instance
+            : new BrowserDiscoveryAdapter(inventory, profileDetector, logger);
         return new MgmtUiEntryPointComposition(
             persister,
             new FileRecentPicksReader(resolvedPath),
             new RulePreviewService(),
-            new FileConfigFileWatcher(resolvedPath));
+            new FileConfigFileWatcher(resolvedPath),
+            discovery);
     }
 
     private static void EnsureSeedConfig(string configPath)

@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+             x:Class="AskMeFirst.MgmtUi.Views.CacheDetailView"
+             x:DataType="vm:CacheDetailViewModel"
+             x:CompileBindings="True">
+
+    <Border Padding="20"
+            BorderBrush="{DynamicResource Token.Border.Default}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Background="{DynamicResource Token.Surface.Card}">
+        <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Button Content="← Back"
+                        Command="{Binding BackCommand}"
+                        Padding="10,4"
+                        Margin="0,0,12,0" />
+                <TextBlock Text="{Binding Title}"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button Content="🔄 Refresh"
+                        DockPanel.Dock="Right"
+                        Command="{Binding RefreshCommand}"
+                        Padding="12,4" />
+            </DockPanel>
+
+            <StackPanel Spacing="12">
+                <Border Padding="14,12"
+                        BorderBrush="{DynamicResource Token.Border.Default}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Background="{DynamicResource Token.Surface.Elevated}">
+                    <Grid ColumnDefinitions="180,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Cache file" FontSize="11" Foreground="{DynamicResource Token.Text.Dim}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CachePath}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Cache size" FontSize="11" Foreground="{DynamicResource Token.Text.Dim}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CacheFileSize}" FontSize="12" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Last refresh" FontSize="11" Foreground="{DynamicResource Token.Text.Dim}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastRefreshed}" FontSize="12" />
+                    </Grid>
+                </Border>
+
+                <TextBlock Text="{Binding ExtraSectionTitle}"
+                           IsVisible="{Binding HasExtraRows}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Margin="0,8,0,4" />
+
+                <ScrollViewer IsVisible="{Binding HasExtraRows}"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              MaxHeight="320">
+                    <ItemsControl ItemsSource="{Binding ExtraRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DetectedBrowserRowViewModel">
+                                <Border Margin="0,0,0,8"
+                                        Padding="12,8"
+                                        BorderBrush="{DynamicResource Token.Border.Default}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Background="{DynamicResource Token.Surface.Elevated}">
+                                    <DockPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock FontSize="11" Foreground="{DynamicResource Token.Text.Dim}" TextTrimming="CharacterEllipsis">
+                                                <Run Text="{Binding ExecutablePath}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <TextBlock DockPanel.Dock="Right"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource Token.Text.Dim}"
+                                                   Text="{Binding ProfileCount, StringFormat={}{0} profile(s)}" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

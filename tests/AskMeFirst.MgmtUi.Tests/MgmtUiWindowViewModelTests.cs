@@ -341,7 +341,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
         window.DrillTo(AreaId.Rules);
 
         SeedConfig(MakeRule("original"), MakeRule("added", priority: 99));
@@ -359,7 +359,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
         window.DrillTo(AreaId.Rules);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
 
@@ -375,7 +375,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
         window.DrillTo(AreaId.Rules);
         ((DraftableRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).DiscardCommand.Execute(null);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
@@ -398,7 +398,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
         window.DrillTo(AreaId.Rules);
         RuleRowViewModel row = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
         row.Name = "kept";
@@ -527,7 +527,8 @@ public class MgmtUiWindowViewModelTests : IDisposable
             persister,
             new EmptyRecentPicksReader(),
             new RulePreviewService(),
-            new StubConfigFileWatcher());
+            new StubConfigFileWatcher(),
+            NullBrowserDiscovery.Instance);
     }
 
     private static BrowserSpec BrowserSpecFor(string id, string displayName)
