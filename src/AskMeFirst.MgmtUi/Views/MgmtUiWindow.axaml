@@ -91,28 +91,31 @@
                 <ContentControl Content="{Binding ActiveDetail}">
                     <ContentControl.DataTemplates>
                         <DataTemplate DataType="vm:AreaDetailViewModel">
-                            <v:AreaDetailView Margin="24" />
+                            <v:AreaDetailView Margin="16" />
                         </DataTemplate>
                         <DataTemplate DataType="vm:EntityDetailViewModel">
-                            <v:EntityDetailView Margin="24" />
+                            <v:EntityDetailView Margin="16" />
                         </DataTemplate>
                     </ContentControl.DataTemplates>
                 </ContentControl>
 
-                <ItemsControl ItemsSource="{Binding Areas}"
-                              IsVisible="{Binding ActiveDetail, Converter={x:Static ObjectConverters.IsNull}}"
-                              Margin="24">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:AreaCardViewModel">
-                            <v:AreaCardView Width="240" Margin="0,0,16,16" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ScrollViewer IsVisible="{Binding ActiveDetail, Converter={x:Static ObjectConverters.IsNull}}"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="16">
+                    <ItemsControl ItemsSource="{Binding Areas}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AreaCardViewModel">
+                                <v:AreaCardView Width="220" Margin="0,0,12,12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Grid>
 
