@@ -443,6 +443,33 @@ public class MgmtUiWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void DrillTo_SetsActiveAreaLeaf_InSidebarTree()
+    {
+        SeedConfig(MakeRule("only"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+
+        TreeNodeViewModel rulesSection = window.Tree[1];
+        TreeNodeViewModel rulesActive = rulesSection.Children[0];
+        Assert.True(rulesActive.IsActive);
+    }
+
+    [Fact]
+    public void DrillToEntity_SetsActiveEntityNode_InSidebarTree()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillToEntity(AreaId.Browsers, "firefox");
+
+        TreeNodeViewModel inventory = window.Tree[0];
+        TreeNodeViewModel browsersLeaf = inventory.Children[0];
+        TreeNodeViewModel firefoxEntity = browsersLeaf.Children[0];
+        Assert.True(firefoxEntity.IsActive);
+    }
+
+    [Fact]
     public void UninstallCommand_ReportsFailure_FromPlatformIntegration()
     {
         StubPlatformIntegration platformIntegration = new()

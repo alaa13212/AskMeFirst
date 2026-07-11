@@ -426,7 +426,42 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         Tree.Add(usageNode);
         Tree.Add(advanced);
 
-        AutoExpandActiveArea();
+        MarkActiveNodes();
+    }
+
+    private void MarkActiveNodes()
+    {
+        AreaId? activeArea = GetActiveAreaId();
+        string? activeEntityId = GetActiveEntityId();
+        foreach (TreeNodeViewModel rootNode in Tree)
+        {
+            foreach (TreeNodeViewModel child in rootNode.Children)
+            {
+                AreaId childArea = child.TargetArea ?? default;
+                string childEntity = child.TargetEntityId ?? string.Empty;
+                bool isAreaActive = activeArea.HasValue && childArea == activeArea.Value && activeEntityId is null;
+                bool isEntityActive = activeArea.HasValue
+                    && activeEntityId is not null
+                    && childArea == activeArea.Value
+                    && childEntity == activeEntityId;
+                child.IsActive = isAreaActive || isEntityActive;
+                if (child.IsActive && child.Children.Count > 0)
+                {
+                    child.IsExpanded = true;
+                }
+                foreach (TreeNodeViewModel entity in child.Children)
+                {
+                    string entityId = entity.TargetEntityId ?? string.Empty;
+                    entity.IsActive = activeEntityId is not null
+                        && entityId == activeEntityId;
+                }
+            }
+        }
+    }
+
+    private string? GetActiveEntityId()
+    {
+        return ActiveDetail is EntityDetailViewModel entity ? entity.EntityId : null;
     }
 
     private void PopulateEntityChildren(

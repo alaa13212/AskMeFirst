@@ -33,17 +33,23 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [ObservableProperty]
     private bool _isExpanded;
 
+    [ObservableProperty]
+    private bool _isActive;
+
     [RelayCommand]
     private void Drill()
     {
         if (TargetEntityId is not null && TargetArea.HasValue)
         {
             _root.DrillToEntity(TargetArea.Value, TargetEntityId);
+            return;
         }
-        else if (TargetArea.HasValue)
+        if (TargetArea.HasValue)
         {
             _root.DrillTo(TargetArea.Value);
+            return;
         }
+        IsExpanded = !IsExpanded;
     }
 
     private readonly MgmtUiWindowViewModel _root;

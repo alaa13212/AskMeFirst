@@ -46,7 +46,7 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="260,*">
+        <Grid Grid.Row="1" ColumnDefinitions="220,*">
 
             <Border Grid.Column="0"
                     BorderBrush="{DynamicResource Token.Border.Default}"
@@ -55,7 +55,7 @@
                     Padding="12">
                 <ScrollViewer>
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Status"
+                        <TextBlock Text="Shortcuts"
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource Token.Text.Dim}"
