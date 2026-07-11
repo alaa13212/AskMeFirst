@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
@@ -21,13 +22,17 @@ public sealed partial class StringListDetailViewModel : AreaDetailViewModel
         _kind = kind;
         _persister = persister;
         Title = title;
-        Placeholder = "Empty list — add the first entry below.";
+        Placeholder = "Empty list — type the first value below.";
+        AddCommand = new RelayCommand(AddEntry);
     }
 
     public override string Placeholder { get; }
 
-    [RelayCommand]
-    private void Add()
+    public override bool SupportsAdd => true;
+
+    public override ICommand? AddCommand { get; }
+
+    private void AddEntry()
     {
         _persister.Save(c => StringListEditor.Append(c, _kind));
     }

@@ -260,7 +260,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Escape_FromEntity_ReturnsToParentArea()
+    public void EvaluateClose_FromEntity_ReturnsToParentArea()
     {
         SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
         JsonConfigPersister persister = new(_configPath, _logger);
@@ -270,6 +270,69 @@ public class MgmtUiWindowViewModelTests : IDisposable
         window.EscapeCommand.Execute(null);
 
         Assert.IsType<BrowserDetailViewModel>(window.ActiveDetail);
+    }
+
+    [Fact]
+    public void RuleArea_AddCommand_AppendsStubRule()
+    {
+        SeedConfig(MakeRule("first"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Rules);
+        RuleDetailViewModel detail = (RuleDetailViewModel) window.ActiveDetail!;
+
+        Assert.True(detail.SupportsAdd);
+        Assert.NotNull(detail.AddCommand);
+        detail.AddCommand!.Execute(null);
+
+        Assert.Equal(2, persister.Current.Rules.Count);
+        Assert.Equal("New rule", persister.Current.Rules[1].Name);
+    }
+
+    [Fact]
+    public void BrowserArea_AddCommand_AppendsStubBrowser()
+    {
+        SeedBrowsers(BrowserSpecFor("firefox", "Firefox"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Browsers);
+        BrowserDetailViewModel detail = (BrowserDetailViewModel) window.ActiveDetail!;
+
+        Assert.True(detail.SupportsAdd);
+        detail.AddCommand!.Execute(null);
+
+        Assert.Equal(2, persister.Current.Browsers.Count);
+        Assert.StartsWith("new-browser-", persister.Current.Browsers[1].Id);
+    }
+
+    [Fact]
+    public void ProfileArea_AddCommand_AppendsStubProfile()
+    {
+        SeedProfiles(MakeProfile("p1", "firefox", displayName: "Existing"));
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Profiles);
+        ProfileDetailViewModel detail = (ProfileDetailViewModel) window.ActiveDetail!;
+
+        Assert.True(detail.SupportsAdd);
+        detail.AddCommand!.Execute(null);
+
+        Assert.Equal(2, persister.Current.Profiles.Count);
+    }
+
+    [Fact]
+    public void Unshortener_AddCommand_AppendsBlankEntry()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = Build(persister);
+        window.DrillTo(AreaId.Unshortener);
+        StringListDetailViewModel detail = (StringListDetailViewModel) window.ActiveDetail!;
+
+        Assert.True(detail.SupportsAdd);
+        detail.AddCommand!.Execute(null);
+
+        Assert.Single(persister.Current.UnshortenDomainsExtra);
+        Assert.Equal("", persister.Current.UnshortenDomainsExtra[0]);
     }
 
     [Fact]

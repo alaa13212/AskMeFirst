@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -49,6 +50,10 @@ public abstract partial class AreaDetailViewModel : ObservableObject
     {
         _parent.DrillTo(null);
     }
+
+    public virtual bool SupportsAdd => false;
+
+    public virtual ICommand? AddCommand => null;
 
     protected void NotifyRowsChanged()
     {
