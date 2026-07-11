@@ -61,6 +61,10 @@ public abstract partial class AreaDetailViewModel : ObservableObject
 
     public virtual ICommand? AddCommand => null;
 
+    public virtual bool ShowRefresh => false;
+
+    public virtual ICommand? RefreshCommand => null;
+
     protected void NotifyRowsChanged()
     {
         OnPropertyChanged(nameof(HasRows));

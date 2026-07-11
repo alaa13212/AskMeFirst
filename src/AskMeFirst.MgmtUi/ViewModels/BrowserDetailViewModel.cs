@@ -4,11 +4,12 @@ using AskMeFirst.Core.Config;
 using AskMeFirst.Core.Models;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AskMeFirst.MgmtUi.ViewModels;
 
-public sealed class BrowserDetailViewModel : AreaDetailViewModel
+public sealed partial class BrowserDetailViewModel : AreaDetailViewModel
 {
     private readonly IConfigPersister _persister;
     private readonly IBrowserDiscovery _discovery;
@@ -32,6 +33,10 @@ public sealed class BrowserDetailViewModel : AreaDetailViewModel
 
     public override ICommand? AddCommand { get; }
 
+    public override bool ShowRefresh => true;
+
+    public override ICommand? RefreshCommand => RefreshBrowsersCommand;
+
     public override string? ExtraSectionTitle => "Discovered (not in config yet)";
 
     private void AddBrowser()
@@ -48,6 +53,13 @@ public sealed class BrowserDetailViewModel : AreaDetailViewModel
             };
             return c with { Browsers = [.. c.Browsers, fresh] };
         });
+    }
+
+    [RelayCommand]
+    private void RefreshBrowsers()
+    {
+        _discovery.Refresh();
+        Rebuild(_persister);
     }
 
     public override void Rebuild(IConfigPersister persister)

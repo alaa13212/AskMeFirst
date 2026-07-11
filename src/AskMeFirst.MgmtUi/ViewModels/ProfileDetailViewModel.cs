@@ -2,11 +2,12 @@ using System.Windows.Input;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AskMeFirst.MgmtUi.ViewModels;
 
-public sealed class ProfileDetailViewModel : AreaDetailViewModel
+public sealed partial class ProfileDetailViewModel : AreaDetailViewModel
 {
     private readonly IConfigPersister _persister;
     private int _newProfileSeq;

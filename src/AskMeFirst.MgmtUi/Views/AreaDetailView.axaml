@@ -20,6 +20,12 @@
                            FontSize="18"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
+                <Button Content="Refresh"
+                        DockPanel.Dock="Right"
+                        Command="{Binding RefreshCommand}"
+                        Padding="10,4"
+                        Margin="0,0,8,0"
+                        IsVisible="{Binding ShowRefresh}" />
                 <Button Content="+ Add"
                         DockPanel.Dock="Right"
                         Command="{Binding AddCommand}"

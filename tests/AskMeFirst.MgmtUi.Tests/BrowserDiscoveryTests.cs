@@ -124,6 +124,41 @@ public class BrowserDiscoveryTests : IDisposable
         Assert.Equal(2, cache.DiscoveredBrowserCount);
     }
 
+    [Fact]
+    public void BrowserArea_RefreshBrowsersCommand_PicksUpNewDetections()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubInventory inventory = new(
+            MakeBrowser("firefox", "Firefox", "/ff"));
+        BrowserDiscoveryAdapter discovery = new(inventory, null, _logger);
+        discovery.Refresh();
+
+        MgmtUiWindowViewModel window = BuildVm(persister, discovery);
+        window.DrillTo(AreaId.Browsers);
+        BrowserDetailViewModel detail = (BrowserDetailViewModel) window.ActiveDetail!;
+        Assert.Single(detail.ExtraRows);
+
+        inventory.Add(MakeBrowser("chrome", "Chrome", "/chrome"));
+        detail.RefreshBrowsersCommand.Execute(null);
+
+        Assert.Equal(2, detail.ExtraRows.Count);
+        List<string> ids = [.. detail.ExtraRows.Cast<DetectedBrowserRowViewModel>().Select(d => d.Id)];
+        Assert.Contains("firefox", ids);
+        Assert.Contains("chrome", ids);
+    }
+
+    [Fact]
+    public void BrowserArea_ShowsRefreshButton_AndNotOnCachedBrowsersView()
+    {
+        JsonConfigPersister persister = new(_configPath, _logger);
+        MgmtUiWindowViewModel window = BuildVm(persister, NullBrowserDiscovery.Instance);
+        window.DrillTo(AreaId.Browsers);
+        BrowserDetailViewModel detail = (BrowserDetailViewModel) window.ActiveDetail!;
+
+        Assert.True(detail.ShowRefresh);
+        Assert.NotNull(detail.RefreshCommand);
+    }
+
     private void SeedConfigWith(JsonConfigPersister persister, params BrowserSpec[] browsers)
     {
         AppConfig seed = new() { Browsers = [.. browsers] };
