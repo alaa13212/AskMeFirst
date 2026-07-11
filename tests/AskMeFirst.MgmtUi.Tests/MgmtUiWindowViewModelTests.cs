@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
@@ -341,7 +342,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
         window.DrillTo(AreaId.Rules);
 
         SeedConfig(MakeRule("original"), MakeRule("added", priority: 99));
@@ -359,7 +360,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
         window.DrillTo(AreaId.Rules);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
 
@@ -375,7 +376,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
         window.DrillTo(AreaId.Rules);
         ((DraftableRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).DiscardCommand.Execute(null);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
@@ -398,7 +399,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
         window.DrillTo(AreaId.Rules);
         RuleRowViewModel row = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
         row.Name = "kept";
@@ -423,6 +424,35 @@ public class MgmtUiWindowViewModelTests : IDisposable
         window.DrillTo(AreaId.Rules);
 
         Assert.Equal(MgmtUiWindowViewModel.CloseDecision.Proceed, window.EvaluateCloseRequest());
+    }
+
+    [Fact]
+    public void InstallCommand_FiresPlatformIntegration_AndUpdatesStatus()
+    {
+        StubPlatformIntegration platformIntegration = new() { InstallResult = new RegistrationResult(true, "Installed.") };
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration);
+        window.InstallCommand.Execute(null);
+
+        Assert.Equal(1, platformIntegration.InstallCount);
+        Assert.StartsWith("Installed", window.PlatformStatus);
+    }
+
+    [Fact]
+    public void UninstallCommand_ReportsFailure_FromPlatformIntegration()
+    {
+        StubPlatformIntegration platformIntegration = new()
+        {
+            UninstallResult = new RegistrationResult(false, "no permissions"),
+        };
+        JsonConfigPersister persister = new(_configPath, _logger);
+        StubConfigFileWatcher watcher = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration);
+        window.UninstallCommand.Execute(null);
+
+        Assert.Equal(1, platformIntegration.UninstallCount);
+        Assert.Contains("no permissions", window.PlatformStatus);
     }
 
     [Fact]
@@ -528,7 +558,8 @@ public class MgmtUiWindowViewModelTests : IDisposable
             new EmptyRecentPicksReader(),
             new RulePreviewService(),
             new StubConfigFileWatcher(),
-            NullBrowserDiscovery.Instance);
+            NullBrowserDiscovery.Instance,
+            NullPlatformIntegration.Instance);
     }
 
     private static BrowserSpec BrowserSpecFor(string id, string displayName)

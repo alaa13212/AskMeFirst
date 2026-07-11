@@ -128,7 +128,8 @@ public class MgmtUiWindowRenderTests : IDisposable
             new EmptyRecentPicksReader(),
             new RulePreviewService(),
             new StubConfigFileWatcher(),
-            NullBrowserDiscovery.Instance);
+            NullBrowserDiscovery.Instance,
+            NullPlatformIntegration.Instance);
     }
 
     private void SeedRules(IConfigPersister persister, params Rule[] rules)

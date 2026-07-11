@@ -19,9 +19,11 @@ public sealed class ConfigCommand : ICommand
         IServiceProvider services = ctx.Services;
         IBrowserInventory? inventory = services.GetService(typeof(IBrowserInventory)) as IBrowserInventory;
         IBrowserProfileDetector? detector = services.GetService(typeof(IBrowserProfileDetector)) as IBrowserProfileDetector;
+        IDefaultBrowserRegistrar? registrar = services.GetService(typeof(IDefaultBrowserRegistrar)) as IDefaultBrowserRegistrar;
         return Task.FromResult(MgmtUiEntryPoint.Run(
             pathResolver.DefaultConfigPath,
             inventory,
-            detector));
+            detector,
+            registrar));
     }
 }

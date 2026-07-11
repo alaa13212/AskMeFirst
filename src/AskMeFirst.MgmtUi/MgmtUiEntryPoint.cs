@@ -10,16 +10,19 @@ public sealed record MgmtUiEntryPointComposition(
     IRecentPicksReader RecentPicksReader,
     IRulePreviewService RulePreview,
     IConfigFileWatcher FileWatcher,
-    IBrowserDiscovery Discovery);
+    IBrowserDiscovery Discovery,
+    IPlatformIntegration PlatformIntegration);
 
 public static class MgmtUiEntryPoint
 {
     public static int Run(
         string? configPath = null,
         IBrowserInventory? inventory = null,
-        IBrowserProfileDetector? profileDetector = null)
+        IBrowserProfileDetector? profileDetector = null,
+        IDefaultBrowserRegistrar? registrar = null)
     {
-        MgmtUiEntryPointComposition composition = BuildComposition(configPath, inventory, profileDetector);
+        MgmtUiEntryPointComposition composition = BuildComposition(
+            configPath, inventory, profileDetector, registrar);
         AppBuilder builder = AppBuilder.Configure<AvaloniaApp>()
             .UsePlatformDetect()
             .LogToTrace()
@@ -32,7 +35,8 @@ public static class MgmtUiEntryPoint
     public static MgmtUiEntryPointComposition BuildComposition(
         string? configPath = null,
         IBrowserInventory? inventory = null,
-        IBrowserProfileDetector? profileDetector = null)
+        IBrowserProfileDetector? profileDetector = null,
+        IDefaultBrowserRegistrar? registrar = null)
     {
         NoOpLogger logger = new();
         string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
@@ -41,12 +45,16 @@ public static class MgmtUiEntryPoint
         IBrowserDiscovery discovery = inventory is null
             ? NullBrowserDiscovery.Instance
             : new BrowserDiscoveryAdapter(inventory, profileDetector, logger);
+        IPlatformIntegration platformIntegration = registrar is null
+            ? NullPlatformIntegration.Instance
+            : new PlatformIntegrationAdapter(registrar);
         return new MgmtUiEntryPointComposition(
             persister,
             new FileRecentPicksReader(resolvedPath),
             new RulePreviewService(),
             new FileConfigFileWatcher(resolvedPath),
-            discovery);
+            discovery,
+            platformIntegration);
     }
 
     private static void EnsureSeedConfig(string configPath)

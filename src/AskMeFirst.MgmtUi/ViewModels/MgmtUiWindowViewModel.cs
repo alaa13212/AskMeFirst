@@ -2,7 +2,8 @@ namespace AskMeFirst.MgmtUi.ViewModels;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using AskMeFirst.Core.Config;
+using System.Threading.Tasks;
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,19 +16,22 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     private readonly IRulePreviewService _rulePreview;
     private readonly IConfigFileWatcher _watcher;
     private readonly IBrowserDiscovery _discovery;
+    private readonly IPlatformIntegration _platformIntegration;
 
     public MgmtUiWindowViewModel(
         IConfigPersister persister,
         IRecentPicksReader recentPicksReader,
         IRulePreviewService rulePreview,
         IConfigFileWatcher watcher,
-        IBrowserDiscovery discovery)
+        IBrowserDiscovery discovery,
+        IPlatformIntegration platformIntegration)
     {
         _persister = persister;
         _recentPicksReader = recentPicksReader;
         _rulePreview = rulePreview;
         _watcher = watcher;
         _discovery = discovery;
+        _platformIntegration = platformIntegration;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Alt+letter to open an area · Esc to back out · Alt+←/→ to step through areas.";
@@ -65,6 +69,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private ConflictPromptViewModel? _pendingConflict;
+
+    [ObservableProperty]
+    private string _platformStatus = "";
 
     public ObservableCollection<AreaCardViewModel> Areas { get; }
 
@@ -149,6 +156,36 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         {
             DrillTo(null);
         }
+    }
+
+    [RelayCommand]
+    private void Install()
+    {
+        PlatformStatus = "Installing...";
+        _ = RunInstallAsync();
+    }
+
+    [RelayCommand]
+    private void Uninstall()
+    {
+        PlatformStatus = "Uninstalling...";
+        _ = RunUninstallAsync();
+    }
+
+    private async Task RunInstallAsync()
+    {
+        RegistrationResult result = await _platformIntegration.InstallAsync();
+        PlatformStatus = result.Success
+            ? "Installed — open OS settings to finish."
+            : $"Install failed: {result.Message}";
+    }
+
+    private async Task RunUninstallAsync()
+    {
+        RegistrationResult result = await _platformIntegration.UninstallAsync();
+        PlatformStatus = result.Success
+            ? "Uninstalled."
+            : $"Uninstall failed: {result.Message}";
     }
 
     [RelayCommand]

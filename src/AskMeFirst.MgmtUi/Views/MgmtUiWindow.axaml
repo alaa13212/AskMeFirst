@@ -145,6 +145,21 @@
                            Foreground="{DynamicResource Token.Text.Dim}"
                            VerticalAlignment="Center"
                            Margin="12,0,0,0" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button Content="Uninstall"
+                            Command="{Binding UninstallCommand}"
+                            Padding="10,4" />
+                    <Button Content="Install"
+                            Command="{Binding InstallCommand}"
+                            Padding="12,4" />
+                </StackPanel>
+                <TextBlock Text="{Binding PlatformStatus}"
+                           DockPanel.Dock="Right"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Accent.Default}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"
+                           IsVisible="{Binding PlatformStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             </DockPanel>
         </Border>
     </Grid>
