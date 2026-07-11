@@ -29,7 +29,9 @@ public sealed class AvaloniaApp : Application
                 composition.RulePreview,
                 composition.FileWatcher,
                 composition.Discovery,
-                composition.PlatformIntegration);
+                composition.PlatformIntegration,
+                composition.Notifier,
+                composition.UrlLauncher);
             MgmtUiWindow window = new() { DataContext = viewModel };
             window.Position = new Avalonia.PixelPoint(120, 80);
             desktop.MainWindow = window;

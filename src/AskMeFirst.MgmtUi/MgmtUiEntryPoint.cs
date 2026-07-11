@@ -2,6 +2,7 @@ namespace AskMeFirst.MgmtUi;
 
 using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
+using AskMeFirst.Core.Models;
 using AskMeFirst.MgmtUi.Services;
 using Avalonia;
 
@@ -11,7 +12,9 @@ public sealed record MgmtUiEntryPointComposition(
     IRulePreviewService RulePreview,
     IConfigFileWatcher FileWatcher,
     IBrowserDiscovery Discovery,
-    IPlatformIntegration PlatformIntegration);
+    IPlatformIntegration PlatformIntegration,
+    INotifier Notifier,
+    IUrlLauncher UrlLauncher);
 
 public static class MgmtUiEntryPoint
 {
@@ -19,10 +22,12 @@ public static class MgmtUiEntryPoint
         string? configPath = null,
         IBrowserInventory? inventory = null,
         IBrowserProfileDetector? profileDetector = null,
-        IDefaultBrowserRegistrar? registrar = null)
+        IDefaultBrowserRegistrar? registrar = null,
+        INotifier? notifier = null,
+        IUrlLauncher? urlLauncher = null)
     {
         MgmtUiEntryPointComposition composition = BuildComposition(
-            configPath, inventory, profileDetector, registrar);
+            configPath, inventory, profileDetector, registrar, notifier, urlLauncher);
         AppBuilder builder = AppBuilder.Configure<AvaloniaApp>()
             .UsePlatformDetect()
             .LogToTrace()
@@ -36,7 +41,9 @@ public static class MgmtUiEntryPoint
         string? configPath = null,
         IBrowserInventory? inventory = null,
         IBrowserProfileDetector? profileDetector = null,
-        IDefaultBrowserRegistrar? registrar = null)
+        IDefaultBrowserRegistrar? registrar = null,
+        INotifier? notifier = null,
+        IUrlLauncher? urlLauncher = null)
     {
         NoOpLogger logger = new();
         string resolvedPath = !string.IsNullOrWhiteSpace(configPath) ? configPath : DefaultConfigPath();
@@ -48,13 +55,17 @@ public static class MgmtUiEntryPoint
         IPlatformIntegration platformIntegration = registrar is null
             ? NullPlatformIntegration.Instance
             : new PlatformIntegrationAdapter(registrar);
+        INotifier effectiveNotifier = notifier ?? new NullNotifier();
+        IUrlLauncher effectiveUrlLauncher = urlLauncher ?? new NoOpUrlLauncher();
         return new MgmtUiEntryPointComposition(
             persister,
             new FileRecentPicksReader(resolvedPath),
             new RulePreviewService(),
             new FileConfigFileWatcher(resolvedPath),
             discovery,
-            platformIntegration);
+            platformIntegration,
+            effectiveNotifier,
+            effectiveUrlLauncher);
     }
 
     private static void EnsureSeedConfig(string configPath)
@@ -84,6 +95,13 @@ public static class MgmtUiEntryPoint
         }
 
         public void LogError(string message)
+        {
+        }
+    }
+
+    private sealed class NoOpUrlLauncher : IUrlLauncher
+    {
+        public void Launch(Browser browser, Uri url)
         {
         }
     }

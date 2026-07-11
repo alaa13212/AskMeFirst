@@ -20,10 +20,14 @@ public sealed class ConfigCommand : ICommand
         IBrowserInventory? inventory = services.GetService(typeof(IBrowserInventory)) as IBrowserInventory;
         IBrowserProfileDetector? detector = services.GetService(typeof(IBrowserProfileDetector)) as IBrowserProfileDetector;
         IDefaultBrowserRegistrar? registrar = services.GetService(typeof(IDefaultBrowserRegistrar)) as IDefaultBrowserRegistrar;
+        INotifier? notifier = services.GetService(typeof(INotifier)) as INotifier;
+        IUrlLauncher? urlLauncher = services.GetService(typeof(IUrlLauncher)) as IUrlLauncher;
         return Task.FromResult(MgmtUiEntryPoint.Run(
             pathResolver.DefaultConfigPath,
             inventory,
             detector,
-            registrar));
+            registrar,
+            notifier,
+            urlLauncher));
     }
 }

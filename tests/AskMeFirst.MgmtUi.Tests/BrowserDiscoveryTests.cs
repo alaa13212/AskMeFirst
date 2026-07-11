@@ -149,7 +149,9 @@ public class BrowserDiscoveryTests : IDisposable
             new RulePreviewService(),
             new StubConfigFileWatcher(),
             discovery,
-            NullPlatformIntegration.Instance);
+            NullPlatformIntegration.Instance,
+            new NullNotifier(),
+            NoOpUrlLauncher.Instance);
     }
 
     private sealed class StubInventory : IBrowserInventory

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
 using AskMeFirst.MgmtUi.Services;
@@ -129,7 +130,9 @@ public class MgmtUiWindowRenderTests : IDisposable
             new RulePreviewService(),
             new StubConfigFileWatcher(),
             NullBrowserDiscovery.Instance,
-            NullPlatformIntegration.Instance);
+            NullPlatformIntegration.Instance,
+            new NullNotifier(),
+            NoOpUrlLauncher.Instance);
     }
 
     private void SeedRules(IConfigPersister persister, params Rule[] rules)

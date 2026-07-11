@@ -17,6 +17,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
     private readonly IConfigFileWatcher _watcher;
     private readonly IBrowserDiscovery _discovery;
     private readonly IPlatformIntegration _platformIntegration;
+    private readonly INotifier _notifier;
+    private readonly IUrlLauncher _urlLauncher;
 
     public MgmtUiWindowViewModel(
         IConfigPersister persister,
@@ -24,7 +26,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         IRulePreviewService rulePreview,
         IConfigFileWatcher watcher,
         IBrowserDiscovery discovery,
-        IPlatformIntegration platformIntegration)
+        IPlatformIntegration platformIntegration,
+        INotifier notifier,
+        IUrlLauncher urlLauncher)
     {
         _persister = persister;
         _recentPicksReader = recentPicksReader;
@@ -32,6 +36,8 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         _watcher = watcher;
         _discovery = discovery;
         _platformIntegration = platformIntegration;
+        _notifier = notifier;
+        _urlLauncher = urlLauncher;
         _title = "AskMeFirst Settings";
         _versionLabel = "v0.2.0 · config";
         _banner = "Alt+letter to open an area · Esc to back out · Alt+←/→ to step through areas.";
@@ -178,6 +184,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         PlatformStatus = result.Success
             ? "Installed — open OS settings to finish."
             : $"Install failed: {result.Message}";
+        _notifier.Show(
+            result.Success ? "AskMeFirst installed" : "AskMeFirst install failed",
+            result.Message);
     }
 
     private async Task RunUninstallAsync()
@@ -186,6 +195,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
         PlatformStatus = result.Success
             ? "Uninstalled."
             : $"Uninstall failed: {result.Message}";
+        _notifier.Show(
+            result.Success ? "AskMeFirst uninstalled" : "AskMeFirst uninstall failed",
+            result.Message);
     }
 
     [RelayCommand]
@@ -266,6 +278,9 @@ public sealed partial class MgmtUiWindowViewModel : ObservableObject
             if (PendingConflict is null)
             {
                 PendingConflict = new ConflictPromptViewModel(_persister.ConfigPath);
+                _notifier.Show(
+                    "AskMeFirst: config changed on disk",
+                    "You have unsaved drafts. Keep them or load the new file.");
             }
             return;
         }

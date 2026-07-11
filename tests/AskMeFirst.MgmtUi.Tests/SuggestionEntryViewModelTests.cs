@@ -1,3 +1,4 @@
+using AskMeFirst.Core.Abstractions;
 using AskMeFirst.Core.Audit;
 using AskMeFirst.Core.Config;
 using AskMeFirst.MgmtUi.Areas;
@@ -51,7 +52,7 @@ public class SuggestionEntryViewModelTests : IDisposable
             MakePick("https://github.com/x", "firefox"),
             MakePick("https://example.com/x", "chrome"),
         ]);
-        MgmtUiWindowViewModel window = new(new JsonConfigPersister(_configPath, _logger), reader, new RulePreviewService(), new StubConfigFileWatcher(), NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
+        MgmtUiWindowViewModel window = new(new JsonConfigPersister(_configPath, _logger), reader, new RulePreviewService(), new StubConfigFileWatcher(), NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.DrillTo(AreaId.Suggestions);
 
         SuggestionsDetailViewModel detail = (SuggestionsDetailViewModel) window.ActiveDetail!;

@@ -342,7 +342,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.DrillTo(AreaId.Rules);
 
         SeedConfig(MakeRule("original"), MakeRule("added", priority: 99));
@@ -360,7 +360,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.DrillTo(AreaId.Rules);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
 
@@ -376,7 +376,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.DrillTo(AreaId.Rules);
         ((DraftableRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).DiscardCommand.Execute(null);
         ((RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0]).Name = "drafted";
@@ -399,7 +399,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         SeedConfig(MakeRule("original"));
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, NullPlatformIntegration.Instance, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.DrillTo(AreaId.Rules);
         RuleRowViewModel row = (RuleRowViewModel) ((AreaDetailViewModel) window.ActiveDetail!).Rows[0];
         row.Name = "kept";
@@ -432,11 +432,14 @@ public class MgmtUiWindowViewModelTests : IDisposable
         StubPlatformIntegration platformIntegration = new() { InstallResult = new RegistrationResult(true, "Installed.") };
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration);
+        TestNotifier notifier = new();
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration, notifier, NoOpUrlLauncher.Instance);
         window.InstallCommand.Execute(null);
 
         Assert.Equal(1, platformIntegration.InstallCount);
         Assert.StartsWith("Installed", window.PlatformStatus);
+        Assert.Single(notifier.Calls);
+        Assert.Equal("AskMeFirst installed", notifier.Calls[0].Title);
     }
 
     [Fact]
@@ -448,7 +451,7 @@ public class MgmtUiWindowViewModelTests : IDisposable
         };
         JsonConfigPersister persister = new(_configPath, _logger);
         StubConfigFileWatcher watcher = new();
-        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration);
+        MgmtUiWindowViewModel window = new(persister, new EmptyRecentPicksReader(), new RulePreviewService(), watcher, NullBrowserDiscovery.Instance, platformIntegration, new NullNotifier(), NoOpUrlLauncher.Instance);
         window.UninstallCommand.Execute(null);
 
         Assert.Equal(1, platformIntegration.UninstallCount);
@@ -559,7 +562,9 @@ public class MgmtUiWindowViewModelTests : IDisposable
             new RulePreviewService(),
             new StubConfigFileWatcher(),
             NullBrowserDiscovery.Instance,
-            NullPlatformIntegration.Instance);
+            NullPlatformIntegration.Instance,
+            new NullNotifier(),
+            NoOpUrlLauncher.Instance);
     }
 
     private static BrowserSpec BrowserSpecFor(string id, string displayName)
