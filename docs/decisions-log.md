@@ -458,3 +458,75 @@ Phase 3 update (2026-06-28): decisions 55–70 added after grill session. See [`
 **Rationale**: `NewWindow: bool` was added to `Browser` / `RoutingIntent` during Phase 4 (commit `b962952`) then reverted in commit `661be93` `refactor(core): drop NewWindow launch option`. Engineer ruling: browser-built-in dedup supersedes a manual flag — Chrome reuses the running instance when launched with a URL; Firefox's `-new-tab` does the same. The daily-driver UX is already covered by the browser. Decision #79 (FocusExisting removal) primed the cleanup via the same "never keep dead code" principle. Net: `NewWindow` plumbing removed from `Browser`, `RoutingIntent`, both launch strategies, and the dedicated test file (`tests/AskMeFirst.Core.Tests/NewWindowLaunchTests.cs` is gone from the repo).
 
 **Rejected**: keep `NewWindow` for "future Phase 4+ might want it" (YAGNI per #79); gate it behind a config flag (adds maintenance surface, no concrete ask).
+
+---
+
+## Phase 7 decisions (added 2026-07-10)
+
+Pre-grill fold-in from prototype session. See [`docs/phase-7-design.md`](./phase-7-design.md).
+
+## 86. Management UI layout = sidebar + cards + inline drill-in (variant D)
+
+**Rationale**: Three HTML prototypes were rendered and compared: A (tab strip), B (sidebar tree + master/detail), C (card grid dashboard). Variant D mixes B's persistent left navigation (always know where you are, deep links survive screen resize) with C's at-a-glance scannable card view, then drills inline within the active card — so navigating between areas doesn't reset the scroll position. Flipping between A/B/C/D in the browser was the deciding exercise; the prototype files live at `prototypes/phase-7-mgmt-ui/variant-{a,b,c,d}*.html`. Areas inventory: Browsers, Profiles, Rules, Suggestions, Usage, Unshortener, Tracking, Cache.
+
+**Rejected**: A as-is (only one section visible at a time, no spatial sense); B as-is (rules list dominates the right pane, ignores the at-a-glance need); C as-is (no persistent navigation, easy to lose context); separate modal-per-area (workflow friction). Card-grid-only D matches "scannable first, drill second" — what 90% of config tools in 2026 actually do well.
+
+## 87. Both Avalonia surfaces follow OS Light/Dark via `ThemeVariant.Default`
+
+**Rationale**: Avalonia 11 has built-in system-theme support via `RequestedThemeVariant = ThemeVariant.Default` (the default if unset; resolves against `IPlatformThemeService`). User wants the tool to feel native on whatever OS theme they're using. Phase 7 introduces a `DesignTokens.axaml` resource dictionary with both Light and Dark palettes; all custom XAML uses `{DynamicResource Token.Brush.*}` so theme switching is a one-resource resolution at runtime, no control-level reactivity code needed. No user-visible theme toggle in v1 — "follow system" covers the common case; a manual toggle is a 4-line dropdown if it ever becomes a complaint.
+
+**Rejected**: explicit user toggle (adds a setting row to a config that already has plenty); two separate binaries per OS theme (distribution + maintenance burden, useless binary size impact); honor the system theme but use only Fluent tokens (works for built-in controls but our custom cards/buttons/sidebar need our own palette to stay consistent).
+
+## 88. Picker theme cleanup — replace hardcoded Light-only colors with DynamicResource tokens
+
+**Rationale**: `src/AskMeFirst.Picker/Views/PickerWindow.axaml` has 8 hardcoded `#…` colors (`#F3F3F3`, `#E5F1FB`, `#0F6CBD`, `#CCE4F7`, `Foreground="Gray"`) that assume Light mode. `AvaloniaPickerLauncher.cs:68` pins `ThemeVariant.Light`. To get picker on Dark too (decision #87), both need swapping: replace hardcoded colors with `{DynamicResource Token.*}` lookups sharing the same `DesignTokens.axaml` the MgmtUi will introduce, drop the `RequestedThemeVariant = ThemeVariant.Light` line. Existing render tests stay pinned to Light for visual regression — they pass unchanged because the token names resolve identically under Light.
+
+**Rejected**: leave picker Light-only and ship MgmtUi Dark-capable (inconsistent UX across surfaces); fork `DesignTokens.axaml` per project (token-name drift between picker and MgmtUi is a real risk for future maintenance); make picker "best-effort dark" by inverting hex codes (looks wrong; doesn't follow Fluent conventions).
+
+## 89. MgmtUi as a separate project (`AskMeFirst.MgmtUi`)
+
+**Rationale**: MgmtUi is a second Avalonia app entry point — parallel to `AskMeFirst.Picker` which is its own project (decision from Phase 3 architecture: `MgmtUi` and `Picker` are leaf UI projects, no project deps between them; both consume `Core`). Keeping them as siblings matches the existing pattern, lets each project ship its own AXAML/csproj surface, and avoids a future split headache if Phase 9 starts shipping per-feature installers. MgmtUi references Core only — same direction as Picker → Core.
+
+**Rejected**: fold into `AskMeFirst.Picker` (UI sharing via a common control library is the next move only if they actually share controls; they don't yet — overlap is just `AvaloniaApp` + `FluentTheme` which is 10 LOC each); keep MgmtUi inside `AskMeFirst` (the CLI binary pulls Avalonia, blowing cold-start budget from decision #59 — MgmtUi only runs when `askmefirst config` is invoked, never on the URL hot path).
+
+## 90. `askmefirst config` as parallel entry point to `askmefirst pick`
+
+**Rationale**: Phase 3 wired two entry points — `askmefirst <url>` for the CLI hot path and `askmefirst pick` for the picker. Phase 7 adds the third: `askmefirst config` for the management UI. Same dispatch shape (`Program.cs` switches on `args[0]`), same Avalonia `AppBuilder.Configure<>().UsePlatformDetect().UseSkia()` pattern, same single-binary distribution. Cold-start budget for MgmtUi is unconstrained (user opens it deliberately) — ~150 ms is fine.
+
+**Rejected**: subcommands (`askmefirst config browser list`, etc.) — user's whole point in shipping a GUI is "no more typing the JSON file"; nested CLI undercuts that; subcommand of `pick` (`askmefirst pick --config`) — confuses routing semantics; auto-launch on first run after `install` — violates the "I want control" principle (decision #11).
+
+## 91. Apply model = Hybrid with per-form Save/Discard, no global Apply button
+
+**Rationale**: User rule from the Q&A grill: "Form needs apply/save. States are auto applied." Boundary is "can the value land in a broken state?" — yes → Save gate (regex, URL pattern, browser path, unshortener domain, tracking param). No → write immediately (pin toggle, enabled toggle, row order, profile visibility). Per-form granularity means each editable row in a drilled detail view carries its own Save + Discard buttons; the bottom action bar carries **only** the Test URL field, no Apply / Save All / Discard All. Drafts are isolated per row — editing rule 3 doesn't entangle rule 5's draft state. Discard rolls the row's text fields back to the on-disk value; Save writes the row's draft through `JsonConfigWriter`.
+
+**Rejected**: per-area drafts (one shared draft per drilled card — abandoned when the user picked per-form in Q8); autosave on every keystroke (violates the user's explicit "Form needs Apply" rule); hybrid with per-field blur-save (granularity too fine, drift between fields hard to reconcile); explicit Apply required for *all* edits (every pin toggle then needs a click — friction).
+
+## 92. Drill replaces the grid; tree leaves drill to deeper sub-areas (2 drill depths)
+
+**Rationale**: User clarification during the Q&A grill — cards are top-level drill surfaces only; tree nodes are not parallel navigation but *deeper* sub-area targets. Final model: **Level 1** = click a card on the dashboard → grid disappears, that area's detail view (table editor) fills the main pane. **Level 2** = within a drilled area, the sidebar tree shows the area's children (e.g. `Browsers > Firefox 132`, `Browsers > Chrome 130`); clicking a leaf drills again to that single entity's detail view (Firefox's profile editor). Tree section headers (`Inventory`, `Rules`, `Advanced`) are expand/collapse only — they don't drill because their sub-areas are the actual cards. The HTML prototype D's "inline expand" pattern was abandoned in favor of full-pane drill, which is cleaner for a 1024×720 desktop window.
+
+**Rejected**: prototype D's inline-expand (cards shrink and stay in the grid — sacrifices vertical space and creates two visualizations of "current area"); card-only drill, tree as scratchpad (Option D — users complained that the tree looked clickable but wasn't); nested modal drill (modals inside modals gets hostile fast).
+
+## 93. Keyboard navigation = Alt+letter mnemonics + Esc + Alt+←/→
+
+**Rationale**: User picked Option A — Alt+letter matches cross-platform desktop convention (Firefox, VS Code, every native Windows / Mac app uses it). One letter per area card: Alt+B = Browsers, Alt+R = Rules, Alt+S = Suggestions, Alt+U = Unshortener, Alt+T = Tracking, Alt+P = Profiles, Alt+C = Cache, Alt+G = Usage (last-used). Underlines on hover advertise the mnemonic. **Esc** = exit current drill (level 2 → level 1 → dashboard). **Alt+←** / **Alt+→** = prev / next drilled area (cycling through the 8 cards linearly). Total: ~25 LOC of key-binding wiring in `MgmtUiWindow.axaml.cs`. The picker already uses 1–9 hotkeys (decision #67b); keeping MgmtUi keyboard-first preserves the project's "muscle-memory wins" feel.
+
+**Rejected**: vim-style chord prefixes (G S, G U — user said no, not discoverable); Cmd+K command palette (overkill for occasional management visits); mouse-only (loses fast-edit feel).
+
+## 94. Hot-reload = FileSystemWatcher + auto-reload OR conflict prompt
+
+**Rationale**: User picked Option A from the Q&A grill. `MgmtUiEntryPoint` subscribes a debounced `FileSystemWatcher` (~200 ms; coalesces editor-save bursts) on the resolved `config.json` path. On change: if no draft is in flight, re-read silently via `ConfigLoader`, swap the in-memory config, re-render — `apply-from-state` (pin / order) is already on disk so the swap lands consistently. If a draft exists in some form, show a modal prompt: "Config changed on disk. Keep your unsaved edits, or discard them and load the new file?" Two buttons (Keep / Discard). Discard = drafts dropped, new config loaded. Keep = current draft wins, the watcher event is swallowed. No third "Cancel" button — that would leave the model in a half-consistent state. The conflict-prompt VM is shared between the two surfaces (picker could be wired to the same prompt later — not in v1).
+
+**Rejected**: silent overwrite (loses drafts); Reload button only (no live-edit convenience); no reload at all (misses the `$EDITOR + config + MgmtUi` power-user flow).
+
+## 95. Close-with-drafts → Save / Discard / Cancel prompt
+
+**Rationale**: User picked Option A. The window's `Closing` handler intercepts close-with-drafts. Three-button modal: Save applies all per-form drafts in one batched write then closes; Discard drops drafts without writing then closes; Cancel keeps the window open with drafts intact. If no drafts are in flight, close happens silently — no prompt (state autosaves mean the model is already consistent). Symmetric with editor UX across every IDE in existence; matches the user's "ask me first, then remember forever" tagline (per `AGENTS.md`).
+
+**Rejected**: auto-apply on close (violates the "Form needs Apply" rule from #91 for one specific code path); force-explicit-resolution-block-close (annoying in practice, treats close as an error); discard-on-close (loss of work — cardinal sin for a config management tool).
+
+## 96. First-run with no `config.json` → auto-init silently
+
+**Rationale**: User picked Option B (over the recommendation of Option A "one-click init"). The implementation runs `InitCommand`-equivalent logic inside `MgmtUiEntryPoint` before showing the window when `!File.Exists(configPath)`. Sample is pre-vetted schema (Phase 6 polish decision); auto-init cannot write a corrupt config. Reversible (user can `rm` the file and start over, or `git revert` if version-controlled). The user already opted into the sample as the default config source — re-prompting them to opt-in is friction; the file is going to land there in their first 60 seconds either way.
+
+**Rejected**: one-click-init button in the empty pane (recommendation; user overrode — wants zero-friction first run); manual instruction "run `askmefirst init` from terminal" (kicks user out of the GUI they just opened); read-only banner without init (same downside).

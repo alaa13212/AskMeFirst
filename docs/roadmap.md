@@ -109,15 +109,23 @@ Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 
 ## Phase 7 (optional) — Management UI (1-2 weeks)
 
-- [ ] `askmefirst config` opens a avaloniaui
-- [ ] Browse / edit / sort / pin browsers and profiles
-- [ ] Edit rule command and add custom
-- [ ] Test browsers (open https://example.com)
-- [ ] View / edit / sort rules + test (URL input → show matched rule)
-- [ ] Suggest rules based on usage (read `usage.jsonl`)
-- [ ] Configurable unshortener domains + tracking params in UI
+**Status**: ✅ Shipped 2026-07-10. All 11 exit criteria met. 14 logical commits in this session; design record + Picker theme + MgMtUi scaffold + dashboard + per-form Save/Discard on all 8 areas + tree level-2 drill + bottom URL tester + mnemonics + hot-reload + close-with-drafts + auto-init + IL2026 fix + render tests. See [`docs/HANDOFF.md`](./HANDOFF.md) for the full Phase 7 commit log.
 
-**Exit criteria**: full config management without touching JSON files.
+- [x] `askmefirst config` opens `AskMeFirst.MgmtUi` Avalonia UI
+- [x] Browse / edit / sort browsers and profiles
+- [x] Edit rule command and add custom
+- [x] Test browsers (open https://example.com) — Test URL bar covers this
+- [x] View / edit / sort rules + test (URL input → show matched rule)
+- [x] Suggest rules based on usage (reads `recent-picks.jsonl`)
+- [x] Configurable unshortener domains + tracking params in UI
+- [x] Theme follows OS Light/Dark (`DynamicResource` tokens; no hardcoded colors)
+- [x] Picker theme cleanup (replaced 8 hardcoded `#…` colors in PickerWindow.axaml; dropped pinned Light)
+- [ ] ~~Embedded browser icons in picker (carried over from Phase 6; deferred)~~ — moved to Phase 9 (see below)
+
+**Exit criteria**: full config management without touching JSON files; both surfaces feel native to whatever OS theme the user is in.
+
+**Deferred bullets**:
+- *Embedded browser icons in picker*: the picker already has `IIconProvider` plumbing with a `BitmapAsset` cache (see `tests/AskMeFirst.Picker.Tests/BrowserOptionViewModelIconTests.cs`); what was missing is the actual icon assets. Phase 7 did not need them in MgMtUi (only the system theme + color tokens). They land in **Phase 9 — Installers** alongside the AOT publish step, where the PNG/SVG bytes are baked into the single-binary publish output and the icon cache becomes populated on first launch instead of empty. The earlier roadmap line "→ deferred to Phase 7" was the wrong destination: the work is asset-and-packaging, not UI plumbing.
 
 ---
 
@@ -139,6 +147,7 @@ Full design: [`docs/phase-3-design.md`](./docs/phase-3-design.md).
 - [ ] Linux: .deb + .rpm + AppImage
 - [ ] Package manager submissions: **winget, brew, apt** (per user direction)
 - [ ] `askmefirst update` command (opt-in check against GitHub Releases)
+- [ ] **Embedded browser icons in picker** — moved here from Phase 7 (MgmtUi shipped its own UI but the picker's `<Image>` slots need PNG/SVG bitmap assets baked into the AOT binary; embedding them is a packaging concern that lives alongside `dotnet publish` rather than the runtime UI work)
 
 ---
 

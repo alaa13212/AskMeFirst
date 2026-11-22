@@ -32,6 +32,30 @@ public static class ConfigLoader
         return LoadFromFile(path);
     }
 
+    public static void WriteAtomic(AppConfig config, string path)
+    {
+        string? dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        string tempPath = path + ".tmp";
+        using (FileStream fs = File.Create(tempPath))
+        {
+            JsonSerializer.Serialize(fs, config, ConfigJsonContext.Default.AppConfig);
+        }
+
+        if (File.Exists(path))
+        {
+            File.Replace(tempPath, path, destinationBackupFileName: null);
+        }
+        else
+        {
+            File.Move(tempPath, path);
+        }
+    }
+
     private static AppConfig Parse(Stream stream)
     {
         AppConfig? config = JsonSerializer.Deserialize(stream, ConfigJsonContext.Default.AppConfig);

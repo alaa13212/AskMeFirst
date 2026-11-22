@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="Token.Surface.Primary"   Color="#FAFAFA" />
+            <SolidColorBrush x:Key="Token.Surface.Card"      Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Token.Surface.Elevated"  Color="#F3F3F3" />
+            <SolidColorBrush x:Key="Token.Surface.Overlay"   Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Token.Border.Default"    Color="#D0D0D0" />
+            <SolidColorBrush x:Key="Token.Border.Strong"     Color="#A0A0A0" />
+            <SolidColorBrush x:Key="Token.Text.Primary"      Color="#1A1A1A" />
+            <SolidColorBrush x:Key="Token.Text.Dim"          Color="#666666" />
+            <SolidColorBrush x:Key="Token.Text.OnAccent"     Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Token.Accent.Default"    Color="#0F6CBD" />
+            <SolidColorBrush x:Key="Token.Accent.SoftBg"     Color="#E5F1FB" />
+            <SolidColorBrush x:Key="Token.Accent.SoftBgHover" Color="#CCE4F7" />
+            <SolidColorBrush x:Key="Token.Icon.FallbackBg"   Color="#E0E0E0" />
+            <SolidColorBrush x:Key="Token.Success.Default"   Color="#107C10" />
+            <SolidColorBrush x:Key="Token.Warning.Default"   Color="#B26B00" />
+            <SolidColorBrush x:Key="Token.Danger.Default"    Color="#C42B1C" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="Token.Surface.Primary"   Color="#0D1117" />
+            <SolidColorBrush x:Key="Token.Surface.Card"      Color="#161B22" />
+            <SolidColorBrush x:Key="Token.Surface.Elevated"  Color="#21262D" />
+            <SolidColorBrush x:Key="Token.Surface.Overlay"   Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Token.Border.Default"    Color="#30363D" />
+            <SolidColorBrush x:Key="Token.Border.Strong"     Color="#444C56" />
+            <SolidColorBrush x:Key="Token.Text.Primary"      Color="#E6EDF3" />
+            <SolidColorBrush x:Key="Token.Text.Dim"          Color="#8B949E" />
+            <SolidColorBrush x:Key="Token.Text.OnAccent"     Color="#FFFFFF" />
+            <SolidColorBrush x:Key="Token.Accent.Default"    Color="#58A6FF" />
+            <SolidColorBrush x:Key="Token.Accent.SoftBg"     Color="#1F3055" />
+            <SolidColorBrush x:Key="Token.Accent.SoftBgHover" Color="#2A4365" />
+            <SolidColorBrush x:Key="Token.Icon.FallbackBg"   Color="#21262D" />
+            <SolidColorBrush x:Key="Token.Success.Default"   Color="#3FB950" />
+            <SolidColorBrush x:Key="Token.Warning.Default"   Color="#D29922" />
+            <SolidColorBrush x:Key="Token.Danger.Default"    Color="#F85149" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

@@ -22,4 +22,8 @@
     <ProjectReference Include="..\AskMeFirst.Core\AskMeFirst.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Resources\DesignTokens.axaml" />
+  </ItemGroup>
+
 </Project>

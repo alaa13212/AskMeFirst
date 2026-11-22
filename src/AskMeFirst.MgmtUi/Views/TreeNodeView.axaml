@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+             xmlns:v="using:AskMeFirst.MgmtUi.Views"
+             x:Class="AskMeFirst.MgmtUi.Views.TreeNodeView"
+             x:DataType="vm:TreeNodeViewModel"
+             x:CompileBindings="True">
+
+    <UserControl.Styles>
+        <Style Selector="Button.treeRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.treeRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Token.Surface.Elevated}" />
+        </Style>
+        <Style Selector="Button.treeRow.active">
+            <Setter Property="Background" Value="{DynamicResource Token.Accent.SoftBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Token.Accent.Default}" />
+        </Style>
+        <Style Selector="TextBlock.sectionHeader">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource Token.Text.Dim}" />
+            <Setter Property="Margin" Value="0,8,0,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="2">
+        <Button Classes="treeRow"
+                Classes.active="{Binding IsActive}"
+                Command="{Binding DrillCommand}">
+            <TextBlock Text="{Binding Label}"
+                       FontSize="13"
+                       VerticalAlignment="Center" />
+        </Button>
+
+        <ItemsControl ItemsSource="{Binding Children}"
+                      Margin="14,0,0,0"
+                      IsVisible="{Binding HasChildren}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TreeNodeViewModel">
+                    <v:TreeNodeView />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

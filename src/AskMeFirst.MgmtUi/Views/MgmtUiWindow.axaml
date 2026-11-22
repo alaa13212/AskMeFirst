@@ -1,0 +1,177 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AskMeFirst.MgmtUi.ViewModels"
+        xmlns:v="using:AskMeFirst.MgmtUi.Views"
+        x:Class="AskMeFirst.MgmtUi.Views.MgmtUiWindow"
+        x:DataType="vm:MgmtUiWindowViewModel"
+        x:CompileBindings="True"
+        Title="{Binding Title}"
+        CanResize="True"
+        ShowInTaskbar="True"
+        Width="1024"
+        Height="720">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
+        <KeyBinding Gesture="Alt+Left" Command="{Binding PrevAreaCommand}" />
+        <KeyBinding Gesture="Alt+Right" Command="{Binding NextAreaCommand}" />
+        <KeyBinding Gesture="Alt+B" Command="{Binding DrillByMnemonicCommand}" CommandParameter="B" />
+        <KeyBinding Gesture="Alt+P" Command="{Binding DrillByMnemonicCommand}" CommandParameter="P" />
+        <KeyBinding Gesture="Alt+R" Command="{Binding DrillByMnemonicCommand}" CommandParameter="R" />
+        <KeyBinding Gesture="Alt+U" Command="{Binding DrillByMnemonicCommand}" CommandParameter="U" />
+        <KeyBinding Gesture="Alt+S" Command="{Binding DrillByMnemonicCommand}" CommandParameter="S" />
+        <KeyBinding Gesture="Alt+N" Command="{Binding DrillByMnemonicCommand}" CommandParameter="N" />
+        <KeyBinding Gesture="Alt+T" Command="{Binding DrillByMnemonicCommand}" CommandParameter="T" />
+        <KeyBinding Gesture="Alt+C" Command="{Binding DrillByMnemonicCommand}" CommandParameter="C" />
+    </Window.KeyBindings>
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Background="{DynamicResource Token.Surface.Primary}">
+
+        <Border Grid.Row="0"
+                Padding="16,12"
+                BorderBrush="{DynamicResource Token.Border.Default}"
+                BorderThickness="0,0,0,1"
+                Background="{DynamicResource Token.Surface.Card}">
+            <DockPanel>
+                <TextBlock Text="{Binding Title}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right"
+                           Text="{Binding VersionLabel}"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="220,*">
+
+            <Border Grid.Column="0"
+                    BorderBrush="{DynamicResource Token.Border.Default}"
+                    BorderThickness="0,0,1,0"
+                    Background="{DynamicResource Token.Surface.Card}"
+                    Padding="12">
+                <ScrollViewer>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Shortcuts"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Token.Text.Dim}"
+                                   Margin="4,0,0,4" />
+                        <Border Padding="10,8"
+                                BorderBrush="{DynamicResource Token.Accent.SoftBg}"
+                                BorderThickness="2,0,0,0"
+                                Background="{DynamicResource Token.Surface.Card}"
+                                CornerRadius="4"
+                                Margin="0,0,0,12">
+                            <TextBlock Text="{Binding Banner}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Token.Text.Dim}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <TextBlock Text="Areas"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Token.Text.Dim}"
+                                   Margin="4,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding Tree}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TreeNodeViewModel">
+                                    <v:TreeNodeView />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Column="1">
+                <ContentControl Content="{Binding ActiveDetail}">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:CacheDetailViewModel">
+                            <v:CacheDetailView Margin="16" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:AreaDetailViewModel">
+                            <v:AreaDetailView Margin="16" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:EntityDetailViewModel">
+                            <v:EntityDetailView Margin="16" />
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
+
+                <ScrollViewer IsVisible="{Binding ActiveDetail, Converter={x:Static ObjectConverters.IsNull}}"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="16">
+                    <ItemsControl ItemsSource="{Binding Areas}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AreaCardViewModel">
+                                <v:AreaCardView Width="220" Margin="0,0,12,12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Padding="16,10"
+                BorderBrush="{DynamicResource Token.Border.Default}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource Token.Surface.Card}">
+            <DockPanel LastChildFill="True">
+                <TextBlock Text="Test URL"
+                           DockPanel.Dock="Left"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0" />
+                <TextBox Text="{Binding UrlTester.UrlInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="https://example.com/path"
+                         Padding="6,4"
+                         VerticalAlignment="Center" />
+                <TextBlock Text="{Binding UrlTester.MatchSummary}"
+                           DockPanel.Dock="Right"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button Content="Uninstall"
+                            Command="{Binding UninstallCommand}"
+                            Padding="10,4" />
+                    <Button Content="Install"
+                            Command="{Binding InstallCommand}"
+                            Padding="12,4" />
+                    <Button Content="Launch URL"
+                            Command="{Binding UrlTester.OpenCommand}"
+                            Padding="10,4"
+                            IsEnabled="{Binding UrlTester.CanLaunch}" />
+                </StackPanel>
+                <TextBlock Text="{Binding UrlTester.LaunchStatus}"
+                           DockPanel.Dock="Right"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Accent.Default}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"
+                           IsVisible="{Binding UrlTester.LaunchStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding PlatformStatus}"
+                           DockPanel.Dock="Right"
+                           FontSize="11"
+                           Foreground="{DynamicResource Token.Text.Dim}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"
+                           IsVisible="{Binding PlatformStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

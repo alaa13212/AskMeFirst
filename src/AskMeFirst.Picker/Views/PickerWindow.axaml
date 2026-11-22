@@ -19,14 +19,14 @@
             <Setter Property="CornerRadius" Value="4" />
         </Style>
         <Style Selector="Button#PART_BrowserButton:pointerover">
-            <Setter Property="Background" Value="#F3F3F3" />
+            <Setter Property="Background" Value="{DynamicResource Token.Surface.Elevated}" />
         </Style>
         <Style Selector="Button#PART_BrowserButton:focus">
-            <Setter Property="Background" Value="#E5F1FB" />
-            <Setter Property="BorderBrush" Value="#0F6CBD" />
+            <Setter Property="Background" Value="{DynamicResource Token.Accent.SoftBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Token.Accent.Default}" />
         </Style>
         <Style Selector="Button#PART_BrowserButton:focus:pointerover">
-            <Setter Property="Background" Value="#CCE4F7" />
+            <Setter Property="Background" Value="{DynamicResource Token.Accent.SoftBgHover}" />
         </Style>
 
         <Style Selector="RadioButton.rememberOption Border.rememberOptionCard">
@@ -38,14 +38,14 @@
             <Setter Property="Margin" Value="-2,0" />
         </Style>
         <Style Selector="RadioButton.rememberOption:pointerover Border.rememberOptionCard">
-            <Setter Property="Background" Value="#F3F3F3" />
+            <Setter Property="Background" Value="{DynamicResource Token.Surface.Elevated}" />
         </Style>
         <Style Selector="RadioButton.rememberOption:focus Border.rememberOptionCard">
-            <Setter Property="Background" Value="#E5F1FB" />
-            <Setter Property="BorderBrush" Value="#0F6CBD" />
+            <Setter Property="Background" Value="{DynamicResource Token.Accent.SoftBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Token.Accent.Default}" />
         </Style>
         <Style Selector="RadioButton.rememberOption:focus:pointerover Border.rememberOptionCard">
-            <Setter Property="Background" Value="#CCE4F7" />
+            <Setter Property="Background" Value="{DynamicResource Token.Accent.SoftBgHover}" />
         </Style>
     </Window.Styles>
 
@@ -57,14 +57,14 @@
                        TextWrapping="Wrap" />
             <TextBlock Text="Resolving..."
                        FontSize="11"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource Token.Text.Dim}"
                        IsVisible="{Binding IsResolving}" />
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnDefinitions="*,16,*">
 
             <Border Grid.Column="0"
-                    BorderBrush="LightGray"
+                    BorderBrush="{DynamicResource Token.Border.Default}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8">
@@ -88,14 +88,14 @@
                                         <Grid ColumnDefinitions="24,36,*" VerticalAlignment="Center">
                                             <TextBlock Grid.Column="0"
                                                        Text="{Binding HotkeyLabel}"
-                                                       Foreground="Gray"
+                                                       Foreground="{DynamicResource Token.Text.Dim}"
                                                        VerticalAlignment="Center" />
                                             <Panel Grid.Column="1" Width="32" Height="32"
                                                    VerticalAlignment="Center">
                                                 <Border Width="28" Height="28"
                                                         CornerRadius="14"
                                                         ClipToBounds="True"
-                                                        Background="#E0E0E0"
+                                                        Background="{DynamicResource Token.Icon.FallbackBg}"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center">
                                                     <Image Source="{Binding PrimaryIcon}"
@@ -104,8 +104,8 @@
                                                 <Border Width="14" Height="14"
                                                         CornerRadius="7"
                                                         ClipToBounds="True"
-                                                        Background="White"
-                                                        BorderBrush="White"
+                                                        Background="{DynamicResource Token.Surface.Overlay}"
+                                                        BorderBrush="{DynamicResource Token.Surface.Overlay}"
                                                         BorderThickness="1"
                                                         IsVisible="{Binding HasOverlay}"
                                                         HorizontalAlignment="Right"
@@ -118,7 +118,7 @@
                                                 <TextBlock Text="{Binding PrimaryLabel}" />
                                                 <TextBlock Text="{Binding SubtitleLabel}"
                                                            FontSize="11"
-                                                           Foreground="Gray"
+                                                           Foreground="{DynamicResource Token.Text.Dim}"
                                                            IsVisible="{Binding IsSubtitleVisible}" />
                                             </StackPanel>
                                         </Grid>
@@ -131,7 +131,7 @@
             </Border>
 
             <Border Grid.Column="2"
-                    BorderBrush="LightGray"
+                    BorderBrush="{DynamicResource Token.Border.Default}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8">
@@ -157,7 +157,7 @@
                                                 <TextBlock Text="{Binding Label}" />
                                                 <TextBlock Text="{Binding UnavailableReason}"
                                                            FontSize="10"
-                                                           Foreground="Gray"
+                                                           Foreground="{DynamicResource Token.Text.Dim}"
                                                            IsVisible="{Binding IsReasonVisible}" />
                                             </StackPanel>
                                         </Border>
